@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 경제지표와 주식 시장 전망</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #0056b3;
+            margin: 0;
+            font-size: 2.2em;
+        }
+        .header p {
+            margin: 5px 0 0;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+        .section-title {
+            font-size: 1.8em;
+            color: #17a2b8;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-left: 5px solid #17a2b8;
+            padding-left: 10px;
+        }
+        .outlook-section {
+            text-align: center;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid;
+        }
+        .outlook-section.negative { background-color: #f8d7da; border-color: #f5c6cb; }
+        .outlook-section.neutral { background-color: #fff3cd; border-color: #ffeeba; }
+        .outlook-section.positive { background-color: #d4edda; border-color: #c3e6cb; }
+
+        .outlook-signal {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        .outlook-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 0;
+        }
+        .outlook-title.negative { color: #721c24; }
+        .outlook-title.neutral { color: #856404; }
+        .outlook-title.positive { color: #155724; }
+        
+        .indicator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .indicator-card {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .indicator-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .indicator-card h4 {
+            margin-top: 0;
+            color: #343a40;
+            font-size: 1.2em;
+            display: flex;
+            justify-content: space-between;
+        }
+        .indicator-card .date {
+            font-size: 0.8em;
+            color: #6c757d;
+            font-weight: normal;
+        }
+        .indicator-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #007bff;
+        }
+        .indicator-status {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .status-icon {
+            font-size: 1.5em;
+            margin-right: 8px;
+        }
+        .status-text.positive { color: #28a745; }
+        .status-text.negative { color: #dc3545; }
+        .status-text.neutral { color: #ffc107; }
+
+        .analysis-section p {
+            font-size: 1.1em;
+            background-color: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #6c757d;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header class="header">
+            <h1>실시간 경제지표와 주식 시장 전망</h1>
+            <p>2025년 9월 30일 기준 | 대한민국 울산</p>
+        </header>
+
+        <h2 class="section-title">시장 종합 전망</h2>
+        
+        <div class="outlook-section neutral">
+            <div class="outlook-signal">😐</div>
+            <h3 class="outlook-title neutral">중립 / 혼조</h3>
+        </div>
+
+        <h2 class="section-title">핵심 지표 대시보드</h2>
+
+        <div class="indicator-grid">
+            <div class="indicator-card">
+                <h4>🇺🇸 장단기 금리차 <span class="date">(9/29)</span></h4>
+                <p class="indicator-value">-0.25%p</p> <div class="indicator-status">
+                    <span class="status-icon">⚠️</span>
+                    <span class="status-text neutral">역전폭 축소, 침체 우려 완화</span>
+                </div>
+            </div>
+
+            <div class="indicator-card">
+                <h4>🇰🇷 GDP 성장률 <span class="date">(2분기)</span></h4>
+                <p class="indicator-value">+0.7%</p> <div class="indicator-status">
+                    <span class="status-icon">👍</span>
+                    <span class="status-text positive">경기 회복세</span>
+                </div>
+            </div>
+
+            <div class="indicator-card">
+                <h4>🇰🇷 수출 증가율 <span class="date">(8월)</span></h4>
+                <p class="indicator-value">+3.1%</p> <div class="indicator-status">
+                    <span class="status-icon">📈</span>
+                    <span class="status-text positive">플러스 전환, 긍정적</span>
+                </div>
+            </div>
+
+            <div class="indicator-card">
+                <h4>🇰🇷 소비자물가지수 <span class="date">(8월)</span></h4>
+                <p class="indicator-value">2.7%</p> <div class="indicator-status">
+                    <span class="status-icon">✅</span>
+                    <span class="status-text positive">물가 안정세</span>
+                </div>
+            </div>
+
+            <div class="indicator-card">
+                <h4>🇺🇸 소비자물가지수 <span class="date">(8월)</span></h4>
+                <p class="indicator-value">3.5%</p> <div class="indicator-status">
+                    <span class="status-icon">😌</span>
+                    <span class="status-text positive">인플레이션 둔화 지속</span>
+                </div>
+            </div>
+            
+            <div class="indicator-card">
+                <h4>🇰🇷 실업률 <span class="date">(8월)</span></h4>
+                <p class="indicator-value">2.8%</p> <div class="indicator-status">
+                    <span class="status-icon">💪</span>
+                    <span class="status-text positive">완전고용 수준</span>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="section-title">종합 분석 및 해석</h2>
+
+        <div class="analysis-section">
+            <p>
+                <strong>현재 주식 시장의 핵심 관심사는 '연착륙'과 '기업 실적'입니다.</strong><br><br>
+                인플레이션은 안정적으로 관리되고 있으며(한국/미국 CPI), 가장 큰 우려였던 미국의 장단기 금리차 역전 폭이 축소되며 경기 침체에 대한 공포는 상당 부분 완화되었습니다. 한국 경제는 수출이 플러스로 전환되고 GDP가 회복세를 보이는 등 긍정적인 신호를 보내고 있습니다. 견조한 고용 시장은 경제의 기초 체력이 튼튼함을 보여줍니다.<br><br>
+                하지만 고금리 환경이 장기간 지속된 만큼, 기업들이 이를 이겨내고 실제 '실적 성장'을 보여줄 수 있을지가 관건입니다. 시장은 이제 '나쁜 소식이 좋은 소식(Bad news is good news)'인 단계를 지나, **'좋은 실적이 좋은 소식(Good news is good news)'**인 국면으로 진입하고 있습니다. 따라서 향후 발표될 기업들의 3분기 실적에 따라 시장의 방향성이 결정될 가능성이 높아 종합적인 전망은 <strong>'중립 / 혼조'</strong>로 판단됩니다.
+            </p>
+        </div>
+
+        <h2 class="section-title">향후 주요 일정</h2>
+        <ul>
+            <li>2025년 10월 10일: 한국은행 금융통화위원회 (기준금리 결정)</li>
+            <li>2025년 10월 15일: 미국 소비자물가지수(CPI) 발표</li>
+            <li>2025년 10월 28일: 미국 FOMC 기준금리 결정</li>
+        </ul>
+        
+        <footer class="footer">
+            <p>&copy; 2025 Market Forecaster. All Rights Reserved.</p>
+            <p>본 페이지는 실시간 데이터 API 연동을 시뮬레이션한 결과이며, 실제 자동 업데이트되지 않습니다. 모든 투자의 책임은 투자자 본인에게 있습니다.</p>
+        </footer>
+    </div>
+
+</body>
+</html>
