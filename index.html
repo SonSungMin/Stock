@@ -3,227 +3,239 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실시간 경제지표와 주식 시장 전망</title>
+    <title>Live 경제 지표 대시보드</title>
     <style>
+        /* CSS 스타일링: 이전과 동일하게 유지하여 디자인을 담당합니다. */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f8f9fa;
-            color: #212529;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
+            background-color: #f8f9fa; color: #212529; line-height: 1.6; margin: 0; padding: 20px;
         }
         .container {
-            max-width: 900px;
-            margin: auto;
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            max-width: 900px; margin: auto; background: #ffffff; padding: 30px;
+            border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08);
         }
         .header {
-            text-align: center;
-            border-bottom: 2px solid #dee2e6;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            text-align: center; border-bottom: 2px solid #dee2e6;
+            padding-bottom: 20px; margin-bottom: 30px;
         }
-        .header h1 {
-            color: #0056b3;
-            margin: 0;
-            font-size: 2.2em;
-        }
-        .header p {
-            margin: 5px 0 0;
-            color: #6c757d;
-            font-size: 1.1em;
-        }
+        .header h1 { color: #0056b3; margin: 0; font-size: 2.2em; }
+        .header p { margin: 5px 0 0; color: #6c757d; font-size: 1.1em; }
         .section-title {
-            font-size: 1.8em;
-            color: #17a2b8;
-            margin-top: 40px;
-            margin-bottom: 20px;
-            border-left: 5px solid #17a2b8;
-            padding-left: 10px;
+            font-size: 1.8em; color: #17a2b8; margin-top: 40px; margin-bottom: 20px;
+            border-left: 5px solid #17a2b8; padding-left: 10px;
         }
-        .outlook-section {
-            text-align: center;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            border: 1px solid;
+        #outlook-section {
+            text-align: center; padding: 30px; border-radius: 10px; margin-bottom: 30px; border: 1px solid;
         }
-        .outlook-section.negative { background-color: #f8d7da; border-color: #f5c6cb; }
-        .outlook-section.neutral { background-color: #fff3cd; border-color: #ffeeba; }
-        .outlook-section.positive { background-color: #d4edda; border-color: #c3e6cb; }
-
-        .outlook-signal {
-            font-size: 3em;
-            margin-bottom: 10px;
-        }
-        .outlook-title {
-            font-size: 1.8em;
-            font-weight: bold;
-            margin: 0;
-        }
-        .outlook-title.negative { color: #721c24; }
-        .outlook-title.neutral { color: #856404; }
-        .outlook-title.positive { color: #155724; }
-        
+        .outlook-signal { font-size: 3em; margin-bottom: 10px; }
+        .outlook-title { font-size: 1.8em; font-weight: bold; margin: 0; }
         .indicator-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;
         }
         .indicator-card {
-            background: #ffffff;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .indicator-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px;
+            padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         .indicator-card h4 {
-            margin-top: 0;
-            color: #343a40;
-            font-size: 1.2em;
-            display: flex;
-            justify-content: space-between;
+            margin-top: 0; color: #343a40; font-size: 1.2em;
+            display: flex; justify-content: space-between;
         }
-        .indicator-card .date {
-            font-size: 0.8em;
-            color: #6c757d;
-            font-weight: normal;
-        }
-        .indicator-value {
-            font-size: 2.2em;
-            font-weight: bold;
-            margin: 10px 0;
-            color: #007bff;
-        }
-        .indicator-status {
-            display: flex;
-            align-items: center;
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        .status-icon {
-            font-size: 1.5em;
-            margin-right: 8px;
-        }
-        .status-text.positive { color: #28a745; }
-        .status-text.negative { color: #dc3545; }
-        .status-text.neutral { color: #ffc107; }
-
+        .indicator-card .date { font-size: 0.8em; color: #6c757d; font-weight: normal; }
+        .indicator-value { font-size: 2.2em; font-weight: bold; margin: 10px 0; color: #007bff; }
+        .indicator-status { display: flex; align-items: center; font-weight: bold; font-size: 1.1em; }
+        .status-icon { font-size: 1.5em; margin-right: 8px; }
         .analysis-section p {
-            font-size: 1.1em;
-            background-color: #e9ecef;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 5px solid #6c757d;
+            font-size: 1.1em; background-color: #e9ecef; padding: 20px;
+            border-radius: 8px; border-left: 5px solid #6c757d;
         }
         .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #dee2e6;
-            font-size: 0.9em;
-            color: #6c757d;
+            text-align: center; margin-top: 40px; padding-top: 20px;
+            border-top: 1px solid #dee2e6; font-size: 0.9em; color: #6c757d;
         }
+        /* 상태별 색상 정의 */
+        .positive-bg { background-color: #d4edda; border-color: #c3e6cb; }
+        .positive-text { color: #155724; }
+        .positive-icon { color: #28a745; }
+        .negative-bg { background-color: #f8d7da; border-color: #f5c6cb; }
+        .negative-text { color: #721c24; }
+        .negative-icon { color: #dc3545; }
+        .neutral-bg { background-color: #fff3cd; border-color: #ffeeba; }
+        .neutral-text { color: #856404; }
+        .neutral-icon { color: #ffc107; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <header class="header">
-            <h1>실시간 경제지표와 주식 시장 전망</h1>
-            <p>2025년 9월 30일 기준 | 대한민국 울산</p>
+            <h1>Live 경제 지표 대시보드</h1>
+            <p id="update-time"></p>
         </header>
 
         <h2 class="section-title">시장 종합 전망</h2>
-        
-        <div class="outlook-section neutral">
-            <div class="outlook-signal">😐</div>
-            <h3 class="outlook-title neutral">중립 / 혼조</h3>
-        </div>
+        <div id="outlook-section">
+            </div>
 
         <h2 class="section-title">핵심 지표 대시보드</h2>
-
-        <div class="indicator-grid">
-            <div class="indicator-card">
-                <h4>🇺🇸 장단기 금리차 <span class="date">(9/29)</span></h4>
-                <p class="indicator-value">-0.25%p</p> <div class="indicator-status">
-                    <span class="status-icon">⚠️</span>
-                    <span class="status-text neutral">역전폭 축소, 침체 우려 완화</span>
-                </div>
+        <div id="indicator-grid" class="indicator-grid">
             </div>
-
-            <div class="indicator-card">
-                <h4>🇰🇷 GDP 성장률 <span class="date">(2분기)</span></h4>
-                <p class="indicator-value">+0.7%</p> <div class="indicator-status">
-                    <span class="status-icon">👍</span>
-                    <span class="status-text positive">경기 회복세</span>
-                </div>
-            </div>
-
-            <div class="indicator-card">
-                <h4>🇰🇷 수출 증가율 <span class="date">(8월)</span></h4>
-                <p class="indicator-value">+3.1%</p> <div class="indicator-status">
-                    <span class="status-icon">📈</span>
-                    <span class="status-text positive">플러스 전환, 긍정적</span>
-                </div>
-            </div>
-
-            <div class="indicator-card">
-                <h4>🇰🇷 소비자물가지수 <span class="date">(8월)</span></h4>
-                <p class="indicator-value">2.7%</p> <div class="indicator-status">
-                    <span class="status-icon">✅</span>
-                    <span class="status-text positive">물가 안정세</span>
-                </div>
-            </div>
-
-            <div class="indicator-card">
-                <h4>🇺🇸 소비자물가지수 <span class="date">(8월)</span></h4>
-                <p class="indicator-value">3.5%</p> <div class="indicator-status">
-                    <span class="status-icon">😌</span>
-                    <span class="status-text positive">인플레이션 둔화 지속</span>
-                </div>
-            </div>
-            
-            <div class="indicator-card">
-                <h4>🇰🇷 실업률 <span class="date">(8월)</span></h4>
-                <p class="indicator-value">2.8%</p> <div class="indicator-status">
-                    <span class="status-icon">💪</span>
-                    <span class="status-text positive">완전고용 수준</span>
-                </div>
-            </div>
-        </div>
 
         <h2 class="section-title">종합 분석 및 해석</h2>
-
-        <div class="analysis-section">
-            <p>
-                <strong>현재 주식 시장의 핵심 관심사는 '연착륙'과 '기업 실적'입니다.</strong><br><br>
-                인플레이션은 안정적으로 관리되고 있으며(한국/미국 CPI), 가장 큰 우려였던 미국의 장단기 금리차 역전 폭이 축소되며 경기 침체에 대한 공포는 상당 부분 완화되었습니다. 한국 경제는 수출이 플러스로 전환되고 GDP가 회복세를 보이는 등 긍정적인 신호를 보내고 있습니다. 견조한 고용 시장은 경제의 기초 체력이 튼튼함을 보여줍니다.<br><br>
-                하지만 고금리 환경이 장기간 지속된 만큼, 기업들이 이를 이겨내고 실제 '실적 성장'을 보여줄 수 있을지가 관건입니다. 시장은 이제 '나쁜 소식이 좋은 소식(Bad news is good news)'인 단계를 지나, **'좋은 실적이 좋은 소식(Good news is good news)'**인 국면으로 진입하고 있습니다. 따라서 향후 발표될 기업들의 3분기 실적에 따라 시장의 방향성이 결정될 가능성이 높아 종합적인 전망은 <strong>'중립 / 혼조'</strong>로 판단됩니다.
-            </p>
-        </div>
-
-        <h2 class="section-title">향후 주요 일정</h2>
-        <ul>
-            <li>2025년 10월 10일: 한국은행 금융통화위원회 (기준금리 결정)</li>
-            <li>2025년 10월 15일: 미국 소비자물가지수(CPI) 발표</li>
-            <li>2025년 10월 28일: 미국 FOMC 기준금리 결정</li>
-        </ul>
+        <div id="analysis-section" class="analysis-section">
+            </div>
         
         <footer class="footer">
-            <p>&copy; 2025 Market Forecaster. All Rights Reserved.</p>
-            <p>본 페이지는 실시간 데이터 API 연동을 시뮬레이션한 결과이며, 실제 자동 업데이트되지 않습니다. 모든 투자의 책임은 투자자 본인에게 있습니다.</p>
+            <p>본 페이지는 JavaScript로 API 호출을 시뮬레이션하여 동적으로 생성되었습니다.</p>
+            <p>모든 투자의 책임은 투자자 본인에게 있습니다.</p>
         </footer>
     </div>
 
+<script>
+// --- JavaScript 코드 시작 ---
+
+// 페이지가 로드되면 main 함수를 실행합니다.
+document.addEventListener('DOMContentLoaded', function() {
+    main();
+});
+
+// 메인 로직을 실행하는 함수
+function main() {
+    // 1. (시뮬레이션) API를 통해 최신 경제 데이터를 가져옵니다.
+    const economicData = getEconomicDataFromAPI();
+
+    // 2. 각 지표를 분석하고 점수를 매깁니다.
+    const analyzedIndicators = analyzeIndicators(economicData.indicators);
+
+    // 3. 지표 분석 결과를 바탕으로 시장 전체의 전망을 도출합니다.
+    const marketOutlook = getMarketOutlook(analyzedIndicators);
+
+    // 4. 분석된 데이터를 화면에 동적으로 렌더링(표시)합니다.
+    renderDashboard(economicData, analyzedIndicators, marketOutlook);
+}
+
+// [시뮬레이션] 실제로는 서버 API를 호출해야 하는 부분입니다.
+// 여기서는 최신 데이터를 담은 JSON 객체를 반환합니다.
+function getEconomicDataFromAPI() {
+    return {
+        lastUpdated: "2025-09-30 08:00 KST",
+        indicators: [
+            { id: "yield_spread", name: "🇺🇸 장단기 금리차 (10Y-2Y)", value: -0.25, unit: "%p", date: "9/29" },
+            { id: "gdp_growth", name: "🇰🇷 GDP 성장률", value: 0.7, unit: "%", date: "2분기" },
+            { id: "export_growth", name: "🇰🇷 수출 증가율", value: 3.1, unit: "%", date: "8월" },
+            { id: "cpi_kor", name: "🇰🇷 소비자물가지수", value: 2.7, unit: "%", date: "8월" },
+            { id: "cpi_usa", name: "🇺🇸 소비자물가지수", value: 3.5, unit: "%", date: "8월" },
+            { id: "unemployment", name: "🇰🇷 실업률", value: 2.8, unit: "%", date: "8월" }
+        ]
+    };
+}
+
+// 각 경제 지표를 분석하고 'positive', 'neutral', 'negative' 상태와 해석을 추가하는 함수
+function analyzeIndicators(indicators) {
+    return indicators.map(indicator => {
+        let analysis = {};
+        switch (indicator.id) {
+            case 'yield_spread':
+                if (indicator.value < -0.1) {
+                    analysis = { status: 'negative', score: -2, text: '경기 침체 우려', icon: '🚨' };
+                } else if (indicator.value < 0) {
+                    analysis = { status: 'neutral', score: 0, text: '역전폭 축소, 우려 완화', icon: '⚠️' };
+                } else {
+                    analysis = { status: 'positive', score: 2, text: '정상 범위, 경기 확장', icon: '✅' };
+                }
+                break;
+            case 'gdp_growth':
+                if (indicator.value >= 0.7) {
+                    analysis = { status: 'positive', score: 2, text: '견조한 회복세', icon: '👍' };
+                } else if (indicator.value >= 0.3) {
+                    analysis = { status: 'neutral', score: 0, text: '완만한 성장', icon: '😐' };
+                } else {
+                    analysis = { status: 'negative', score: -2, text: '성장 둔화 우려', icon: '👎' };
+                }
+                break;
+            case 'export_growth':
+                if (indicator.value > 2.0) {
+                    analysis = { status: 'positive', score: 2, text: '플러스 전환, 긍정적', icon: '📈' };
+                } else if (indicator.value > 0) {
+                    analysis = { status: 'neutral', score: 0, text: '소폭 개선', icon: '📊' };
+                } else {
+                    analysis = { status: 'negative', score: -2, text: '수출 부진', icon: '📉' };
+                }
+                break;
+            case 'cpi_kor':
+            case 'cpi_usa':
+                if (indicator.value <= 3.0) {
+                    analysis = { status: 'positive', score: 1, text: '물가 안정세', icon: '😌' };
+                } else if (indicator.value <= 4.0) {
+                    analysis = { status: 'neutral', score: 0, text: '인플레이션 둔화', icon: '😐' };
+                } else {
+                    analysis = { status: 'negative', score: -1, text: '물가 압력 지속', icon: '🔥' };
+                }
+                break;
+            case 'unemployment':
+                if (indicator.value <= 3.0) {
+                    analysis = { status: 'positive', score: 1, text: '완전고용 수준', icon: '💪' };
+                } else {
+                    analysis = { status: 'negative', score: -1, text: '고용 시장 악화', icon: '😥' };
+                }
+                break;
+            default:
+                analysis = { status: 'neutral', score: 0, text: '데이터 분석 중', icon: '📊' };
+        }
+        return { ...indicator, ...analysis };
+    });
+}
+
+// 분석된 지표들의 점수를 합산하여 최종 시장 전망을 결정하는 함수
+function getMarketOutlook(analyzedIndicators) {
+    const totalScore = analyzedIndicators.reduce((acc, indicator) => acc + indicator.score, 0);
+
+    if (totalScore >= 4) {
+        return { status: 'positive', signal: '📈', title: '상승 기대', 
+                 analysis: "대부분의 경제 지표가 긍정적인 신호를 보내고 있습니다. 경기 확장과 물가 안정이 동시에 나타나며 투자 심리가 개선될 가능성이 높습니다. 특히 성장 관련 지표들의 호조가 돋보입니다." };
+    } else if (totalScore <= -2) {
+        return { status: 'negative', signal: '📉', title: '하락 우려', 
+                 analysis: "경기 침체 또는 둔화에 대한 우려가 커지고 있습니다. 장단기 금리차와 같은 핵심 선행지표가 부정적인 신호를 보내고 있으며, 이는 투자 심리를 위축시키는 주요 요인입니다. 보수적인 접근이 필요합니다." };
+    } else {
+        return { status: 'neutral', signal: '😐', title: '중립 / 혼조',
+                 analysis: "긍정적 요인과 부정적 요인이 혼재되어 시장의 방향성이 불분명합니다. 물가는 안정되고 있으나 성장에 대한 확신이 부족한 상태입니다. 향후 발표될 기업 실적이나 주요 정책 변화에 따라 시장의 방향이 결정될 가능성이 높습니다." };
+    }
+}
+
+// 분석된 모든 데이터를 기반으로 웹페이지의 HTML을 동적으로 생성하는 함수
+function renderDashboard(economicData, analyzedIndicators, marketOutlook) {
+    // 업데이트 시간 표시
+    document.getElementById('update-time').innerText = `마지막 업데이트: ${economicData.lastUpdated}`;
+
+    // 종합 전망 섹션 렌더링
+    const outlookSection = document.getElementById('outlook-section');
+    outlookSection.className = `${marketOutlook.status}-bg`;
+    outlookSection.innerHTML = `
+        <div class="outlook-signal">${marketOutlook.signal}</div>
+        <h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>
+    `;
+
+    // 핵심 지표 대시보드 렌더링
+    const indicatorGrid = document.getElementById('indicator-grid');
+    indicatorGrid.innerHTML = ''; // 기존 내용 초기화
+    analyzedIndicators.forEach(indicator => {
+        const card = document.createElement('div');
+        card.className = 'indicator-card';
+        card.innerHTML = `
+            <h4>${indicator.name} <span class="date">(${indicator.date})</span></h4>
+            <p class="indicator-value">${indicator.value}${indicator.unit}</p>
+            <div class="indicator-status">
+                <span class="status-icon">${indicator.icon}</span>
+                <span class="status-text ${indicator.status}-icon">${indicator.text}</span>
+            </div>
+        `;
+        indicatorGrid.appendChild(card);
+    });
+
+    // 종합 분석 섹션 렌더링
+    const analysisSection = document.getElementById('analysis-section');
+    analysisSection.innerHTML = `<p>${marketOutlook.analysis}</p>`;
+}
+
+</script>
 </body>
 </html>
