@@ -122,7 +122,7 @@ async function fetchYieldSpread() {
 
 // --- ★★★ 새로워진 한국은행 데이터 호출 함수 ★★★ ---
 async function fetchAllKoreanData() {
-    // 1. KeyStatisticList API를 호출하여 100대 지표를 모두 가져옵니다.
+    // 1. KeyStatisticList API를 호출합니다.
     const ecosApiUrl = `https://ecos.bok.or.kr/api/KeyStatisticList/${API_KEYS.ECOS}/json/kr/1/100`;
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
     const response = await fetch(finalUrl);
@@ -134,13 +134,17 @@ async function fetchAllKoreanData() {
     
     const allStats = data.KeyStatisticList.row;
 
-    // --- ★★★ 최종 검증된 STAT_NAME으로 수정 ★★★ ---
-    // 2. 현재 시점의 정확한 이름으로 데이터를 찾습니다.
-    const gdpData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실질 국내총생산(전분기대비 증감률)'));
+    // --- ★★★ 디버깅 코드 ★★★ ---
+    // API가 반환한 100개 지표 전체 목록을 콘솔에 출력합니다.
+    console.log("--- ECOS API 실제 응답 데이터 (100개 지표) ---");
+    console.log(allStats);
+    // --- ★★★ 디버깅 코드 끝 ★★★ ---
+
+    // 2. 키워드로 데이터를 찾습니다.
+    const gdpData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실질 국내총생산(전분기대비'));
     const exportData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('수출금액증감률(총, 전년동월대비)'));
-    const cpiData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('소비자물가지수(총지수, 전년동월대비 증감률)'));
-    const unemploymentData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실업률(계절변동조정, %)')); // 특수기호(%) 포함
-    // --- ★★★ 수정 끝 ★★★ ---
+    const cpiData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('소비자물가지수(총지수, 전년동월대비'));
+    const unemploymentData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실업률(계절변동조정'));
     
     // 3. 찾은 데이터를 대시보드 형식에 맞게 변환합니다.
     const formatData = (stat, displayName) => {
