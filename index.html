@@ -124,36 +124,65 @@ async function fetchEcosData(displayName, statCode, period) {
 // --- 분석 및 렌더링 함수 (이전과 유사) ---
 
 function analyzeIndicators(indicators) {
-    /* 각 지표별로 상태와 점수를 부여하는 로직 */
+    // 각 지표를 순회하며 상태와 점수를 부여합니다.
     return indicators.map(indicator => {
-        let analysis = {};
+        let analysis = {}; // 각 지표의 분석 결과를 담을 빈 객체
+
         switch (indicator.id) {
             case 'yield_spread':
-                if (indicator.value < -0.1) analysis = { status: 'negative', score: -2, text: '경기 침체 우려', icon: '🚨' };
-                else if (indicator.value < 0) analysis = { status: 'neutral', score: 0, text: '역전폭 축소', icon: '⚠️' };
-                else analysis = { status: 'positive', score: 2, text: '정상 범위', icon: '✅' };
-                break;
+                if (indicator.value < -0.1) {
+                    analysis = { status: 'negative', score: -2, text: '경기 침체 우려', icon: '🚨' };
+                } else if (indicator.value < 0) {
+                    analysis = { status: 'neutral', score: 0, text: '역전폭 축소', icon: '⚠️' };
+                } else {
+                    analysis = { status: 'positive', score: 2, text: '정상 범위', icon: '✅' };
+                }
+                break; // case 종료
+
             case 'GDP 성장률':
-                if (indicator.value >= 0.7) analysis = { status: 'positive', score: 2, text: '견조한 회복세', icon: '👍' };
-                else if (indicator.value >= 0.3) analysis = { status: 'neutral', score: 0, text: '완만한 성장', icon: '😐' };
-                else analysis = { status: 'negative', score: -2, text: '성장 둔화 우려', icon: '👎' };
+                if (indicator.value >= 0.7) {
+                    analysis = { status: 'positive', score: 2, text: '견조한 회복세', icon: '👍' };
+                } else if (indicator.value >= 0.3) {
+                    analysis = { status: 'neutral', score: 0, text: '완만한 성장', icon: '😐' };
+                } else {
+                    analysis = { status: 'negative', score: -2, text: '성장 둔화 우려', icon: '👎' };
+                }
                 break;
+
             case '수출 증가율':
-                if (indicator.value > 2.0) analysis = { status: 'positive', score: 2, text: '플러스 전환', icon: '📈' };
-                else analysis = { status: 'neutral', score: 0, text: '소폭 개선', icon: '📊' };
-                else analysis = { status: 'negative', score: -2, text: '수출 부진', icon: '📉' };
+                if (indicator.value > 2.0) {
+                    analysis = { status: 'positive', score: 2, text: '플러스 전환', icon: '📈' };
+                } else if (indicator.value >= 0) {
+                    analysis = { status: 'neutral', score: 0, text: '소폭 개선', icon: '📊' };
+                } else {
+                    analysis = { status: 'negative', score: -2, text: '수출 부진', icon: '📉' };
+                }
                 break;
+
             case '소비자물가지수':
-                if (indicator.value <= 3.0) analysis = { status: 'positive', score: 1, text: '물가 안정세', icon: '😌' };
-                else if (indicator.value <= 4.0) analysis = { status: 'neutral', score: 0, text: '인플레이션 둔화', icon: '😐' };
-                else analysis = { status: 'negative', score: -1, text: '물가 압력 지속', icon: '🔥' };
+                if (indicator.value <= 3.0) {
+                    analysis = { status: 'positive', score: 1, text: '물가 안정세', icon: '😌' };
+                } else if (indicator.value <= 4.0) {
+                    analysis = { status: 'neutral', score: 0, text: '인플레이션 둔화', icon: '😐' };
+                } else {
+                    analysis = { status: 'negative', score: -1, text: '물가 압력 지속', icon: '🔥' };
+                }
                 break;
+
             case '실업률':
-                if (indicator.value <= 3.0) analysis = { status: 'positive', score: 1, text: '완전고용 수준', icon: '💪' };
-                else analysis = { status: 'negative', score: -1, text: '고용 시장 악화', icon: '😥' };
+                if (indicator.value <= 3.0) {
+                    analysis = { status: 'positive', score: 1, text: '완전고용 수준', icon: '💪' };
+                } else {
+                    analysis = { status: 'negative', score: -1, text: '고용 시장 악화', icon: '😥' };
+                }
                 break;
-            default: analysis = { status: 'neutral', score: 0, text: '데이터 분석 중', icon: '📊' };
+                
+            default:
+                // 목록에 없는 예외적인 경우
+                analysis = { status: 'neutral', score: 0, text: '데이터 분석 중', icon: '📊' };
         }
+        
+        // 원본 indicator 데이터와 분석 결과를 합쳐서 반환
         return { ...indicator, ...analysis };
     });
 }
