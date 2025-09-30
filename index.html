@@ -95,6 +95,7 @@ async function fetchAllData() {
 }
 
 // --- 미국 장단기 금리차 데이터 호출 ---
+// --- 미국 장단기 금리차 데이터 호출 ---
 async function fetchYieldSpread() {
     const fredUrl10Y = `https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
     const fredUrl2Y = `https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
@@ -107,6 +108,16 @@ async function fetchYieldSpread() {
     const data10Y = await res10Y.json();
     const data2Y = await res2Y.json();
     
+    // --- ★★★ 디버깅 로그 추가 ★★★ ---
+    console.log("=== FRED 10년물 국채 데이터 ===");
+    console.log("전체 응답:", data10Y);
+    console.log("observations:", data10Y.observations);
+    
+    console.log("=== FRED 2년물 국채 데이터 ===");
+    console.log("전체 응답:", data2Y);
+    console.log("observations:", data2Y.observations);
+    // --- ★★★ 디버깅 로그 끝 ★★★ ---
+    
     if (!data10Y.observations || data10Y.observations.length === 0 || !data2Y.observations || data2Y.observations.length === 0) {
         throw new Error("FRED 금리 데이터를 가져오는 데 실패했습니다.");
     }
@@ -114,9 +125,16 @@ async function fetchYieldSpread() {
     const value10Y = parseFloat(data10Y.observations[0].value);
     const value2Y = parseFloat(data2Y.observations[0].value);
     
+    console.log("=== 파싱된 값 ===");
+    console.log("10년물:", value10Y);
+    console.log("2년물:", value2Y);
+    console.log("금리차:", value10Y - value2Y);
+    
+    const spread = value10Y - value2Y;
+    
     return {
         id: "yield_spread", name: "🇺🇸 장단기 금리차",
-        value: (value10Y - value2Y).toFixed(2), unit: "%p", date: data10Y.observations[0].date.substring(5)
+        value: parseFloat(spread.toFixed(2)), unit: "%p", date: data10Y.observations[0].date.substring(5)
     };
 }
 
