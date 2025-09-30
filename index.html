@@ -72,11 +72,12 @@ async function main() {
 async function fetchAllData() {
     const promises = [
         fetchYieldSpread(),
-        // --- ★★★ 통계 코드(STAT_CODE) 수정 ★★★ ---
-        fetchEcosData('GDP 성장률', '2.1.1', 'Q'),         // 200Y001 -> 2.1.1 (실질 국내총생산(전기대비 증감률))
-        fetchEcosData('수출 증가율', '4.1.1', 'M'),         // 403Y003 -> 4.1.1 (수출금액증감률(총))
-        fetchEcosData('소비자물가지수', '010Y002', 'M'),   // 901Y001 -> 010Y002 (소비자물가등락률(전년동월대비))
-        fetchEcosData('실업률', 'I2A00', 'M')           // 401Y003 -> I2A00 (실업률(계절변동조정))
+        // --- ★★★ 통계표 코드(tableCode) 추가 ★★★ ---
+        // fetchEcosData('이름', '통계표코드', '통계코드', '주기') 형식으로 호출
+        fetchEcosData('GDP 성장률', '102Y004', '200Y001', 'Q'), // 국민소득 > 주요지표 > 경제활동별 GDP 및 GDI
+        fetchEcosData('수출 증가율', '200Y009', '403Y003', 'M'), // 대외거래 > 주요지표 > 수출입총괄
+        fetchEcosData('소비자물가지수', '901Y001', '010Y002', 'M'), // 물가 > 주요지표 > 소비자물가지수
+        fetchEcosData('실업률', '401Y003', 'I2A00', 'M')      // 경기 > 주요지표 > 실업률
         // --- ★★★ 통계 코드(STAT_CODE) 수정 끝 ★★★ ---
     ];
     return await Promise.all(promises);
@@ -112,7 +113,7 @@ async function fetchYieldSpread() {
     };
 }
 
-async function fetchEcosData(displayName, statCode, period) {
+async function fetchEcosData(displayName, tableCode, statCode, period) {
     const now = new Date();
     let endTime, startTime;
 
@@ -128,9 +129,9 @@ async function fetchEcosData(displayName, statCode, period) {
         startTime = `${year - 1}${month}`;
     }
     
-    // --- ★★★ 최종 수정된 URL 구조 ★★★ ---
-    // ECOS API 공식 명세에 따라, 주요 파라미터를 경로(path)에 포함시키는 방식으로 수정합니다.
-    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/${statCode}/${period}/${startTime}/${endTime}`;
+    // --- ★★★ 수정된 URL 구조 ★★★ ---
+    // 통계표 코드(tableCode)를 경로에 추가합니다.
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/${tableCode}/${period}/${startTime}/${endTime}/${statCode}`;
     // --- ★★★ 최종 수정된 부분 끝 ★★★
 
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
@@ -160,7 +161,7 @@ async function fetchEcosData(displayName, statCode, period) {
         };
 
     } catch (error) {
-        console.error(`[디버깅 2] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
+        console.error(`[디버깅] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
         console.error(`Failed to fetch ${displayName}:`, error);
         return {
             id: displayName, name: `🇰🇷 ${displayName}`,
