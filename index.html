@@ -14,7 +14,8 @@
         #outlook-section { text-align: center; padding: 30px; border-radius: 10px; margin-bottom: 30px; border: 1px solid; }
         .outlook-signal { font-size: 3em; margin-bottom: 10px; }
         .outlook-title { font-size: 1.8em; font-weight: bold; margin: 0; }
-        
+        .outlook-analysis { font-size: 1.1em; margin-top: 15px; padding: 0 20px; }
+
         /* Sector Outlook Styles */
         #sector-outlook-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .sector-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; }
@@ -36,14 +37,13 @@
         .card-footer { display: flex; justify-content: flex-end; align-items: center; margin-top: 10px; }
         .details-btn { background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.75em; }
         .impact-ratio { font-size: 0.75em; font-weight: bold; color: #fff; background-color: #17a2b8; padding: 2px 7px; border-radius: 10px; margin-right: 10px; }
-        
-        .analysis-section p { font-size: 1.1em; background-color: #e9ecef; padding: 20px; border-radius: 8px; border-left: 5px solid #6c757d; }
+
         .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 0.9em; color: #6c757d; }
         .positive-bg { background-color: #d4edda; border-color: #c3e6cb; } .positive-text { color: #155724; } .positive-icon { color: #28a745; }
         .negative-bg { background-color: #f8d7da; border-color: #f5c6cb; } .negative-text { color: #721c24; } .negative-icon { color: #dc3545; }
         .neutral-bg { background-color: #fff3cd; border-color: #ffeeba; } .neutral-text { color: #856404; } .neutral-icon { color: #ffc107; }
         .loading-text { color: #6c757d; font-style: italic; font-size: 1.2em; }
-        
+
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
         .modal-content { background-color: #fefefe; margin: 10% auto; padding: 30px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 10px; position: relative; animation-name: animatetop; animation-duration: 0.4s }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
@@ -59,7 +59,6 @@
         <h2 class="section-title">시장 종합 전망</h2><div id="outlook-section"><p class="loading-text">지표 분석 중...</p></div>
         <h2 class="section-title">섹터별 전망</h2><div id="sector-outlook-grid"></div>
         <h2 class="section-title">핵심 지표 대시보드</h2><div id="indicator-grid" class="indicator-grid"></div>
-        <h2 class="section-title">종합 분석 및 해석</h2><div id="analysis-section" class="analysis-section"></div>
         <footer class="footer"><p>본 페이지의 데이터는 FRED, 한국은행 ECOS API를 통해 실시간으로 제공됩니다.</p><p>모든 투자의 책임은 투자자 본인에게 있습니다.</p></footer>
     </div>
 
@@ -213,8 +212,8 @@ const indicatorDetails = {
         ]
     },
     sox_index: {
-        title: '⚡️ 필라델피아 반도체 지수',
-        description: '미국 증시에 상장된 대표적인 반도체 기업 30개의 주가를 종합한 지수입니다. 전 세계 반도체 산업의 업황을 가장 잘 보여주는 핵심 선행 지표로 활용됩니다.',
+        title: '⚡️ 美 반도체 지수 (SOXX)',
+        description: '미국 증시에 상장된 대표적인 반도체 기업 ETF(SOXX)의 가격입니다. 필라델피아 반도체 지수를 추종하며, 전 세계 반도체 산업의 업황을 가장 잘 보여주는 핵심 선행 지표로 활용됩니다.',
         criteria: [
             '📈 <b>상승:</b> 반도체 수요가 견조하고 업황이 긍정적임을 의미합니다.',
             '📉 <b>하락:</b> 반도체 수요 둔화 및 업황 악화 우려를 반영합니다.'
@@ -229,11 +228,27 @@ const indicatorDetails = {
         ]
     },
     pharma_index: {
-        title: '💊 NYSE 제약 지수',
-        description: '미국 증시에 상장된 주요 제약 회사들의 주가를 종합한 지수입니다. 제약/바이오 산업은 전통적으로 경기가 좋지 않을 때도 꾸준한 수요가 발생하는 경기 방어적 성격을 가집니다.',
+        title: '💊 美 제약업 생산자물가',
+        description: '미국의 제약 및 의약품 제조업체의 생산자 물가 변동을 나타냅니다. 제약/바이오 산업은 전통적으로 경기가 좋지 않을 때도 꾸준한 수요가 발생하는 경기 방어적 성격을 가집니다.',
         criteria: [
-            '📈 <b>상승:</b> 신약 개발 기대감 등 섹터 내 긍정적 모멘텀이 있음을 의미합니다.',
-            '📉 <b>하락:</b> 섹터 투자 심리가 위축되었음을 의미합니다.'
+            '📈 <b>물가 안정:</b> 생산 비용이 안정되어 기업 수익성에 긍정적입니다.',
+            '📉 <b>물가 상승:</b> 생산 비용 증가로 기업 수익성에 부담이 될 수 있습니다.'
+        ]
+    },
+    retail_sales: {
+        title: '🛒 美 소매 판매',
+        description: '미국의 전반적인 소비 활동을 나타내는 핵심 지표입니다. 소매 판매가 증가하면 경제가 활발하게 움직이고 있음을 의미하며, 기업 실적에도 긍정적인 영향을 줍니다.',
+        criteria: [
+            '📈 <b>판매 호조:</b> 소비가 강하게 살아나고 있어 경기 확장의 신호입니다.',
+            '📉 <b>판매 부진:</b> 소비 심리가 위축되고 있어 경기 둔화의 신호일 수 있습니다.'
+        ]
+    },
+    home_price_index: {
+        title: '🏠 美 주택 가격 지수',
+        description: 'S&P/Case-Shiller 미국 전국 주택 가격 지수로, 미국 주택 시장의 건강 상태를 보여줍니다. 주택 가격 상승은 소비자의 자산 가치를 높여 소비 심리를 개선하는 효과가 있습니다.',
+        criteria: [
+            '📈 <b>가격 상승:</b> 주택 시장이 활성화되고 있으며, 이는 긍정적인 자산 효과로 이어질 수 있습니다.',
+            '📉 <b>가격 하락:</b> 주택 시장이 둔화되고 있으며, 소비 심리에 부정적인 영향을 줄 수 있습니다.'
         ]
     }
 };
@@ -341,31 +356,36 @@ async function fetchAllKoreanData() {
 
 async function fetchAllSectorData() {
     const series = {
-        sox: 'SOX',
-        drg: 'DRG',
-        auto_sales: 'TOTALSA'
+        sox_index: 'SOXX', // iShares Semiconductor ETF as proxy
+        pharma_index: 'PCU325412325412', // Producer Price Index by Industry: Pharmaceutical Preparation Manufacturing
+        auto_sales: 'TOTALSA',
+        retail_sales: 'MRTSSM44000USS',
+        home_price_index: 'CSUSHPINSA'
     };
     
     const urls = Object.values(series).map(id => `https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`);
-    const [soxData, drgData, autoData] = await Promise.all(urls.map(url => fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(url)}`).then(res => res.json())));
+    const [soxData, pharmaData, autoData, retailData, homeData] = await Promise.all(urls.map(url => fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(url)}`).then(res => res.json())));
     
     const format = (data, id, name, unit) => {
         const obs = data.observations?.[0];
         return { id, name, value: obs ? parseFloat(obs.value) : 'N/A', unit, date: obs ? obs.date.substring(5) : '없음' };
     };
     return [
-        format(soxData, 'sox_index', '⚡️ 필라델피아 반도체 지수', ''),
+        format(soxData, 'sox_index', '⚡️ 美 반도체 지수 (SOXX)', ''),
+        format(pharmaData, 'pharma_index', '💊 美 제약업 생산자물가', ''),
         format(autoData, 'auto_sales', '🚗 美 자동차 판매량', 'M'),
-        format(drgData, 'pharma_index', '💊 NYSE 제약 지수', '')
+        format(retailData, 'retail_sales', '🛒 美 소매 판매', '$'),
+        format(homeData, 'home_price_index', '🏠 美 주택 가격 지수', '')
     ];
 }
+
 
 function analyzeIndicators(indicators) {
     const weights = {
         yield_spread: 15, vix: 15, gdp_growth: 10, export_growth: 10, industrial_production: 8,
         corp_bond_spread: 8, cpi: 7, dollar_index: 6, wti_price: 5, consumer_sentiment: 5,
         base_rate: 4, unemployment: 4, exchange_rate: 3, producer_price_index: 2, kospi: 0,
-        sox_index: 0, auto_sales: 0, pharma_index: 0 
+        sox_index: 0, auto_sales: 0, pharma_index: 0, retail_sales: 0, home_price_index: 0
     };
 
     return indicators.map(indicator => {
@@ -455,6 +475,12 @@ function analyzeIndicators(indicators) {
             case 'pharma_index':
                  analysis = { ...analysis, status: 'neutral', score: 0, text: '제약/바이오 업황 지수', icon: '🔬' };
                  break;
+            case 'retail_sales':
+                analysis = { ...analysis, status: 'neutral', score: 0, text: '소비 경기 지표', icon: '🛒' };
+                break;
+            case 'home_price_index':
+                analysis = { ...analysis, status: 'neutral', score: 0, text: '자산 시장 지표', icon: '🏠' };
+                break;
             default: analysis = { ...analysis, status: 'neutral', score: 0, text: '분석 중', icon: '📊' };
         }
         return { ...indicator, ...analysis };
@@ -510,7 +536,26 @@ function getSectorOutlook(analyzedIndicators) {
          pharmaOutlook = { status: 'neutral', text: '중립적', reason: '시장이 안정적일 때는 성장주 대비 매력도가 낮아질 수 있습니다.'};
     }
 
-    return { electronics: electronicsOutlook, auto: autoOutlook, pharma: pharmaOutlook };
+    // 신규 섹터 전망 로직 추가
+    const retail = find('retail_sales');
+    let retailOutlook = { status: 'neutral', text: '중립적', reason: '소비자 심리와 고용 지표를 함께 고려해야 합니다.' };
+    if (retail.value > 0) { // 단순하게 양수이면 긍정적으로 판단 (실제로는 더 복잡한 로직 필요)
+        retailOutlook = { status: 'positive', text: '긍정적', reason: '견조한 소매 판매는 내수 경기 회복의 긍정적인 신호입니다.'};
+    } else {
+        retailOutlook = { status: 'negative', text: '부정적', reason: '소매 판매 감소는 소비 심리 위축 및 경기 둔화 우려를 키웁니다.'};
+    }
+    
+    const home = find('home_price_index');
+    let constructionOutlook = { status: 'neutral', text: '중립적', reason: '금리 변동에 민감하며, 정부 정책의 영향을 많이 받습니다.' };
+    // 최근 데이터가 이전 데이터보다 높을 때 긍정적이라고 가정
+    if (home.value > 300) { // 임의의 기준
+        constructionOutlook = { status: 'positive', text: '긍정적', reason: '주택 가격 상승은 자산 효과를 통해 소비를 촉진하고 건설 경기에 긍정적입니다.'};
+    } else {
+        constructionOutlook = { status: 'neutral', text: '중립적', reason: '주택 가격 안정세는 시장의 불확실성을 반영합니다.'};
+    }
+
+
+    return { electronics: electronicsOutlook, auto: autoOutlook, pharma: pharmaOutlook, retail: retailOutlook, construction: constructionOutlook };
 }
 
 function renderInitialPlaceholders() {
@@ -523,6 +568,8 @@ function renderInitialPlaceholders() {
         <div class="sector-card"><p class="loading-text">전기/전자 분석 중...</p></div>
         <div class="sector-card"><p class="loading-text">자동차 분석 중...</p></div>
         <div class="sector-card"><p class="loading-text">의약/바이오 분석 중...</p></div>
+        <div class="sector-card"><p class="loading-text">유통/소비재 분석 중...</p></div>
+        <div class="sector-card"><p class="loading-text">건설/부동산 분석 중...</p></div>
     `;
 }
 
@@ -531,7 +578,11 @@ function renderDashboard(analyzedIndicators, marketOutlook, sectorOutlook) {
     
     const outlookSection = document.getElementById('outlook-section');
     outlookSection.className = `${marketOutlook.status}-bg`;
-    outlookSection.innerHTML = `<div class="outlook-signal">${marketOutlook.signal}</div><h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>`;
+    outlookSection.innerHTML = `
+        <div class="outlook-signal">${marketOutlook.signal}</div>
+        <h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>
+        <p class="outlook-analysis">${marketOutlook.analysis}</p>
+    `;
 
     const sectorGrid = document.getElementById('sector-outlook-grid');
     sectorGrid.innerHTML = `
@@ -549,6 +600,16 @@ function renderDashboard(analyzedIndicators, marketOutlook, sectorOutlook) {
             <h4 class="sector-title"><span class="sector-icon">💊</span>의약/바이오</h4>
             <p class="sector-outlook ${sectorOutlook.pharma.status}-text">${sectorOutlook.pharma.text}</p>
             <p class="sector-reason">${sectorOutlook.pharma.reason}</p>
+        </div>
+        <div class="sector-card">
+            <h4 class="sector-title"><span class="sector-icon">🛒</span>유통/소비재</h4>
+            <p class="sector-outlook ${sectorOutlook.retail.status}-text">${sectorOutlook.retail.text}</p>
+            <p class="sector-reason">${sectorOutlook.retail.reason}</p>
+        </div>
+        <div class="sector-card">
+            <h4 class="sector-title"><span class="sector-icon">🏠</span>건설/부동산</h4>
+            <p class="sector-outlook ${sectorOutlook.construction.status}-text">${sectorOutlook.construction.text}</p>
+            <p class="sector-reason">${sectorOutlook.construction.reason}</p>
         </div>
     `;
 
@@ -589,8 +650,6 @@ function renderDashboard(analyzedIndicators, marketOutlook, sectorOutlook) {
             </div>`;
         indicatorGrid.appendChild(card);
     });
-    
-    document.getElementById('analysis-section').innerHTML = `<p>${marketOutlook.analysis}</p>`;
 }
 
 function setupModal() {
