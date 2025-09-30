@@ -109,6 +109,8 @@ async function fetchEcosData(displayName, statCode, period) {
     // 프록시 URL을 allorigins.win으로 변경
     const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(ECOS_URL)}`);
     const data = JSON.parse((await response.json()).contents);
+
+    console.log(data); // <-- 이 줄을 추가해서 실제 응답을 확인!
     
     const latestData = data.StatisticSearch.row.pop();
     const dateStr = latestData.TIME;
