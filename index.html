@@ -111,33 +111,32 @@ async function fetchYieldSpread() {
     };
 }
 
+// index.html 파일의 fetchEcosData 함수를 아래 코드로 교체하세요.
+
 async function fetchEcosData(displayName, statCode, period) {
-    // --- 날짜 계산 로직 수정 ---
     const now = new Date();
     let endTime, startTime;
 
     if (period === 'Q') { // 분기별 데이터 처리
         const year = now.getFullYear();
-        // 현재 분기 (1, 2, 3, 4)
-        const quarter = Math.floor(now.getMonth() / 3) + 1; 
+        const quarter = Math.floor(now.getMonth() / 3) + 1;
         endTime = `${year}Q${quarter}`;
-        // 1년 전 데이터부터 조회
         startTime = `${year - 1}Q${quarter}`;
     } else { // 월별 데이터 처리
         const year = now.getFullYear();
-        // 현재 월 (1~12). padStart로 01, 02월 처리
         const month = (now.getMonth() + 1).toString().padStart(2, '0');
         endTime = `${year}${month}`;
-        // 1년 전 데이터부터 조회
         startTime = `${year - 1}${month}`;
     }
-    // --- 날짜 계산 로직 수정 끝 ---
-
-    // ECOS API URL에 startTime과 endTime을 모두 포함하여 요청
-    const ECOS_URL = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
+    
+    // ECOS API URL 전체를 변수에 저장합니다.
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
+    
+    // 우리 서버(proxy.js)로 보낼 최종 URL. ecosApiUrl 전체를 encodeURIComponent로 감싸줍니다.
+    const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
     
     try {
-        const response = await fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ECOS_URL)}`);
+        const response = await fetch(finalUrl); // 수정된 최종 URL 사용
         const data = await response.json();
 
         if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
