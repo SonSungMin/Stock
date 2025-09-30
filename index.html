@@ -139,8 +139,8 @@ async function fetchAllKoreanData() {
     // --- ★★★ 디버깅 코드 끝 ★★★ ---
     
     // KEYSTAT_NAME 필드를 사용하여 데이터 매칭 (실제 API 응답 값에 맞춤)
-    const gdpData = allStats.find(stat => stat.CLASS_NAME === '성장·고용·물가' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('GDP'));
-    const exportData = allStats.find(stat => stat.CLASS_NAME === '무역·국제수지' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('수출'));
+    const gdpData = allStats.find(stat => stat.CLASS_NAME === '소득' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('GDP(명목, 계절조정)'));
+    const exportData = allStats.find(stat => stat.CLASS_NAME === '성장률' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('재화의 수출 증감률(실질, 계절조정 전기대비)'));
     const cpiData = allStats.find(stat => stat.CLASS_NAME === '소비자/생산자 물가' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('소비자물가지수'));
     const unemploymentData = allStats.find(stat => stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('실업률'));
     
