@@ -356,7 +356,7 @@ async function fetchAllKoreanData() {
 
 async function fetchAllSectorData() {
     const series = {
-        sox_index: 'SOXPH', // Philadelphia SE Semiconductor Index
+        sox_index: 'NASDAQSOX', // PHLX Semiconductor Index
         pharma_index: 'PCU325412325412', // Producer Price Index by Industry: Pharmaceutical Preparation Manufacturing
         auto_sales: 'TOTALSA',
         retail_sales: 'MRTSSM44000USS',
@@ -371,7 +371,7 @@ async function fetchAllSectorData() {
         return { id, name, value: obs ? parseFloat(obs.value) : 'N/A', unit, date: obs ? obs.date.substring(5) : '없음' };
     };
     return [
-        format(soxData, 'sox_index', '⚡️ 美 반도체 지수 (SOXX)', ''),
+        format(soxData, 'sox_index', '⚡️ PHLX 반도체 지수 (SOX)', ''),
         format(pharmaData, 'pharma_index', '💊 美 제약업 생산자물가', ''),
         format(autoData, 'auto_sales', '🚗 美 자동차 판매량', 'M'),
         format(retailData, 'retail_sales', '🛒 美 소매 판매', '$'),
