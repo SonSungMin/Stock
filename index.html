@@ -127,9 +127,9 @@ async function fetchEcosData(displayName, statCode, period) {
         startTime = `${year - 1}${month}`;
     }
     
-    // --- ★★★ 최종 수정된 부분 ★★★ ---
-    // 데이터 개수 지정을 ECOS API 규칙에 맞게 '시작번호/끝번호' (1/10) 형식으로 수정
-    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
+    // --- ★★★ 최종 수정된 URL 구조 ★★★ ---
+    // ECOS API 공식 명세에 따라, 주요 파라미터를 경로(path)에 포함시키는 방식으로 수정합니다.
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/${statCode}/${period}/${startTime}/${endTime}`;
     // --- ★★★ 최종 수정된 부분 끝 ★★★
 
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
@@ -141,14 +141,14 @@ async function fetchEcosData(displayName, statCode, period) {
         }
         const data = await response.json();
 
+        if (data.StatisticSearch.list_total_count === 0) {
+            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 없습니다.`);
+        }
+
         if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
             throw new Error(`ECOS API Error for ${displayName}: ${data.RESULT.MESSAGE}`);
         }
         
-        if (!data.StatisticSearch || !data.StatisticSearch.row || data.StatisticSearch.row.length === 0) {
-             throw new Error(`${displayName} 데이터를 찾을 수 없습니다.`);
-        }
-
         const latestData = data.StatisticSearch.row.pop();
         const dateStr = latestData.TIME;
 
@@ -159,7 +159,7 @@ async function fetchEcosData(displayName, statCode, period) {
         };
 
     } catch (error) {
-        console.error(`[디버깅] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
+        console.error(`[디버깅 1] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
         console.error(`Failed to fetch ${displayName}:`, error);
         return {
             id: displayName, name: `🇰🇷 ${displayName}`,
