@@ -117,25 +117,29 @@ async function fetchYieldSpread() {
     };
 }
 
-async function fetchEcosData(displayName, statCode, period, ...itemCodes) {
+async function fetchEcosData(displayName, tableCode, period, ...itemCodes) {
     const now = new Date();
     let endTime, startTime;
 
+    // 조회 종료 시점은 항상 현재로 설정
     if (period === 'Q') {
         const year = now.getFullYear();
         const quarter = Math.floor(now.getMonth() / 3) + 1; 
         endTime = `${year}Q${quarter}`;
-        startTime = `${year - 1}Q${quarter}`;
+        startTime = `${year - 2}Q${quarter}`; // 2년 전부터 조회하여 데이터 공백 방지
     } else {
         const year = now.getFullYear();
         const month = (now.getMonth() + 1).toString().padStart(2, '0');
         endTime = `${year}${month}`;
-        startTime = `${year - 1}${month}`;
+        startTime = `${year - 2}${month}`; // 2년 전부터 조회하여 데이터 공백 방지
     }
     
-    // 최종 검증된 URL 구조
+    // --- ★★★ 수정된 URL 구조 ★★★ ---
+    // 시작일과 종료일을 지정하여 해당 기간의 데이터를 모두 요청합니다.
     const itemCodePath = itemCodes.join('/');
-    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/${statCode}/${period}/${startTime}/${endTime}/${itemCodePath}`;
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/${tableCode}/${period}/${startTime}/${endTime}/${itemCodePath}`;
+    // --- ★★★ 수정 끝 ★★★ ---
+
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
     
     try {
@@ -144,26 +148,26 @@ async function fetchEcosData(displayName, statCode, period, ...itemCodes) {
             throw new Error(`서버 응답 오류: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
-        
-        // ECOS 응답에 StatisticSearch 키가 없는 경우 (가장 흔한 에러)
-        if (!data.StatisticSearch) {
-            // 실제 에러 메시지가 있는지 확인하고 보여줍니다.
-            if(data.RESULT) {
-                throw new Error(`ECOS API Error: ${data.RESULT.MESSAGE}`);
-            }
-            throw new Error('ECOS API로부터 유효한 응답을 받지 못했습니다.');
+
+        if (!data.StatisticSearch || data.StatisticSearch.list_total_count === 0) {
+            // ECOS는 데이터가 없어도 에러를 반환하지 않으므로, 직접 확인해야 합니다.
+            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 조회 조건이 잘못되었습니다.`);
         }
 
-        if (data.StatisticSearch.list_total_count === 0) {
-            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 없습니다.`);
+        if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
+            throw new Error(`ECOS API Error for ${displayName}: ${data.RESULT.MESSAGE}`);
         }
         
+        // --- ★★★ '가장 최신 데이터'를 찾는 로직 ★★★ ---
+        // 받아온 여러 데이터 중 가장 마지막 데이터가 최신 데이터입니다.
         const latestData = data.StatisticSearch.row.pop();
         const dateStr = latestData.TIME;
+        // --- ★★★ 로직 끝 ★★★ ---
 
         return {
             id: displayName, name: `🇰🇷 ${displayName}`,
             value: parseFloat(latestData.DATA_VALUE), unit: "%",
+            // 받아온 최신 데이터의 실제 날짜를 표시
             date: period === 'Q' ? `${dateStr.slice(0,4)}년 ${dateStr.slice(5)}분기` : `${dateStr.slice(4)}월`
         };
 
