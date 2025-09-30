@@ -160,7 +160,7 @@ async function fetchEcosData(displayName, statCode, period) {
         };
 
     } catch (error) {
-        console.error(`[디버깅 1] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
+        console.error(`[디버깅 2] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
         console.error(`Failed to fetch ${displayName}:`, error);
         return {
             id: displayName, name: `🇰🇷 ${displayName}`,
