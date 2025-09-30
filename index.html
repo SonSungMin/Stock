@@ -72,14 +72,16 @@ async function main() {
 async function fetchAllData() {
     const promises = [
         fetchYieldSpread(),
-        // --- ★★★ 최종 검증된 통계 코드 적용 ★★★ ---
-        // fetchEcosData('이름', '주요 통계코드', '주기', '항목 코드1'...) 형식으로 호출
+        // GDP 성장률 (분기)
         fetchEcosData('GDP 성장률', '102Y004', 'Q', '200Y001'),
-        fetchEcosData('수출 증가율', '200Y009', 'M', '403Y003'),
-        // 소비자물가지수는 세부 항목 코드 없이 '주요 통계 코드'만으로 호출합니다.
+        // 소비자물가지수 (월별)
         fetchEcosData('소비자물가지수', '901Y001', 'M'),
-        fetchEcosData('실업률', '401Y003', 'M', 'I2A00')
-        // --- ★★★ 수정 끝 ★★★ ---
+        // 수출금액증감률 (월별)
+        fetchEcosData('수출 증가율', '200Y009', 'M', '403Y003'),
+        // 실업률 (월별)
+        fetchEcosData('실업률', '401Y003', 'M', 'I2A00'),
+        // 원/달러 환율 (일별) - 필요 시 추가
+        // fetchEcosData('원/달러 환율', '402Y007', 'D', '0000001'),
     ];
     return await Promise.all(promises);
 }
