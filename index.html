@@ -132,14 +132,22 @@ async function fetchAllKoreanData() {
     }
     
     const allStats = data.KeyStatisticList.row;
-    
-    // --- ★★★ 실제 STAT_NAME과 검색 키워드 최종 일치 ★★★ ---
-    // API가 실제로 반환하는 정확한 이름으로 데이터를 찾습니다.
-    const gdpData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME === '실질 국내총생산(전분기대비 증감률)');
-    const exportData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME === '수출금액증감률(총, 전년동월대비)');
-    const cpiData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME === '소비자물가지수(총지수, 전년동월대비 증감률)');
-    const unemploymentData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME === '실업률(계절변동조정, %)');
-    // --- ★★★ 수정 끝 ★★★ ---
+
+    // --- ★★★ 디버깅 코드 ★★★ ---
+    console.log("--- ECOS API 실제 응답 데이터 (100개 지표 전체) ---");
+    // 보기 편하도록 표(table) 형식으로 출력합니다.
+    console.table(allStats); 
+
+    // 'GDP' 또는 '국내총생산' 키워드를 포함하는 모든 항목을 찾아봅니다.
+    const gdpCandidates = allStats.filter(stat => stat.STAT_NAME && (stat.STAT_NAME.includes('GDP') || stat.STAT_NAME.includes('국내총생산')));
+    console.log("--- 'GDP' 또는 '국내총생산' 포함 후보 데이터 ---");
+    console.table(gdpCandidates);
+    // --- ★★★ 디버깅 코드 끝 ★★★ ---
+
+    const gdpData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실질 국내총생산(전분기대비'));
+    const exportData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('수출금액증감률(총, 전년동월대비)'));
+    const cpiData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('소비자물가지수(총지수, 전년동월대비'));
+    const unemploymentData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실업률(계절변동조정'));
     
     const formatData = (stat, displayName) => {
         if (!stat) return { id: displayName, name: `🇰🇷 ${displayName}`, value: 'N/A', unit: '', date: '없음' };
@@ -147,11 +155,8 @@ async function fetchAllKoreanData() {
         let date = stat.CYCLE === '분기' ? `${stat.TIME.slice(0,4)}년 ${stat.TIME.slice(4)}` : `${parseInt(stat.TIME.slice(4))}월`;
 
         return {
-            id: displayName,
-            name: `🇰🇷 ${displayName}`,
-            value: parseFloat(stat.DATA_VALUE),
-            unit: stat.UNIT_NAME,
-            date: date
+            id: displayName, name: `🇰🇷 ${displayName}`,
+            value: parseFloat(stat.DATA_VALUE), unit: stat.UNIT_NAME, date: date
         };
     };
 
