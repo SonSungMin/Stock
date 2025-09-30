@@ -84,15 +84,15 @@ async function fetchAllData() {
 // --- API 데이터 호출 함수들 ---
 
 async function fetchYieldSpread() {
-    // 프록시 URL을 corsproxy.io로 변경
-    const URL_10Y = `https://corsproxy.io/?${encodeURIComponent('https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=' + API_KEYS.FRED + '&file_type=json&sort_order=desc&limit=1')}`;
-    const URL_2Y = `https://corsproxy.io/?${encodeURIComponent('https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key=' + API_KEYS.FRED + '&file_type=json&sort_order=desc&limit=1')}`;
+    // 프록시 URL을 allorigins.win으로 변경
+    const URL_10Y = `https://api.allorigins.win/get?url=${encodeURIComponent('https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=' + API_KEYS.FRED + '&file_type=json&sort_order=desc&limit=1')}`;
+    const URL_2Y = `https://api.allorigins.win/get?url=${encodeURIComponent('https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key=' + API_KEYS.FRED + '&file_type=json&sort_order=desc&limit=1')}`;
     
     const [res10Y, res2Y] = await Promise.all([fetch(URL_10Y), fetch(URL_2Y)]);
     
-    // corsproxy.io는 바로 JSON을 반환하므로 .contents 파싱 과정이 불필요
-    const data10Y = await res10Y.json();
-    const data2Y = await res2Y.json();
+    // allorigins는 실제 JSON 데이터를 'contents' 필드에 문자열로 담아주므로, 한 번 더 파싱해야 합니다.
+    const data10Y = JSON.parse((await res10Y.json()).contents);
+    const data2Y = JSON.parse((await res2Y.json()).contents);
 
     const value10Y = parseFloat(data10Y.observations[0].value);
     const value2Y = parseFloat(data2Y.observations[0].value);
@@ -106,9 +106,9 @@ async function fetchYieldSpread() {
 async function fetchEcosData(displayName, statCode, period) {
     const ECOS_URL = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&END_TIME=202509`;
     
-    // 프록시 URL을 corsproxy.io로 변경
-    const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(ECOS_URL)}`);
-    const data = await response.json();
+    // 프록시 URL을 allorigins.win으로 변경
+    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(ECOS_URL)}`);
+    const data = JSON.parse((await response.json()).contents);
     
     const latestData = data.StatisticSearch.row.pop();
     const dateStr = latestData.TIME;
