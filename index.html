@@ -50,24 +50,35 @@ const API_KEYS = {
 
 document.addEventListener('DOMContentLoaded', main);
 
+document.addEventListener('DOMContentLoaded', main);
+
 async function main() {
-    //if (API_KEYS.FRED.includes('') || API_KEYS.ECOS.includes('')) {
-    //    alert('JavaScript 코드 상단에 API 키를 먼저 입력해주세요.');
-    //    return;
-    //}
+    if (API_KEYS.FRED.includes('여기에') || API_KEYS.ECOS.includes('여기에')) {
+        alert('JavaScript 코드 상단에 API 키를 먼저 입력해주세요.');
+        return;
+    }
     
     renderInitialPlaceholders();
 
     try {
-        const indicators = await fetchAllData();
-        const analyzedIndicators = analyzeIndicators(indicators);
+        // 미국/한국 데이터를 각각 호출합니다.
+        const [yieldData, koreanIndicators] = await Promise.all([
+            fetchYieldSpread(),
+            fetchAllKoreanData()
+        ]);
+        
+        const allIndicators = [yieldData, ...koreanIndicators];
+        const analyzedIndicators = analyzeIndicators(allIndicators);
         const marketOutlook = getMarketOutlook(analyzedIndicators);
+
         renderDashboard(analyzedIndicators, marketOutlook);
+
     } catch (error) {
         console.error("데이터 로딩 실패:", error);
         document.getElementById('update-time').innerText = "데이터 로딩에 실패했습니다. API 키 또는 네트워크 상태를 확인해주세요.";
     }
 }
+
 
 async function fetchAllData() {
     const promises = [
@@ -83,8 +94,7 @@ async function fetchAllData() {
     return await Promise.all(promises);
 }
 
-// --- API 데이터 호출 함수들 ---
-
+// --- 미국 장단기 금리차 데이터 호출 ---
 async function fetchYieldSpread() {
     const fredUrl10Y = `https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
     const fredUrl2Y = `https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
@@ -97,12 +107,9 @@ async function fetchYieldSpread() {
     const data10Y = await res10Y.json();
     const data2Y = await res2Y.json();
     
-    // --- 에러 방지 코드 추가 ---
-    // 서버에서 에러가 나거나 데이터 구조가 예상과 다를 경우를 대비합니다.
     if (!data10Y.observations || data10Y.observations.length === 0 || !data2Y.observations || data2Y.observations.length === 0) {
         throw new Error("FRED 금리 데이터를 가져오는 데 실패했습니다.");
     }
-    // --- 에러 방지 코드 끝 ---
 
     const value10Y = parseFloat(data10Y.observations[0].value);
     const value2Y = parseFloat(data2Y.observations[0].value);
@@ -113,156 +120,99 @@ async function fetchYieldSpread() {
     };
 }
 
-async function fetchEcosData(displayName, tableCode, period, itemCode) {
-    const now = new Date();
-    let endTime, startTime;
-
-    // 조회 기간을 1년으로 설정
-    if (period === 'Q') {
-        const year = now.getFullYear();
-        const quarter = Math.floor(now.getMonth() / 3) + 1;
-        endTime = `${year}Q${quarter}`;
-        startTime = `${year - 1}Q${quarter}`;
-    } else { // Monthly data
-        const year = now.getFullYear();
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        endTime = `${year}${month}`;
-        startTime = `${year - 1}${month}`;
-    }
-
-    // --- ★★★ ECOS 공식 규칙 기반 최종 URL 구조 ★★★ ---
-    // 구조: ...?pClassName=통계표코드&STAT_CODE=세부항목코드&...
-    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/?pClassName=${tableCode}&STAT_CODE=${itemCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
-    // --- ★★★ 수정 끝 ★★★ ---
-    
+// --- ★★★ 새로워진 한국은행 데이터 호출 함수 ★★★ ---
+async function fetchAllKoreanData() {
+    // 1. KeyStatisticList API를 호출하여 100대 지표를 모두 가져옵니다.
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/KeyStatisticList/${API_KEYS.ECOS}/json/kr/1/100`;
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
-    
-    try {
-        const response = await fetch(finalUrl);
-        if (!response.ok) throw new Error(`서버 응답 오류: ${response.status}`);
-        
-        const data = await response.json();
-        
-        if (!data.StatisticSearch) {
-            if(data.RESULT) throw new Error(`ECOS API Error: ${data.RESULT.MESSAGE}`);
-            throw new Error('ECOS API로부터 유효한 응답을 받지 못했습니다.');
-        }
+    const response = await fetch(finalUrl);
+    const data = await response.json();
 
-        if (data.StatisticSearch.list_total_count === 0) {
-            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 없습니다.`);
-        }
-        
-        const latestData = data.StatisticSearch.row.pop();
-        const dateStr = latestData.TIME;
-
-        return {
-            id: displayName,
-            name: `🇰🇷 ${displayName}`,
-            value: parseFloat(latestData.DATA_VALUE),
-            unit: "%",
-            date: period === 'Q' ? `${dateStr.slice(0, 4)}년 ${dateStr.slice(5)}분기` : `${dateStr.slice(4)}월`
-        };
-
-    } catch (error) {
-        console.error(`[디버깅] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
-        console.error(`Failed to fetch ${displayName}:`, error);
-        return {
-            id: displayName,
-            name: `🇰🇷 ${displayName}`,
-            value: 'Error',
-            unit: '',
-            date: 'N/A',
-            status: 'negative',
-            score: 0,
-            text: '데이터 없음',
-            icon: '❌'
-        };
+    if (!data.KeyStatisticList || !data.KeyStatisticList.row) {
+        throw new Error("한국은행 주요지표(KeyStatisticList)를 가져오지 못했습니다.");
     }
+    
+    const allStats = data.KeyStatisticList.row;
+
+    // 2. 가져온 100개 지표 중에서 우리가 필요한 데이터를 이름으로 찾습니다.
+    const gdpData = allStats.find(stat => stat.STAT_NAME === '실질 국내총생산(전기대비 증감률)');
+    const exportData = allStats.find(stat => stat.STAT_NAME === '수출금액증감률(총, 전년동기대비)');
+    const cpiData = allStats.find(stat => stat.STAT_NAME === '소비자물가(총지수, 전년동월대비 증감률)');
+    const unemploymentData = allStats.find(stat => stat.STAT_NAME === '실업률(계절변동조정)');
+    
+    // 3. 찾은 데이터를 대시보드 형식에 맞게 변환합니다.
+    const formatData = (stat, displayName) => {
+        if (!stat) return { id: displayName, name: `🇰🇷 ${displayName}`, value: 'N/A', unit: '', date: '없음' };
+        
+        // 날짜 형식 변환 (예: 2025Q2 -> 2025년 Q2, 202508 -> 8월)
+        let date = stat.CYCLE === '분기' ? `${stat.TIME.slice(0,4)}년 ${stat.TIME.slice(4)}` : `${parseInt(stat.TIME.slice(4))}월`;
+
+        return {
+            id: displayName,
+            name: `🇰🇷 ${displayName}`,
+            value: parseFloat(stat.DATA_VALUE),
+            unit: stat.UNIT_NAME,
+            date: date
+        };
+    };
+
+    return [
+        formatData(gdpData, 'GDP 성장률'),
+        formatData(exportData, '수출 증가율'),
+        formatData(cpiData, '소비자물가지수'),
+        formatData(unemploymentData, '실업률')
+    ];
 }
-// --- 분석 및 렌더링 함수 (이전과 유사) ---
 
+
+// --- 분석 및 렌더링 함수 (수정 없음) ---
 function analyzeIndicators(indicators) {
-    // 각 지표를 순회하며 상태와 점수를 부여합니다.
     return indicators.map(indicator => {
-        let analysis = {}; // 각 지표의 분석 결과를 담을 빈 객체
-
+        let analysis = {};
+        if (typeof indicator.value !== 'number') {
+             return { ...indicator, status: 'negative', score: 0, text: '데이터 없음', icon: '❌' };
+        }
         switch (indicator.id) {
             case 'yield_spread':
-                if (indicator.value < -0.1) {
-                    analysis = { status: 'negative', score: -2, text: '경기 침체 우려', icon: '🚨' };
-                } else if (indicator.value < 0) {
-                    analysis = { status: 'neutral', score: 0, text: '역전폭 축소', icon: '⚠️' };
-                } else {
-                    analysis = { status: 'positive', score: 2, text: '정상 범위', icon: '✅' };
-                }
-                break; // case 종료
-
+                if (indicator.value < -0.1) analysis = { status: 'negative', score: -2, text: '경기 침체 우려', icon: '🚨' };
+                else if (indicator.value < 0) analysis = { status: 'neutral', score: 0, text: '역전폭 축소', icon: '⚠️' };
+                else analysis = { status: 'positive', score: 2, text: '정상 범위', icon: '✅' };
+                break;
             case 'GDP 성장률':
-                if (indicator.value >= 0.7) {
-                    analysis = { status: 'positive', score: 2, text: '견조한 회복세', icon: '👍' };
-                } else if (indicator.value >= 0.3) {
-                    analysis = { status: 'neutral', score: 0, text: '완만한 성장', icon: '😐' };
-                } else {
-                    analysis = { status: 'negative', score: -2, text: '성장 둔화 우려', icon: '👎' };
-                }
+                if (indicator.value >= 0.7) analysis = { status: 'positive', score: 2, text: '견조한 회복세', icon: '👍' };
+                else if (indicator.value >= 0.3) analysis = { status: 'neutral', score: 0, text: '완만한 성장', icon: '😐' };
+                else analysis = { status: 'negative', score: -2, text: '성장 둔화 우려', icon: '👎' };
                 break;
-
             case '수출 증가율':
-                if (indicator.value > 2.0) {
-                    analysis = { status: 'positive', score: 2, text: '플러스 전환', icon: '📈' };
-                } else if (indicator.value >= 0) {
-                    analysis = { status: 'neutral', score: 0, text: '소폭 개선', icon: '📊' };
-                } else {
-                    analysis = { status: 'negative', score: -2, text: '수출 부진', icon: '📉' };
-                }
+                if (indicator.value > 2.0) analysis = { status: 'positive', score: 2, text: '플러스 전환', icon: '📈' };
+                else if (indicator.value >= 0) analysis = { status: 'neutral', score: 0, text: '소폭 개선', icon: '📊' };
+                else analysis = { status: 'negative', score: -2, text: '수출 부진', icon: '📉' };
                 break;
-
             case '소비자물가지수':
-                if (indicator.value <= 3.0) {
-                    analysis = { status: 'positive', score: 1, text: '물가 안정세', icon: '😌' };
-                } else if (indicator.value <= 4.0) {
-                    analysis = { status: 'neutral', score: 0, text: '인플레이션 둔화', icon: '😐' };
-                } else {
-                    analysis = { status: 'negative', score: -1, text: '물가 압력 지속', icon: '🔥' };
-                }
+                if (indicator.value <= 3.0) analysis = { status: 'positive', score: 1, text: '물가 안정세', icon: '😌' };
+                else if (indicator.value <= 4.0) analysis = { status: 'neutral', score: 0, text: '인플레이션 둔화', icon: '😐' };
+                else analysis = { status: 'negative', score: -1, text: '물가 압력 지속', icon: '🔥' };
                 break;
-
             case '실업률':
-                if (indicator.value <= 3.0) {
-                    analysis = { status: 'positive', score: 1, text: '완전고용 수준', icon: '💪' };
-                } else {
-                    analysis = { status: 'negative', score: -1, text: '고용 시장 악화', icon: '😥' };
-                }
+                if (indicator.value <= 3.0) analysis = { status: 'positive', score: 1, text: '완전고용 수준', icon: '💪' };
+                else analysis = { status: 'negative', score: -1, text: '고용 시장 악화', icon: '😥' };
                 break;
-                
-            default:
-                // 목록에 없는 예외적인 경우
-                analysis = { status: 'neutral', score: 0, text: '데이터 분석 중', icon: '📊' };
+            default: analysis = { status: 'neutral', score: 0, text: '데이터 분석 중', icon: '📊' };
         }
-        
-        // 원본 indicator 데이터와 분석 결과를 합쳐서 반환
         return { ...indicator, ...analysis };
     });
 }
-
 function getMarketOutlook(analyzedIndicators) {
     const totalScore = analyzedIndicators.reduce((acc, indicator) => acc + (indicator.score || 0), 0);
     if (totalScore >= 4) return { status: 'positive', signal: '📈', title: '상승 기대', analysis: "대부분의 경제 지표가 긍정적인 신호를 보내고 있습니다. 경기 확장과 물가 안정이 동시에 나타나며 투자 심리가 개선될 가능성이 높습니다." };
     if (totalScore <= -2) return { status: 'negative', signal: '📉', title: '하락 우려', analysis: "경기 침체 또는 둔화에 대한 우려가 커지고 있습니다. 핵심 선행지표가 부정적인 신호를 보내고 있어 보수적인 접근이 필요합니다." };
     return { status: 'neutral', signal: '😐', title: '중립 / 혼조', analysis: "긍정적 요인과 부정적 요인이 혼재되어 시장의 방향성이 불분명합니다. 향후 발표될 기업 실적이나 주요 정책 변화에 따라 시장의 방향이 결정될 가능성이 높습니다." };
 }
-
 function renderInitialPlaceholders() {
     const ids = ["🇺🇸 장단기 금리차", "🇰🇷 GDP 성장률", "🇰🇷 수출 증가율", "🇰🇷 소비자물가지수", "🇰🇷 실업률"];
     const grid = document.getElementById('indicator-grid');
-    grid.innerHTML = ids.map(name => `
-        <div class="indicator-card">
-            <h4>${name}</h4>
-            <p class="loading-text">Loading...</p>
-        </div>
-    `).join('');
+    grid.innerHTML = ids.map(name => `<div class="indicator-card"><h4>${name}</h4><p class="loading-text">Loading...</p></div>`).join('');
 }
-
 function renderDashboard(analyzedIndicators, marketOutlook) {
     document.getElementById('update-time').innerText = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
     const outlookSection = document.getElementById('outlook-section');
@@ -273,9 +223,10 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
     analyzedIndicators.forEach(indicator => {
         const card = document.createElement('div');
         card.className = 'indicator-card';
+        const valueText = typeof indicator.value === 'number' ? `${indicator.value}${indicator.unit}` : `<span class="loading-text">${indicator.value}</span>`;
         card.innerHTML = `
             <h4>${indicator.name} <span class="date">(${indicator.date})</span></h4>
-            <p class="indicator-value">${indicator.value}${indicator.unit}</p>
+            <p class="indicator-value">${valueText}</p>
             <div class="indicator-status">
                 <span class="status-icon">${indicator.icon}</span>
                 <span class="status-text ${indicator.status}-icon">${indicator.text}</span>
