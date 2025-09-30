@@ -109,13 +109,13 @@ async function fetchYieldSpread() {
     const data2Y = await res2Y.json();
     
     // --- ★★★ 디버깅 로그 추가 ★★★ ---
-    console.log("=== FRED 10년물 국채 데이터 ===");
-    console.log("전체 응답:", data10Y);
-    console.log("observations:", data10Y.observations);
+    //console.log("=== FRED 10년물 국채 데이터 ===");
+    //console.log("전체 응답:", data10Y);
+    //console.log("observations:", data10Y.observations);
     
-    console.log("=== FRED 2년물 국채 데이터 ===");
-    console.log("전체 응답:", data2Y);
-    console.log("observations:", data2Y.observations);
+    //console.log("=== FRED 2년물 국채 데이터 ===");
+    //console.log("전체 응답:", data2Y);
+    //console.log("observations:", data2Y.observations);
     // --- ★★★ 디버깅 로그 끝 ★★★ ---
     
     if (!data10Y.observations || data10Y.observations.length === 0 || !data2Y.observations || data2Y.observations.length === 0) {
@@ -125,10 +125,10 @@ async function fetchYieldSpread() {
     const value10Y = parseFloat(data10Y.observations[0].value);
     const value2Y = parseFloat(data2Y.observations[0].value);
     
-    console.log("=== 파싱된 값 ===");
-    console.log("10년물:", value10Y);
-    console.log("2년물:", value2Y);
-    console.log("금리차:", value10Y - value2Y);
+    //console.log("=== 파싱된 값 ===");
+    //console.log("10년물:", value10Y);
+    //console.log("2년물:", value2Y);
+    //console.log("금리차:", value10Y - value2Y);
     
     const spread = value10Y - value2Y;
     
@@ -152,8 +152,8 @@ async function fetchAllKoreanData() {
     const allStats = data.KeyStatisticList.row;
 
     // --- ★★★ 디버깅 코드 ★★★ ---
-    console.log("--- ECOS API 실제 응답 데이터 (100개 지표 전체) ---");
-    console.table(allStats); 
+    //console.log("--- ECOS API 실제 응답 데이터 (100개 지표 전체) ---");
+    //console.table(allStats); 
     // --- ★★★ 디버깅 코드 끝 ★★★ ---
     
     // KEYSTAT_NAME 필드를 사용하여 데이터 매칭 (실제 API 응답 값에 맞춤)
