@@ -342,15 +342,15 @@ async function fetchAllKoreanData() {
     
     const found = {};
     allStats.forEach(stat => {
-        for (const [key, value] of Object.entries(mapping)) {
-            if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
-                found[key] = {
-                    id: key, name: value.name, value: parseFloat(stat.DATA_VALUE),
-                    unit: stat.UNIT_NAME, date: stat.TIME?.substring(4, 6) + '월' || '최신'
-                };
-            }
+    for (const [key, value] of Object.entries(mapping)) {
+        if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
+            found[key] = {
+                id: key, name: value.name, value: parseFloat(stat.DATA_VALUE),
+                unit: stat.UNIT_NAME, date: stat.TIME ? (stat.TIME.substring(4, 6) + '월') : '최신'
+            };
         }
-    });
+    }
+});
     return Object.values(found);
 }
 
