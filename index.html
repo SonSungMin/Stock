@@ -72,13 +72,13 @@ async function main() {
 async function fetchAllData() {
     const promises = [
         fetchYieldSpread(),
-        // --- ★★★ 통계표 코드(tableCode) 추가 ★★★ ---
-        // fetchEcosData('이름', '통계표코드', '통계코드', '주기') 형식으로 호출
-        fetchEcosData('GDP 성장률', '102Y004', '200Y001', 'Q'), // 국민소득 > 주요지표 > 경제활동별 GDP 및 GDI
-        fetchEcosData('수출 증가율', '200Y009', '403Y003', 'M'), // 대외거래 > 주요지표 > 수출입총괄
-        fetchEcosData('소비자물가지수', '901Y001', '010Y002', 'M'), // 물가 > 주요지표 > 소비자물가지수
-        fetchEcosData('실업률', '401Y003', 'I2A00', 'M')      // 경기 > 주요지표 > 실업률
-        // --- ★★★ 통계 코드(STAT_CODE) 수정 끝 ★★★ ---
+        // --- ★★★ ECOS 공식 명세 기반으로 코드 수정 ★★★ ---
+        // fetchEcosData('이름', '주요 통계코드', '주기', '항목 코드1', '항목 코드2'...) 형식으로 호출
+        fetchEcosData('GDP 성장률', '2.1.1', 'Q', '1'),     // 2.1.1(국민소득) > 항목 1(실질GDP성장률)
+        fetchEcosData('수출 증가율', '4.1.1', 'M', '1'),     // 4.1.1(수출입) > 항목 1(수출금액증감률)
+        fetchEcosData('소비자물가지수', 'I17A', 'M', '0'), // I17A(소비자물가지수) > 항목 0(총지수)
+        fetchEcosData('실업률', 'I2A', 'M', '00')        // I2A(실업률) > 항목 00(계절변동조정)
+        // --- ★★★ 수정 끝 ★★★ ---
     ];
     return await Promise.all(promises);
 }
@@ -113,7 +113,7 @@ async function fetchYieldSpread() {
     };
 }
 
-async function fetchEcosData(displayName, tableCode, statCode, period) {
+async function fetchEcosData(displayName, statCode, period, ...itemCodes) {
     const now = new Date();
     let endTime, startTime;
 
@@ -129,10 +129,11 @@ async function fetchEcosData(displayName, tableCode, statCode, period) {
         startTime = `${year - 1}${month}`;
     }
     
-    // --- ★★★ 수정된 URL 구조 ★★★ ---
-    // 통계표 코드(tableCode)를 경로에 추가합니다.
-    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/${tableCode}/${period}/${startTime}/${endTime}/${statCode}`;
-    // --- ★★★ 최종 수정된 부분 끝 ★★★
+    // --- ★★★ ECOS 공식 명세 기반 URL 구조 ★★★ ---
+    // 구조: .../주요통계코드/주기/시작일/종료일/항목코드1/항목코드2...
+    const itemCodePath = itemCodes.join('/');
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/${statCode}/${period}/${startTime}/${endTime}/${itemCodePath}`;
+    // --- ★★★ 수정 끝 ★★★ ---
 
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
     
@@ -144,7 +145,8 @@ async function fetchEcosData(displayName, tableCode, statCode, period) {
         const data = await response.json();
 
         if (data.StatisticSearch.list_total_count === 0) {
-            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 없습니다.`);
+            // ECOS는 데이터가 없어도 에러를 반환하지 않으므로, 직접 확인해야 합니다.
+            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 조회 조건이 잘못되었습니다.`);
         }
 
         if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
