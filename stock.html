@@ -300,7 +300,7 @@
                 document.getElementById('content').style.display = 'none';
 
                 // 기존 proxy.js를 통해 호출
-                const response = await fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ECOS_API_URL)}`);
+                const response = await fetch(`/netlify/functions/proxy?targetUrl=${encodeURIComponent(ECOS_API_URL)}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
