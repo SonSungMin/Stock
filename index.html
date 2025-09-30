@@ -134,12 +134,12 @@ async function fetchAllKoreanData() {
     
     const allStats = data.KeyStatisticList.row;
 
-    // --- ★★★ 실제 STAT_NAME으로 수정 ★★★ ---
-    // 2. 가져온 100개 지표 중에서 우리가 필요한 데이터의 '실제 이름'으로 찾습니다.
-    const gdpData = allStats.find(stat => stat.STAT_NAME === '실질 국내총생산(전분기대비 증감률)');
-    const exportData = allStats.find(stat => stat.STAT_NAME === '수출금액증감률(총, 전년동월대비)');
-    const cpiData = allStats.find(stat => stat.STAT_NAME === '소비자물가(총지수, 전년동월대비 증감률)');
-    const unemploymentData = allStats.find(stat => stat.STAT_NAME === '실업률(계절변동조정,%)');
+    // --- ★★★ 핵심 키워드(includes) 검색으로 수정 ★★★ ---
+    // 2. 이름이 100% 일치하지 않아도, 핵심 키워드가 포함된 데이터를 찾습니다.
+    const gdpData = allStats.find(stat => stat.STAT_NAME.includes('실질 국내총생산(전분기대비'));
+    const exportData = allStats.find(stat => stat.STAT_NAME.includes('수출금액증감률(총, 전년동월대비)'));
+    const cpiData = allStats.find(stat => stat.STAT_NAME.includes('소비자물가(총지수, 전년동월대비'));
+    const unemploymentData = allStats.find(stat => stat.STAT_NAME.includes('실업률(계절변동조정'));
     // --- ★★★ 수정 끝 ★★★ ---
     
     // 3. 찾은 데이터를 대시보드 형식에 맞게 변환합니다.
