@@ -111,15 +111,13 @@ async function fetchYieldSpread() {
     };
 }
 
-// index.html 파일의 fetchEcosData 함수를 아래 코드로 교체하세요.
-
 async function fetchEcosData(displayName, statCode, period) {
     const now = new Date();
     let endTime, startTime;
 
     if (period === 'Q') { // 분기별 데이터 처리
         const year = now.getFullYear();
-        const quarter = Math.floor(now.getMonth() / 3) + 1;
+        const quarter = Math.floor(now.getMonth() / 3) + 1; 
         endTime = `${year}Q${quarter}`;
         startTime = `${year - 1}Q${quarter}`;
     } else { // 월별 데이터 처리
@@ -129,12 +127,16 @@ async function fetchEcosData(displayName, statCode, period) {
         startTime = `${year - 1}${month}`;
     }
     
-    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
+    // --- ★★★ 수정된 부분 ★★★ ---
+    // 기존: /json/kr/1/100/?pClassName=KR...
+    // 수정: /json/kr/1/100/pClassName=KR... (? 삭제)
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
+    // --- ★★★ 수정된 부분 끝 ★★★
+
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
     
     try {
         const response = await fetch(finalUrl);
-        // 응답이 성공적이지 않을 경우를 대비
         if (!response.ok) {
             throw new Error(`서버 응답 오류: ${response.status} ${response.statusText}`);
         }
@@ -158,11 +160,7 @@ async function fetchEcosData(displayName, statCode, period) {
         };
 
     } catch (error) {
-        // --- ★★★ 디버깅 코드 ★★★ ---
-        // 오류 발생 시, 어떤 URL로 요청했는지 콘솔에 Raw 데이터를 출력합니다.
         console.error(`[디버깅] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
-        // --- ★★★ 디버깅 코드 끝 ★★★
-        
         console.error(`Failed to fetch ${displayName}:`, error);
         return {
             id: displayName, name: `🇰🇷 ${displayName}`,
