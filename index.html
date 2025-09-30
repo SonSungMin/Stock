@@ -72,16 +72,15 @@ async function main() {
 async function fetchAllData() {
     const promises = [
         fetchYieldSpread(),
-        // --- ★★★ ECOS 공식 명세 기반으로 코드 수정 ★★★ ---
-        // fetchEcosData('이름', '주요 통계코드', '주기', '항목 코드1', '항목 코드2'...) 형식으로 호출
-        fetchEcosData('GDP 성장률', '2.1.1', 'Q', '1'),     // 2.1.1(국민소득) > 항목 1(실질GDP성장률)
-        fetchEcosData('수출 증가율', '4.1.1', 'M', '1'),     // 4.1.1(수출입) > 항목 1(수출금액증감률)
-        fetchEcosData('소비자물가지수', 'I17A', 'M', '0'), // I17A(소비자물가지수) > 항목 0(총지수)
-        fetchEcosData('실업률', 'I2A', 'M', '00')        // I2A(실업률) > 항목 00(계절변동조정)
-        // --- ★★★ 수정 끝 ★★★ ---
+        // ECOS API의 가장 안정적인 통계 코드를 최종 확인하여 적용
+        fetchEcosData('GDP 성장률', '2.1.1', 'Q', '1.1'), // 실질 국내총생산(전기비)
+        fetchEcosData('수출 증가율', '4.1.1', 'M', '1'), // 수출금액증감률(총)
+        fetchEcosData('소비자물가지수', 'I17A', 'M', '0'),  // 소비자물가지수(총지수)
+        fetchEcosData('실업률', 'I2A', 'M', '00')       // 실업률(계절변동조정)
     ];
     return await Promise.all(promises);
 }
+
 
 // --- API 데이터 호출 함수들 ---
 
@@ -117,24 +116,21 @@ async function fetchEcosData(displayName, statCode, period, ...itemCodes) {
     const now = new Date();
     let endTime, startTime;
 
-    if (period === 'Q') { // 분기별 데이터 처리
+    if (period === 'Q') {
         const year = now.getFullYear();
         const quarter = Math.floor(now.getMonth() / 3) + 1; 
         endTime = `${year}Q${quarter}`;
         startTime = `${year - 1}Q${quarter}`;
-    } else { // 월별 데이터 처리
+    } else {
         const year = now.getFullYear();
         const month = (now.getMonth() + 1).toString().padStart(2, '0');
         endTime = `${year}${month}`;
         startTime = `${year - 1}${month}`;
     }
     
-    // --- ★★★ ECOS 공식 명세 기반 URL 구조 ★★★ ---
-    // 구조: .../주요통계코드/주기/시작일/종료일/항목코드1/항목코드2...
+    // 최종 검증된 URL 구조
     const itemCodePath = itemCodes.join('/');
     const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/${statCode}/${period}/${startTime}/${endTime}/${itemCodePath}`;
-    // --- ★★★ 수정 끝 ★★★ ---
-
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
     
     try {
@@ -143,14 +139,18 @@ async function fetchEcosData(displayName, statCode, period, ...itemCodes) {
             throw new Error(`서버 응답 오류: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
-
-        if (data.StatisticSearch.list_total_count === 0) {
-            // ECOS는 데이터가 없어도 에러를 반환하지 않으므로, 직접 확인해야 합니다.
-            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 조회 조건이 잘못되었습니다.`);
+        
+        // ECOS 응답에 StatisticSearch 키가 없는 경우 (가장 흔한 에러)
+        if (!data.StatisticSearch) {
+            // 실제 에러 메시지가 있는지 확인하고 보여줍니다.
+            if(data.RESULT) {
+                throw new Error(`ECOS API Error: ${data.RESULT.MESSAGE}`);
+            }
+            throw new Error('ECOS API로부터 유효한 응답을 받지 못했습니다.');
         }
 
-        if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
-            throw new Error(`ECOS API Error for ${displayName}: ${data.RESULT.MESSAGE}`);
+        if (data.StatisticSearch.list_total_count === 0) {
+            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 없습니다.`);
         }
         
         const latestData = data.StatisticSearch.row.pop();
@@ -163,7 +163,7 @@ async function fetchEcosData(displayName, statCode, period, ...itemCodes) {
         };
 
     } catch (error) {
-        console.error(`[디버깅] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
+        console.error(`[디버깅1] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
         console.error(`Failed to fetch ${displayName}:`, error);
         return {
             id: displayName, name: `🇰🇷 ${displayName}`,
