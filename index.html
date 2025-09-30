@@ -70,19 +70,13 @@ async function main() {
 }
 
 async function fetchAllData() {
-    // 현재 날짜를 YYYYMM 형식으로 생성 (예: 202509)
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const currentTime = `${year}${month}`;
-
-    // 여러 API 요청을 동시에 보냅니다.
+    // 이제 날짜 계산을 각 함수에 위임하므로 여기서는 호출만 합니다.
     const promises = [
         fetchYieldSpread(),
-        fetchEcosData('GDP 성장률', '200Y001', 'Q', currentTime),
-        fetchEcosData('수출 증가율', '403Y003', 'M', currentTime),
-        fetchEcosData('소비자물가지수', '901Y001', 'M', currentTime),
-        fetchEcosData('실업률', '401Y003', 'M', currentTime)
+        fetchEcosData('GDP 성장률', '200Y001', 'Q'),      // 분기
+        fetchEcosData('수출 증가율', '403Y003', 'M'),      // 월별
+        fetchEcosData('소비자물가지수', '901Y001', 'M'), // 월별
+        fetchEcosData('실업률', '401Y003', 'M')        // 월별
     ];
     return await Promise.all(promises);
 }
@@ -112,29 +106,60 @@ async function fetchYieldSpread() {
     };
 }
 
-async function fetchEcosData(displayName, statCode, period, currentTime) {
-    // 실제 ECOS API 주소
-    const ECOS_URL = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&END_TIME=${currentTime}`;
+async function fetchEcosData(displayName, statCode, period) {
+    // --- 날짜 계산 로직 수정 ---
+    const now = new Date();
+    let endTime, startTime;
+
+    if (period === 'Q') { // 분기별 데이터 처리
+        const year = now.getFullYear();
+        // 현재 분기 (1, 2, 3, 4)
+        const quarter = Math.floor(now.getMonth() / 3) + 1; 
+        endTime = `${year}Q${quarter}`;
+        // 1년 전 데이터부터 조회
+        startTime = `${year - 1}Q${quarter}`;
+    } else { // 월별 데이터 처리
+        const year = now.getFullYear();
+        // 현재 월 (1~12). padStart로 01, 02월 처리
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        endTime = `${year}${month}`;
+        // 1년 전 데이터부터 조회
+        startTime = `${year - 1}${month}`;
+    }
+    // --- 날짜 계산 로직 수정 끝 ---
+
+    // ECOS API URL에 startTime과 endTime을 모두 포함하여 요청
+    const ECOS_URL = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
     
-    // 우리 서버 프로그램(proxy.js)에 데이터 요청을 전달
-    const response = await fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ECOS_URL)}`);
-    const data = await response.json();
+    try {
+        const response = await fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ECOS_URL)}`);
+        const data = await response.json();
 
-    if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
-        throw new Error(`ECOS API Error for ${displayName}: ${data.RESULT.MESSAGE}`);
+        if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
+            throw new Error(`ECOS API Error for ${displayName}: ${data.RESULT.MESSAGE}`);
+        }
+        
+        if (!data.StatisticSearch || !data.StatisticSearch.row || data.StatisticSearch.row.length === 0) {
+             throw new Error(`${displayName} 데이터를 찾을 수 없습니다.`);
+        }
+
+        const latestData = data.StatisticSearch.row.pop();
+        const dateStr = latestData.TIME;
+
+        return {
+            id: displayName, name: `🇰🇷 ${displayName}`,
+            value: parseFloat(latestData.DATA_VALUE), unit: "%",
+            date: period === 'Q' ? `${dateStr.slice(0,4)}년 ${dateStr.slice(5)}분기` : `${dateStr.slice(4)}월`
+        };
+
+    } catch (error) {
+        console.error(`Failed to fetch ${displayName}:`, error);
+        return {
+            id: displayName, name: `🇰🇷 ${displayName}`,
+            value: 'Error', unit: '', date: 'N/A',
+            status: 'negative', score: 0, text: '데이터 로딩 실패', icon: '❌'
+        };
     }
-    if (!data.StatisticSearch || !data.StatisticSearch.row || data.StatisticSearch.row.length === 0) {
-        throw new Error(`${displayName} 데이터를 찾을 수 없습니다.`);
-    }
-
-    const latestData = data.StatisticSearch.row.pop();
-    const dateStr = latestData.TIME;
-
-    return {
-        id: displayName, name: `🇰🇷 ${displayName}`,
-        value: parseFloat(latestData.DATA_VALUE), unit: "%",
-        date: period === 'Q' ? `${dateStr.slice(0,4)}년 ${dateStr.slice(5)}분기` : `${dateStr.slice(4)}월`
-    };
 }
 
 // --- 분석 및 렌더링 함수 (이전과 유사) ---
