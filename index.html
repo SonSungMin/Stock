@@ -84,11 +84,9 @@ async function fetchAllData() {
 // --- API 데이터 호출 함수들 ---
 
 async function fetchYieldSpread() {
-    // 실제 FRED API 주소
     const fredUrl10Y = `https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
     const fredUrl2Y = `https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
 
-    // 우리 서버 프로그램(proxy.js)에 데이터 요청을 전달
     const [res10Y, res2Y] = await Promise.all([
         fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(fredUrl10Y)}`),
         fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(fredUrl2Y)}`)
@@ -96,6 +94,13 @@ async function fetchYieldSpread() {
 
     const data10Y = await res10Y.json();
     const data2Y = await res2Y.json();
+    
+    // --- 에러 방지 코드 추가 ---
+    // 서버에서 에러가 나거나 데이터 구조가 예상과 다를 경우를 대비합니다.
+    if (!data10Y.observations || data10Y.observations.length === 0 || !data2Y.observations || data2Y.observations.length === 0) {
+        throw new Error("FRED 금리 데이터를 가져오는 데 실패했습니다.");
+    }
+    // --- 에러 방지 코드 끝 ---
 
     const value10Y = parseFloat(data10Y.observations[0].value);
     const value2Y = parseFloat(data2Y.observations[0].value);
