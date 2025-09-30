@@ -106,20 +106,41 @@ async function fetchYieldSpread() {
 async function fetchEcosData(displayName, statCode, period) {
     const ECOS_URL = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/10/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&END_TIME=202509`;
     
-    // 프록시 URL을 allorigins.win으로 변경
-    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(ECOS_URL)}`);
-    const data = JSON.parse((await response.json()).contents);
+    try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(ECOS_URL)}`);
+        const data = JSON.parse((await response.json()).contents);
 
-    console.log(data); // <-- 이 줄을 추가해서 실제 응답을 확인!
-    
-    const latestData = data.StatisticSearch.row.pop();
-    const dateStr = latestData.TIME;
+        // --- 에러 처리 로직 추가 ---
+        // ECOS API가 에러를 반환했는지 확인합니다.
+        if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
+            // 에러가 있다면, 해당 메시지를 담아 에러를 발생시킵니다.
+            throw new Error(`ECOS API Error for ${displayName}: ${data.RESULT.MESSAGE}`);
+        }
+        
+        // 데이터가 없는 경우를 대비한 방어 코드
+        if (!data.StatisticSearch || !data.StatisticSearch.row || data.StatisticSearch.row.length === 0) {
+             throw new Error(`${displayName} 데이터를 찾을 수 없습니다.`);
+        }
+        // --- 에러 처리 로직 끝 ---
 
-    return {
-        id: displayName, name: `🇰🇷 ${displayName}`,
-        value: parseFloat(latestData.DATA_VALUE), unit: "%",
-        date: period === 'Q' ? `${dateStr.slice(0,4)}년 ${dateStr.slice(5)}분기` : `${dateStr.slice(4)}월`
-    };
+        const latestData = data.StatisticSearch.row.pop();
+        const dateStr = latestData.TIME;
+
+        return {
+            id: displayName, name: `🇰🇷 ${displayName}`,
+            value: parseFloat(latestData.DATA_VALUE), unit: "%",
+            date: period === 'Q' ? `${dateStr.slice(0,4)}년 ${dateStr.slice(5)}분기` : `${dateStr.slice(4)}월`
+        };
+
+    } catch (error) {
+        console.error(`Failed to fetch ${displayName}:`, error);
+        // 에러 발생 시 화면에 표시할 기본값 반환
+        return {
+            id: displayName, name: `🇰🇷 ${displayName}`,
+            value: 'Error', unit: '', date: 'N/A',
+            status: 'negative', score: 0, text: '데이터 로딩 실패', icon: '❌'
+        };
+    }
 }
 
 
