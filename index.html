@@ -134,19 +134,18 @@ async function fetchAllKoreanData() {
     
     const allStats = data.KeyStatisticList.row;
 
-    // --- ★★★ 핵심 키워드(includes) 검색으로 수정 ★★★ ---
-    // 2. 이름이 100% 일치하지 않아도, 핵심 키워드가 포함된 데이터를 찾습니다.
-    const gdpData = allStats.find(stat => stat.STAT_NAME.includes('실질 국내총생산(전분기대비'));
-    const exportData = allStats.find(stat => stat.STAT_NAME.includes('수출금액증감률(총, 전년동월대비)'));
-    const cpiData = allStats.find(stat => stat.STAT_NAME.includes('소비자물가(총지수, 전년동월대비'));
-    const unemploymentData = allStats.find(stat => stat.STAT_NAME.includes('실업률(계절변동조정'));
+    // --- ★★★ 안전장치(stat.STAT_NAME && ...) 추가 ★★★ ---
+    // 2. 이름(STAT_NAME)이 있는 데이터만 대상으로 키워드 검색을 실행합니다.
+    const gdpData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실질 국내총생산(전분기대비'));
+    const exportData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('수출금액증감률(총, 전년동월대비)'));
+    const cpiData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('소비자물가(총지수, 전년동월대비'));
+    const unemploymentData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실업률(계절변동조정'));
     // --- ★★★ 수정 끝 ★★★ ---
     
     // 3. 찾은 데이터를 대시보드 형식에 맞게 변환합니다.
     const formatData = (stat, displayName) => {
         if (!stat) return { id: displayName, name: `🇰🇷 ${displayName}`, value: 'N/A', unit: '', date: '없음' };
         
-        // 날짜 형식 변환 (예: 2025Q2 -> 2025년 Q2, 202508 -> 8월)
         let date = stat.CYCLE === '분기' ? `${stat.TIME.slice(0,4)}년 ${stat.TIME.slice(4)}` : `${parseInt(stat.TIME.slice(4))}월`;
 
         return {
@@ -165,8 +164,6 @@ async function fetchAllKoreanData() {
         formatData(unemploymentData, '실업률')
     ];
 }
-
-
 // --- 분석 및 렌더링 함수 (수정 없음) ---
 function analyzeIndicators(indicators) {
     return indicators.map(indicator => {
