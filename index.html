@@ -72,17 +72,16 @@ async function main() {
 async function fetchAllData() {
     const promises = [
         fetchYieldSpread(),
-        // --- ★★★ 최종 검증된 ECOS 코드 조합 ★★★ ---
+        // --- ★★★ ECOS 공식 규칙 최종 코드 ★★★ ---
         // fetchEcosData('이름', '통계표 코드', '주기', '세부 항목 코드') 형식
-        fetchEcosData('GDP 성장률', '102Y004', 'Q', '200Y001'),      // 통계표: 경제활동별 GDP, 항목: 실질 GDP(전기비)
-        fetchEcosData('수출 증가율', '200Y009', 'M', '403Y003'),      // 통계표: 수출입총괄, 항목: 수출금액증감률
-        fetchEcosData('소비자물가지수', '901Y001', 'M', '010Y002'), // 통계표: 소비자물가지수, 항목: 등락률(전년동월비)
-        fetchEcosData('실업률', '401Y003', 'M', 'I2A00')         // 통계표: 실업률, 항목: 계절변동조정
+        fetchEcosData('GDP 성장률', '102Y004', 'Q', '200Y001'),
+        fetchEcosData('수출 증가율', '200Y009', 'M', '403Y003'),
+        fetchEcosData('소비자물가지수', '901Y001', 'M', '010Y002'),
+        fetchEcosData('실업률', '401Y003', 'M', 'I2A00')
         // --- ★★★ 수정 끝 ★★★ ---
     ];
     return await Promise.all(promises);
 }
-
 
 // --- API 데이터 호출 함수들 ---
 
@@ -114,11 +113,11 @@ async function fetchYieldSpread() {
     };
 }
 
-async function fetchEcosData(displayName, tableCode, period, ...itemCodes) {
+async function fetchEcosData(displayName, tableCode, period, itemCode) {
     const now = new Date();
     let endTime, startTime;
 
-    // 조회 기간을 1년으로 설정하여 데이터가 없을 가능성을 최소화
+    // 조회 기간을 1년으로 설정
     if (period === 'Q') {
         const year = now.getFullYear();
         const quarter = Math.floor(now.getMonth() / 3) + 1;
@@ -131,9 +130,9 @@ async function fetchEcosData(displayName, tableCode, period, ...itemCodes) {
         startTime = `${year - 1}${month}`;
     }
 
-    // --- ★★★ 최종 검증된 URL 구조 ★★★ ---
-    const itemCodePath = itemCodes.join('/');
-    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/${tableCode}/${period}/${startTime}/${endTime}/${itemCodePath}`;
+    // --- ★★★ ECOS 공식 규칙 기반 최종 URL 구조 ★★★ ---
+    // 구조: ...?pClassName=통계표코드&STAT_CODE=세부항목코드&...
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/?pClassName=${tableCode}&STAT_CODE=${itemCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
     // --- ★★★ 수정 끝 ★★★ ---
     
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
@@ -180,7 +179,6 @@ async function fetchEcosData(displayName, tableCode, period, ...itemCodes) {
         };
     }
 }
-
 // --- 분석 및 렌더링 함수 (이전과 유사) ---
 
 function analyzeIndicators(indicators) {
