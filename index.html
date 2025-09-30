@@ -23,6 +23,7 @@
         .status-icon { font-size: 1.5em; margin-right: 8px; }
         .details-btn { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-top: 15px; align-self: flex-end; }
         .details-btn:hover { background-color: #5a6268; }
+        .impact-ratio { font-size: 0.8em; font-weight: bold; color: #fff; background-color: #17a2b8; padding: 3px 8px; border-radius: 10px; }
         .analysis-section p { font-size: 1.1em; background-color: #e9ecef; padding: 20px; border-radius: 8px; border-left: 5px solid #6c757d; }
         .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 0.9em; color: #6c757d; }
         .positive-bg { background-color: #d4edda; border-color: #c3e6cb; } .positive-text { color: #155724; } .positive-icon { color: #28a745; }
@@ -30,7 +31,6 @@
         .neutral-bg { background-color: #fff3cd; border-color: #ffeeba; } .neutral-text { color: #856404; } .neutral-icon { color: #ffc107; }
         .loading-text { color: #6c757d; font-style: italic; font-size: 1.2em; }
         
-        /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
         .modal-content { background-color: #fefefe; margin: 10% auto; padding: 30px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 10px; position: relative; animation-name: animatetop; animation-duration: 0.4s }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
@@ -235,196 +235,172 @@ async function main() {
 async function fetchYieldSpread() {
     const fredUrl10Y = `https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
     const fredUrl2Y = `https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
-
     const [res10Y, res2Y] = await Promise.all([
         fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(fredUrl10Y)}`),
         fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(fredUrl2Y)}`)
     ]);
-
     const data10Y = await res10Y.json();
     const data2Y = await res2Y.json();
-    
-    if (!data10Y.observations || data10Y.observations.length === 0 || !data2Y.observations || data2Y.observations.length === 0) {
-        throw new Error("FRED 금리 데이터를 가져오는 데 실패했습니다.");
-    }
-
-    const value10Y = parseFloat(data10Y.observations[0].value);
-    const value2Y = parseFloat(data2Y.observations[0].value);
-    const spread = value10Y - value2Y;
-    
-    return {
-        id: "yield_spread", name: "🇺🇸 장단기 금리차",
-        value: parseFloat(spread.toFixed(2)), unit: "%p", date: data10Y.observations[0].date.substring(5)
-    };
+    if (!data10Y.observations || !data2Y.observations || data10Y.observations.length === 0 || data2Y.observations.length === 0) throw new Error("FRED 금리 데이터 로딩 실패");
+    const spread = parseFloat(data10Y.observations[0].value) - parseFloat(data2Y.observations[0].value);
+    return { id: "yield_spread", name: "🇺🇸 장단기 금리차", value: parseFloat(spread.toFixed(2)), unit: "%p", date: data10Y.observations[0].date.substring(5) };
 }
 
 async function fetchAdditionalFredData() {
-    const seriesIds = {
-        vix: 'VIXCLS',
-        dollarIndex: 'DTWEXBGS',
-        wti: 'MCOILWTICO'
+    const series = { vix: 'VIXCLS', dollarIndex: 'DTWEXBGS', wti: 'MCOILWTICO' };
+    const urls = Object.values(series).map(id => `https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`);
+    const [vixData, dollarData, wtiData] = await Promise.all(urls.map(url => fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(url)}`).then(res => res.json())));
+    
+    const format = (data, id, name, unit) => {
+        const obs = data.observations?.[0];
+        return { id, name, value: obs ? parseFloat(obs.value) : 'N/A', unit, date: obs ? obs.date.substring(5) : '없음' };
     };
-
-    const urls = Object.entries(seriesIds).map(([key, seriesId]) => {
-        const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`;
-        return fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(url)}`).then(res => res.json());
-    });
-
-    const [vixData, dollarIndexData, wtiData] = await Promise.all(urls);
-
-    const formatFredData = (data, id, name, unit) => {
-        if (!data.observations || data.observations.length === 0) {
-            return { id, name, value: 'N/A', unit, date: '없음' };
-        }
-        const observation = data.observations[0];
-        return {
-            id, name,
-            value: parseFloat(observation.value),
-            unit,
-            date: observation.date.substring(5)
-        };
-    };
-
-    return [
-        formatFredData(vixData, 'vix', '😱 VIX 지수', ''),
-        formatFredData(dollarIndexData, 'dollar_index', '💲 달러 인덱스', ''),
-        formatFredData(wtiData, 'wti_price', '🛢️ WTI 유가', '$/bbl')
-    ];
+    return [ format(vixData, 'vix', '😱 VIX 지수', ''), format(dollarData, 'dollar_index', '💲 달러 인덱스', ''), format(wtiData, 'wti_price', '🛢️ WTI 유가', '$/bbl') ];
 }
 
 async function fetchAllKoreanData() {
     const ecosApiUrl = `https://ecos.bok.or.kr/api/KeyStatisticList/${API_KEYS.ECOS}/json/kr/1/100`;
-    const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
-    const response = await fetch(finalUrl);
+    const response = await fetch(`/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`);
     const data = await response.json();
-
-    if (!data.KeyStatisticList || !data.KeyStatisticList.row) {
-        throw new Error("한국은행 주요지표(KeyStatisticList)를 가져오지 못했습니다.");
-    }
+    if (!data.KeyStatisticList?.row) throw new Error("한국은행 데이터 로딩 실패");
     
     const allStats = data.KeyStatisticList.row;
-
-    const indicatorMapping = {
-        'base_rate': { name: '🇰🇷 기준금리', keywords: ['기준금리'] },
-        'exchange_rate': { name: '🇰🇷 원/달러 환율', keywords: ['원/달러'] },
-        'industrial_production': { name: '🇰🇷 산업생산지수', keywords: ['산업생산지수'] },
-        'consumer_sentiment': { name: '🇰🇷 소비자심리지수', keywords: ['소비자동향조사', '소비자심리지수'] },
-        'corp_bond_spread': { name: '🇰🇷 회사채 스프레드', keywords: ['회사채', '스프레드'] },
-        'kospi': { name: '🇰🇷 코스피', keywords: ['KOSPI'] },
-        'producer_price_index': { name: '🇰🇷 생산자물가지수', keywords: ['생산자물가지수'] },
-        'gdp_growth': { name: '🇰🇷 GDP 성장률', keywords: ['GDP', '성장률', '전기대비'] },
-        'export_growth': { name: '🇰🇷 수출 증가율', keywords: ['수출', '증감률'] },
-        'cpi': { name: '🇰🇷 소비자물가지수', keywords: ['소비자물가지수'] },
-        'unemployment': { name: '🇰🇷 실업률', keywords: ['실업률'] }
+    const mapping = {
+        base_rate: { name: '🇰🇷 기준금리', keywords: ['기준금리'] },
+        exchange_rate: { name: '🇰🇷 원/달러 환율', keywords: ['원/달러'] },
+        industrial_production: { name: '🇰🇷 산업생산지수', keywords: ['산업생산지수'] },
+        consumer_sentiment: { name: '🇰🇷 소비자심리지수', keywords: ['소비자동향조사', '소비자심리지수'] },
+        corp_bond_spread: { name: '🇰🇷 회사채 스프레드', keywords: ['회사채', '스프레드'] },
+        kospi: { name: '🇰🇷 코스피', keywords: ['KOSPI'] },
+        producer_price_index: { name: '🇰🇷 생산자물가지수', keywords: ['생산자물가지수'] },
+        gdp_growth: { name: '🇰🇷 GDP 성장률', keywords: ['GDP', '성장률', '전기대비'] },
+        export_growth: { name: '🇰🇷 수출 증가율', keywords: ['수출', '증감률'] },
+        cpi: { name: '🇰🇷 소비자물가지수', keywords: ['소비자물가지수'] },
+        unemployment: { name: '🇰🇷 실업률', keywords: ['실업률'] }
     };
-
-    const foundIndicators = {};
-
+    
+    const found = {};
     allStats.forEach(stat => {
-        for (const [key, value] of Object.entries(indicatorMapping)) {
-            if (!foundIndicators[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
-                foundIndicators[key] = {
-                    id: key,
-                    name: value.name,
-                    value: parseFloat(stat.DATA_VALUE),
-                    unit: stat.UNIT_NAME,
-                    date: (stat.TIME && typeof stat.TIME === 'string') ? stat.TIME.substring(4, 6) + '월' : '최신'
+        for (const [key, value] of Object.entries(mapping)) {
+            if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
+                found[key] = {
+                    id: key, name: value.name, value: parseFloat(stat.DATA_VALUE),
+                    unit: stat.UNIT_NAME, date: stat.TIME?.substring(4, 6) + '월' || '최신'
                 };
             }
         }
     });
-
-    return Object.values(foundIndicators);
+    return Object.values(found);
 }
 
 function analyzeIndicators(indicators) {
+    const weights = {
+        yield_spread: 15, vix: 15, gdp_growth: 10, export_growth: 10, industrial_production: 8,
+        corp_bond_spread: 8, cpi: 7, dollar_index: 6, wti_price: 5, consumer_sentiment: 5,
+        base_rate: 4, unemployment: 4, exchange_rate: 3, producer_price_index: 2, kospi: 0
+    };
+
     return indicators.map(indicator => {
-        let analysis = {};
+        let analysis = { weight: weights[indicator.id] || 0 };
         if (typeof indicator.value !== 'number' || isNaN(indicator.value)) {
-             return { ...indicator, status: 'negative', score: 0, text: '데이터 없음', icon: '❌' };
+             return { ...indicator, ...analysis, status: 'negative', score: 0, text: '데이터 없음', icon: '❌' };
         }
         switch (indicator.id) {
             case 'yield_spread':
-                if (indicator.value < -0.1) analysis = { status: 'negative', score: -2, text: '경기 침체 우려', icon: '🚨' };
-                else if (indicator.value < 0) analysis = { status: 'neutral', score: 0, text: '역전폭 축소', icon: '⚠️' };
-                else analysis = { status: 'positive', score: 2, text: '정상 범위', icon: '✅' };
-                break;
-            case 'gdp_growth':
-                if (indicator.value >= 0.7) analysis = { status: 'positive', score: 2, text: '견조한 회복세', icon: '👍' };
-                else if (indicator.value >= 0.3) analysis = { status: 'neutral', score: 0, text: '완만한 성장', icon: '😐' };
-                else analysis = { status: 'negative', score: -2, text: '성장 둔화 우려', icon: '👎' };
-                break;
-            case 'export_growth':
-                if (indicator.value > 2.0) analysis = { status: 'positive', score: 2, text: '플러스 전환', icon: '📈' };
-                else if (indicator.value >= 0) analysis = { status: 'neutral', score: 0, text: '소폭 개선', icon: '📊' };
-                else analysis = { status: 'negative', score: -2, text: '수출 부진', icon: '📉' };
-                break;
-            case 'cpi':
-                if (indicator.value <= 3.0) analysis = { status: 'positive', score: 1, text: '물가 안정세', icon: '😌' };
-                else if (indicator.value <= 4.0) analysis = { status: 'neutral', score: 0, text: '인플레이션 둔화', icon: '😐' };
-                else analysis = { status: 'negative', score: -1, text: '물가 압력 지속', icon: '🔥' };
-                break;
-            case 'unemployment':
-                if (indicator.value <= 3.0) analysis = { status: 'positive', score: 1, text: '완전고용 수준', icon: '💪' };
-                else analysis = { status: 'negative', score: -1, text: '고용 시장 악화', icon: '😥' };
-                break;
-             case 'base_rate':
-                if (indicator.value <= 2.5) analysis = { status: 'positive', score: 1, text: '완화적 통화정책', icon: '💰' };
-                else if (indicator.value <= 3.5) analysis = { status: 'neutral', score: 0, text: '중립적 금리 수준', icon: '⚖️' };
-                else analysis = { status: 'negative', score: -1, text: '긴축적 통화정책', icon: '🔒' };
-                break;
-            case 'exchange_rate':
-                if (indicator.value <= 1300) analysis = { status: 'positive', score: 1, text: '환율 안정', icon: '💵' };
-                else if (indicator.value <= 1350) analysis = { status: 'neutral', score: 0, text: '환율 변동성 확대', icon: ' fluctuating' };
-                else analysis = { status: 'negative', score: -1, text: '원화 약세 심화', icon: '💸' };
+                if (indicator.value < -0.1) analysis = { ...analysis, status: 'negative', score: -2, text: '경기 침체 우려', icon: '🚨' };
+                else if (indicator.value < 0) analysis = { ...analysis, status: 'neutral', score: 0, text: '역전폭 축소', icon: '⚠️' };
+                else analysis = { ...analysis, status: 'positive', score: 2, text: '정상 범위', icon: '✅' };
                 break;
             case 'vix':
-                if (indicator.value <= 20) analysis = { status: 'positive', score: 1, text: '시장 안정', icon: '😌' };
-                else if (indicator.value <= 30) analysis = { status: 'neutral', score: 0, text: '불안 심리 존재', icon: '😟' };
-                else analysis = { status: 'negative', score: -2, text: '공포 심리 확산', icon: '😱' };
+                if (indicator.value <= 20) analysis = { ...analysis, status: 'positive', score: 2, text: '시장 안정', icon: '😌' };
+                else if (indicator.value <= 30) analysis = { ...analysis, status: 'neutral', score: 0, text: '불안 심리 존재', icon: '😟' };
+                else analysis = { ...analysis, status: 'negative', score: -2, text: '공포 심리 확산', icon: '😱' };
+                break;
+            case 'gdp_growth':
+                if (indicator.value >= 0.7) analysis = { ...analysis, status: 'positive', score: 2, text: '견조한 회복세', icon: '👍' };
+                else if (indicator.value >= 0.3) analysis = { ...analysis, status: 'neutral', score: 0, text: '완만한 성장', icon: '😐' };
+                else analysis = { ...analysis, status: 'negative', score: -2, text: '성장 둔화 우려', icon: '👎' };
+                break;
+            case 'export_growth':
+                if (indicator.value > 2.0) analysis = { ...analysis, status: 'positive', score: 2, text: '플러스 전환', icon: '📈' };
+                else if (indicator.value >= 0) analysis = { ...analysis, status: 'neutral', score: 0, text: '소폭 개선', icon: '📊' };
+                else analysis = { ...analysis, status: 'negative', score: -2, text: '수출 부진', icon: '📉' };
                 break;
             case 'industrial_production':
-                if (indicator.value > 1.0) analysis = { status: 'positive', score: 2, text: '생산 활발', icon: '🏭' };
-                else if (indicator.value >= 0) analysis = { status: 'neutral', score: 0, text: '생산 보합', icon: '😐' };
-                else analysis = { status: 'negative', score: -2, text: '생산 위축', icon: '📉' };
+                if (indicator.value > 1.0) analysis = { ...analysis, status: 'positive', score: 2, text: '생산 활발', icon: '🏭' };
+                else if (indicator.value >= 0) analysis = { ...analysis, status: 'neutral', score: 0, text: '생산 보합', icon: '😐' };
+                else analysis = { ...analysis, status: 'negative', score: -2, text: '생산 위축', icon: '📉' };
+                break;
+            case 'cpi':
+                if (indicator.value <= 3.0) analysis = { ...analysis, status: 'positive', score: 1, text: '물가 안정세', icon: '😌' };
+                else if (indicator.value <= 4.0) analysis = { ...analysis, status: 'neutral', score: 0, text: '인플레이션 둔화', icon: '😐' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '물가 압력 지속', icon: '🔥' };
+                break;
+            case 'unemployment':
+                if (indicator.value <= 3.0) analysis = { ...analysis, status: 'positive', score: 1, text: '완전고용 수준', icon: '💪' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '고용 시장 악화', icon: '😥' };
+                break;
+             case 'base_rate':
+                if (indicator.value <= 2.5) analysis = { ...analysis, status: 'positive', score: 1, text: '완화적 통화정책', icon: '💰' };
+                else if (indicator.value <= 3.5) analysis = { ...analysis, status: 'neutral', score: 0, text: '중립적 금리 수준', icon: '⚖️' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '긴축적 통화정책', icon: '🔒' };
+                break;
+            case 'exchange_rate':
+                if (indicator.value <= 1300) analysis = { ...analysis, status: 'positive', score: 1, text: '환율 안정', icon: '💵' };
+                else if (indicator.value <= 1350) analysis = { ...analysis, status: 'neutral', score: 0, text: '환율 변동성 확대', icon: ' fluctuating' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '원화 약세 심화', icon: '💸' };
                 break;
             case 'consumer_sentiment':
-                if (indicator.value >= 100) analysis = { status: 'positive', score: 1, text: '소비 심리 낙관', icon: '😊' };
-                else if (indicator.value >= 90) analysis = { status: 'neutral', score: 0, text: '소비 심리 중립', icon: '😐' };
-                else analysis = { status: 'negative', score: -1, text: '소비 심리 비관', icon: '😟' };
+                if (indicator.value >= 100) analysis = { ...analysis, status: 'positive', score: 1, text: '소비 심리 낙관', icon: '😊' };
+                else if (indicator.value >= 90) analysis = { ...analysis, status: 'neutral', score: 0, text: '소비 심리 중립', icon: '😐' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '소비 심리 비관', icon: '😟' };
                 break;
             case 'corp_bond_spread':
-                if (indicator.value <= 0.8) analysis = { status: 'positive', score: 1, text: '신용 위험 완화', icon: '✅' };
-                else if (indicator.value <= 1.2) analysis = { status: 'neutral', score: 0, text: '신용 위험 보통', icon: '⚠️' };
-                else analysis = { status: 'negative', score: -1, text: '신용 위험 증가', icon: '🚨' };
+                if (indicator.value <= 0.8) analysis = { ...analysis, status: 'positive', score: 1, text: '신용 위험 완화', icon: '✅' };
+                else if (indicator.value <= 1.2) analysis = { ...analysis, status: 'neutral', score: 0, text: '신용 위험 보통', icon: '⚠️' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '신용 위험 증가', icon: '🚨' };
                 break;
             case 'dollar_index':
-                if (indicator.value <= 100) analysis = { status: 'positive', score: 1, text: '달러 약세 (위험자산 선호)', icon: '💲' };
-                else analysis = { status: 'negative', score: -1, text: '달러 강세 (안전자산 선호)', icon: '💰' };
+                if (indicator.value <= 100) analysis = { ...analysis, status: 'positive', score: 1, text: '달러 약세', icon: '💲' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '달러 강세', icon: '💰' };
                 break;
             case 'wti_price':
-                if (indicator.value <= 80) analysis = { status: 'positive', score: 1, text: '유가 안정', icon: '⛽' };
-                else if (indicator.value <= 100) analysis = { status: 'neutral', score: 0, text: '유가 상승 압력', icon: '🔺' };
-                else analysis = { status: 'negative', score: -1, text: '고유가 부담', icon: '🔥' };
-                break;
-            case 'kospi':
-                analysis = { status: 'neutral', score: 0, text: '주요 시장 지수', icon: '📊' };
+                if (indicator.value <= 80) analysis = { ...analysis, status: 'positive', score: 1, text: '유가 안정', icon: '⛽' };
+                else if (indicator.value <= 100) analysis = { ...analysis, status: 'neutral', score: 0, text: '유가 상승 압력', icon: '🔺' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '고유가 부담', icon: '🔥' };
                 break;
             case 'producer_price_index':
-                if (indicator.value <= 3.0) analysis = { status: 'positive', score: 1, text: '생산자 물가 안정', icon: '😌' };
-                else analysis = { status: 'negative', score: -1, text: '생산자 물가 부담', icon: '🔺' };
+                if (indicator.value <= 3.0) analysis = { ...analysis, status: 'positive', score: 1, text: '생산자 물가 안정', icon: '😌' };
+                else analysis = { ...analysis, status: 'negative', score: -1, text: '생산자 물가 부담', icon: '🔺' };
                 break;
-            default: analysis = { status: 'neutral', score: 0, text: '데이터 분석 중', icon: '📊' };
+            case 'kospi':
+                analysis = { ...analysis, status: 'neutral', score: 0, text: '주요 시장 지수', icon: '📊' };
+                break;
+            default: analysis = { ...analysis, status: 'neutral', score: 0, text: '분석 중', icon: '📊' };
         }
         return { ...indicator, ...analysis };
     });
 }
 
 function getMarketOutlook(analyzedIndicators) {
-    const totalScore = analyzedIndicators.reduce((acc, indicator) => acc + (indicator.score || 0), 0);
-    if (totalScore >= 5) return { status: 'positive', signal: '📈', title: '상승 기대', analysis: "다수의 핵심 경제 지표가 긍정적인 신호를 보내고 있습니다. 경기 확장, 물가 안정, 위험자산 선호 심리가 복합적으로 나타나며 투자 환경이 우호적일 가능성이 높습니다." };
-    if (totalScore <= -3) return { status: 'negative', signal: '📉', title: '하락 우려', analysis: "경기 침체 또는 둔화에 대한 우려가 커지고 있습니다. 장단기 금리차, VIX 지수 등 주요 선행지표가 부정적인 신호를 보내고 있어 보수적인 접근이 필요합니다." };
-    return { status: 'neutral', signal: '😐', title: '중립 / 혼조', analysis: "긍정적 요인(예: 견조한 성장)과 부정적 요인(예: 높은 물가, 지정학적 리스크)이 혼재되어 시장의 방향성이 불분명합니다. 향후 발표될 기업 실적이나 주요 정책 변화에 따라 시장의 방향이 결정될 가능성이 높습니다." };
+    let totalWeightedScore = 0;
+    let totalPossibleScore = 0;
+
+    analyzedIndicators.forEach(indicator => {
+        if (typeof indicator.score === 'number' && indicator.weight > 0) {
+            totalWeightedScore += indicator.score * indicator.weight;
+            // 최고점수는 2점, 최저점수는 -2점이므로, 양수 방향의 최대 가중치를 계산
+            const maxScore = (indicator.id === 'yield_spread' || indicator.id === 'vix' || indicator.id === 'gdp_growth' || indicator.id === 'export_growth' || indicator.id === 'industrial_production') ? 2 : 1;
+            totalPossibleScore += maxScore * indicator.weight;
+        }
+    });
+    
+    // 최종 점수를 0~100 사이로 정규화 (50이 중립)
+    const normalizedScore = 50 + 50 * (totalWeightedScore / totalPossibleScore);
+
+    if (normalizedScore > 65) return { status: 'positive', signal: '📈', title: '상승 기대', analysis: "다수의 핵심 경제 지표가 긍정적인 신호를 보내고 있습니다. 경기 확장, 물가 안정, 위험자산 선호 심리가 복합적으로 나타나며 투자 환경이 우호적일 가능성이 높습니다." };
+    if (normalizedScore < 35) return { status: 'negative', signal: '📉', title: '하락 우려', analysis: "경기 침체 또는 둔화에 대한 우려가 커지고 있습니다. 장단기 금리차, VIX 지수 등 주요 선행지표가 부정적인 신호를 보내고 있어 보수적인 접근이 필요합니다." };
+    return { status: 'neutral', signal: '😐', title: '중립 / 혼조', analysis: "긍정적 요인과 부정적 요인이 혼재되어 시장의 방향성이 불분명합니다. 향후 발표될 기업 실적이나 주요 정책 변화에 따라 시장의 방향이 결정될 가능성이 높습니다." };
 }
 
 function renderInitialPlaceholders() {
@@ -442,8 +418,17 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
     const indicatorGrid = document.getElementById('indicator-grid');
     indicatorGrid.innerHTML = '';
     
+    // 영향력(가중치)의 총합 계산 (비율 계산용)
+    const totalWeight = analyzedIndicators.reduce((sum, ind) => sum + (ind.weight || 0), 0);
+    
+    // 영향력 순으로 지표 정렬
+    analyzedIndicators.sort((a, b) => (b.weight || 0) - (a.weight || 0));
+    
     analyzedIndicators.forEach(indicator => {
         if (!indicator.id) return;
+        
+        const impactRatio = totalWeight > 0 ? ((indicator.weight / totalWeight) * 100).toFixed(1) : 0;
+        
         const card = document.createElement('div');
         card.className = 'indicator-card';
         const valueText = (typeof indicator.value === 'number' && !isNaN(indicator.value)) 
@@ -452,7 +437,10 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
             
         card.innerHTML = `
             <div>
-                <h4>${indicator.name} <span class="date">(${indicator.date})</span></h4>
+                <h4>
+                    <span>${indicator.name} <span class="date">(${indicator.date})</span></span>
+                    <span class="impact-ratio">영향력 ${impactRatio}%</span>
+                </h4>
                 <p class="indicator-value">${valueText}</p>
                 <div class="indicator-status">
                     <span class="status-icon">${indicator.icon}</span>
@@ -465,37 +453,20 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
     document.getElementById('analysis-section').innerHTML = `<p>${marketOutlook.analysis}</p>`;
 }
 
-// Modal Functions
 function setupModal() {
     const modal = document.getElementById('modal');
     const closeBtn = document.getElementsByClassName('close-btn')[0];
-
-    closeBtn.onclick = () => {
-        modal.style.display = 'none';
-    };
-
-    window.onclick = (event) => {
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    };
+    closeBtn.onclick = () => { modal.style.display = 'none'; };
+    window.onclick = (event) => { if (event.target == modal) modal.style.display = 'none'; };
 }
 
 function showModal(indicatorId) {
     const details = indicatorDetails[indicatorId];
     if (!details) return;
-
     document.getElementById('modal-title').innerHTML = details.title;
     document.getElementById('modal-description').innerHTML = details.description;
-    
     const criteriaList = document.getElementById('modal-criteria');
-    criteriaList.innerHTML = '';
-    details.criteria.forEach(item => {
-        const li = document.createElement('li');
-        li.innerHTML = item;
-        criteriaList.appendChild(li);
-    });
-
+    criteriaList.innerHTML = details.criteria.map(item => `<li>${item}</li>`).join('');
     document.getElementById('modal').style.display = 'block';
 }
 
