@@ -137,11 +137,11 @@ async function fetchAllKoreanData() {
     console.log("--- ECOS API 실제 응답 데이터 (100개 지표 전체) ---");
     console.table(allStats); 
     // --- ★★★ 디버깅 코드 끝 ★★★ ---
-
+    
     // KEYSTAT_NAME 필드를 사용하여 데이터 매칭 (실제 API 응답 값에 맞춤)
     const gdpData = allStats.find(stat => stat.CLASS_NAME === '성장·고용·물가' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('GDP'));
     const exportData = allStats.find(stat => stat.CLASS_NAME === '무역·국제수지' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('수출'));
-    const cpiData = allStats.find(stat => stat.CLASS_NAME === '소비자/생산자물가' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('물가'));
+    const cpiData = allStats.find(stat => stat.CLASS_NAME === '소비자/생산자 물가' && stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('소비자물가지수'));
     const unemploymentData = allStats.find(stat => stat.KEYSTAT_NAME && stat.KEYSTAT_NAME.includes('실업률'));
     
     const formatData = (stat, displayName) => {
