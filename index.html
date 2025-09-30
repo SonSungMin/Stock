@@ -128,9 +128,8 @@ async function fetchEcosData(displayName, statCode, period) {
     }
     
     // --- ★★★ 수정된 부분 ★★★ ---
-    // 기존: /json/kr/1/100/?pClassName=KR...
-    // 수정: /json/kr/1/100/pClassName=KR... (? 삭제)
-    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
+    // pClassName 앞에 '?'를 추가하여 첫 번째 파라미터임을 명시합니다.
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
     // --- ★★★ 수정된 부분 끝 ★★★
 
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
