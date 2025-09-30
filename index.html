@@ -43,7 +43,7 @@
 // ▼ ▼ ▼ ▼ ▼ 여기에 발급받은 API 키를 입력하세요 ▼ ▼ ▼ ▼ ▼
 // ==================================================================
 const API_KEYS = {
-    FRED: '8d458c39f61a72d72300a84abfbc96da',      // 미국 데이터용
+    FRED: '480b8d74e3d546674e8180193c30dbf6',      // 미국 데이터용
     ECOS: 'C4UHXGGIUUZ1TNZJOXFM' // 한국 데이터용
 };
 // ==================================================================
@@ -134,12 +134,12 @@ async function fetchAllKoreanData() {
     
     const allStats = data.KeyStatisticList.row;
 
-    // --- ★★★ 안전장치(stat.STAT_NAME && ...) 추가 ★★★ ---
-    // 2. 이름(STAT_NAME)이 있는 데이터만 대상으로 키워드 검색을 실행합니다.
-    const gdpData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실질 국내총생산(전분기대비'));
+    // --- ★★★ 최종 검증된 STAT_NAME으로 수정 ★★★ ---
+    // 2. 현재 시점의 정확한 이름으로 데이터를 찾습니다.
+    const gdpData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실질 국내총생산(전분기대비 증감률)'));
     const exportData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('수출금액증감률(총, 전년동월대비)'));
-    const cpiData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('소비자물가(총지수, 전년동월대비'));
-    const unemploymentData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실업률(계절변동조정'));
+    const cpiData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('소비자물가지수(총지수, 전년동월대비 증감률)'));
+    const unemploymentData = allStats.find(stat => stat.STAT_NAME && stat.STAT_NAME.includes('실업률(계절변동조정, %)')); // 특수기호(%) 포함
     // --- ★★★ 수정 끝 ★★★ ---
     
     // 3. 찾은 데이터를 대시보드 형식에 맞게 변환합니다.
@@ -164,6 +164,7 @@ async function fetchAllKoreanData() {
         formatData(unemploymentData, '실업률')
     ];
 }
+    
 // --- 분석 및 렌더링 함수 (수정 없음) ---
 function analyzeIndicators(indicators) {
     return indicators.map(indicator => {
