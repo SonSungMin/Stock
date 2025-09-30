@@ -118,73 +118,71 @@ async function fetchYieldSpread() {
 }
 
 async function fetchEcosData(displayName, tableCode, period, ...itemCodes) {
-    // 월별은 최대 6개월, 분기별은 최대 4분기(1년)까지 조회합니다.
-    const maxRetries = (period === 'Q') ? 4 : 6;
+    const now = new Date();
+    let endTime, startTime;
 
-    for (let i = 0; i < maxRetries; i++) {
-        const now = new Date();
-        let targetTime;
-
-        // i만큼 이전 기간으로 시간을 되돌립니다.
-        if (period === 'Q') {
-            now.setMonth(now.getMonth() - (i * 3));
-            const year = now.getFullYear();
-            const quarter = Math.floor(now.getMonth() / 3) + 1;
-            targetTime = `${year}Q${quarter}`;
-        } else { // Monthly data
-            now.setMonth(now.getMonth() - i);
-            const year = now.getFullYear();
-            const month = (now.getMonth() + 1).toString().padStart(2, '0');
-            targetTime = `${year}${month}`;
-        }
-
-        const itemCodePath = itemCodes.join('/');
-        // 해당 기간의 데이터 딱 1개만 요청합니다.
-        const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/1/${tableCode}/${period}/${targetTime}/${targetTime}/${itemCodePath}`;
-        const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
-
-        try {
-            const response = await fetch(finalUrl);
-            if (!response.ok) continue; // 서버가 응답하지 않으면 다음 기간으로 넘어갑니다.
-            
-            const data = await response.json();
-            
-            // ★★★ 핵심 로직 ★★★
-            // 데이터가 있는지 확인하고, 있으면 즉시 결과를 반환하고 함수를 종료합니다.
-            if (data.StatisticSearch && data.StatisticSearch.list_total_count > 0) {
-                const latestData = data.StatisticSearch.row[0];
-                const dateStr = latestData.TIME;
-
-                return { // 성공!
-                    id: displayName,
-                    name: `🇰🇷 ${displayName}`,
-                    value: parseFloat(latestData.DATA_VALUE),
-                    unit: "%",
-                    date: period === 'Q' ? `${dateStr.slice(0, 4)}년 ${dateStr.slice(5)}분기` : `${dateStr.slice(4)}월`
-                };
-            }
-            // 데이터가 없으면 for 루프가 다음 i로 넘어가 이전 기간을 조회합니다.
-
-        } catch (error) {
-            console.error(`[디버깅] '${displayName}' 조회 중 오류 발생 (기간: ${targetTime}):`, error);
-            // 오류가 발생해도 다음 기간 조회를 위해 루프를 계속합니다.
-        }
+    // --- ★★★ 조회 기간 1년으로 확대 ★★★ ---
+    if (period === 'Q') {
+        const year = now.getFullYear();
+        const quarter = Math.floor(now.getMonth() / 3) + 1;
+        endTime = `${year}Q${quarter}`;
+        startTime = `${year - 1}Q${quarter}`; // 1년 전 동일 분기
+    } else { // Monthly data
+        const year = now.getFullYear();
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        endTime = `${year}${month}`;
+        startTime = `${year - 1}${month}`; // 1년 전 동일 월
     }
+    // --- ★★★ 수정 끝 ★★★ ---
 
-    // for 루프가 끝날 때까지 데이터를 찾지 못한 경우
-    const finalErrorMsg = `${displayName} 최근 ${maxRetries} 기간 내 발표된 데이터가 없습니다.`;
-    console.error(finalErrorMsg);
-    return {
-        id: displayName,
-        name: `🇰🇷 ${displayName}`,
-        value: 'Error',
-        unit: '',
-        date: 'N/A',
-        status: 'negative',
-        score: 0,
-        text: '데이터 없음',
-        icon: '❌'
-    };
+    const itemCodePath = itemCodes.join('/');
+    // 1년치 데이터를 모두 요청(최대 100개)
+    const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/${tableCode}/${period}/${startTime}/${endTime}/${itemCodePath}`;
+    const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
+
+    try {
+        const response = await fetch(finalUrl);
+        if (!response.ok) {
+            throw new Error(`서버 응답 오류: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.StatisticSearch || data.StatisticSearch.list_total_count === 0) {
+            throw new Error(`${displayName} 데이터를 찾을 수 없거나 아직 발표되지 않았습니다.`);
+        }
+
+        if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
+            throw new Error(`ECOS API Error: ${data.RESULT.MESSAGE}`);
+        }
+        
+        // --- ★★★ 가장 최신 데이터 선택 ★★★ ---
+        const latestData = data.StatisticSearch.row.pop(); // 배열의 마지막 데이터가 가장 최신
+        const dateStr = latestData.TIME;
+
+        return {
+            id: displayName,
+            name: `🇰🇷 ${displayName}`,
+            value: parseFloat(latestData.DATA_VALUE),
+            unit: "%",
+            date: period === 'Q' ? `${dateStr.slice(0, 4)}년 ${dateStr.slice(5)}분기` : `${dateStr.slice(4)}월`
+        };
+
+    } catch (error) {
+        console.error(`[디버깅] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
+        console.error(`Failed to fetch ${displayName}:`, error);
+        return {
+            id: displayName,
+            name: `🇰🇷 ${displayName}`,
+            value: 'Error',
+            unit: '',
+            date: 'N/A',
+            status: 'negative',
+            score: 0,
+            text: '데이터 없음',
+            icon: '❌'
+        };
+    }
 }
 
 // --- 분석 및 렌더링 함수 (이전과 유사) ---
