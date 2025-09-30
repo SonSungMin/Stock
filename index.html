@@ -15,18 +15,31 @@
         .outlook-signal { font-size: 3em; margin-bottom: 10px; }
         .outlook-title { font-size: 1.8em; font-weight: bold; margin: 0; }
         .indicator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .indicator-card { background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); min-height: 150px; }
-        .indicator-card h4 { margin-top: 0; color: #343a40; font-size: 1.2em; display: flex; justify-content: space-between; }
+        .indicator-card { background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
+        .indicator-card h4 { margin-top: 0; color: #343a40; font-size: 1.2em; display: flex; justify-content: space-between; align-items: center; }
         .indicator-card .date { font-size: 0.8em; color: #6c757d; font-weight: normal; }
         .indicator-value { font-size: 2.2em; font-weight: bold; margin: 10px 0; color: #007bff; }
         .indicator-status { display: flex; align-items: center; font-weight: bold; font-size: 1.1em; }
         .status-icon { font-size: 1.5em; margin-right: 8px; }
+        .details-btn { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-top: 15px; align-self: flex-end; }
+        .details-btn:hover { background-color: #5a6268; }
         .analysis-section p { font-size: 1.1em; background-color: #e9ecef; padding: 20px; border-radius: 8px; border-left: 5px solid #6c757d; }
         .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 0.9em; color: #6c757d; }
         .positive-bg { background-color: #d4edda; border-color: #c3e6cb; } .positive-text { color: #155724; } .positive-icon { color: #28a745; }
         .negative-bg { background-color: #f8d7da; border-color: #f5c6cb; } .negative-text { color: #721c24; } .negative-icon { color: #dc3545; }
         .neutral-bg { background-color: #fff3cd; border-color: #ffeeba; } .neutral-text { color: #856404; } .neutral-icon { color: #ffc107; }
         .loading-text { color: #6c757d; font-style: italic; font-size: 1.2em; }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 30px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 10px; position: relative; animation-name: animatetop; animation-duration: 0.4s }
+        @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
+        .close-btn { color: #aaa; position: absolute; top: 15px; right: 25px; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover, .close-btn:focus { color: black; }
+        #modal-title { color: #0056b3; margin-top: 0; }
+        #modal-description { margin-bottom: 20px; }
+        #modal-criteria { list-style-type: none; padding-left: 0; }
+        #modal-criteria li { background-color: #f1f1f1; margin-bottom: 8px; padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -38,15 +51,156 @@
         <footer class="footer"><p>본 페이지의 데이터는 FRED, 한국은행 ECOS API를 통해 실시간으로 제공됩니다.</p><p>모든 투자의 책임은 투자자 본인에게 있습니다.</p></footer>
     </div>
 
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="modal-title"></h3>
+            <p id="modal-description"></p>
+            <h4>대시보드 판단 기준:</h4>
+            <ul id="modal-criteria"></ul>
+        </div>
+    </div>
+
 <script>
 // ==================================================================
-// ▼ ▼ ▼ ▼ ▼ 여기에 발급받은 API 키를 입력하세요 ▼ ▼ ▼ ▼ ▼
-// ==================================================================
 const API_KEYS = {
-    FRED: '480b8d74e3d546674e8180193c30dbf6',      // 미국 데이터용
-    ECOS: 'C4UHXGGIUUZ1TNZJOXFM' // 한국 데이터용
+    FRED: '480b8d74e3d546674e8180193c30dbf6',
+    ECOS: 'C4UHXGGIUUZ1TNZJOXFM'
 };
 // ==================================================================
+
+const indicatorDetails = {
+    yield_spread: {
+        title: '🇺🇸 장단기 금리차 (Yield Spread)',
+        description: '미래 경기를 예측하는 핵심 선행 지표입니다. 보통 10년 만기 국채 금리에서 2년 만기 국채 금리를 빼서 계산하며, 이 금리차가 마이너스(-)로 떨어지는 \'금리 역전\' 현상은 미래 경기 침체의 강력한 경고 신호로 해석됩니다.',
+        criteria: [
+            '✅ <b>정상 범위 (0 이상):</b> 경제의 안정적인 확장을 기대하는 상태입니다.',
+            '⚠️ <b>역전폭 축소 (-0.1 ~ 0):</b> 경기 침체 우려가 일부 완화되었지만 여전히 불안한 상태입니다.',
+            '🚨 <b>경기 침체 우려 (-0.1 미만):</b> 가까운 미래에 경기 침체가 올 가능성이 매우 높다고 시장이 판단하는 상태입니다.'
+        ]
+    },
+    gdp_growth: {
+        title: '🇰🇷 GDP 성장률',
+        description: '한 나라의 경제 규모가 이전 분기에 비해 얼마나 성장했는지를 보여주는 가장 대표적인 경제 지표입니다. GDP가 꾸준히 성장한다는 것은 국가 경제가 활발하게 움직이고 있다는 의미입니다.',
+        criteria: [
+            '👍 <b>견조한 회복세 (0.7% 이상):</b> 경제가 예상보다 강하게 성장하고 있음을 의미합니다.',
+            '😐 <b>완만한 성장 (0.3% ~ 0.7%):</b> 경제가 안정적으로 성장하고 있음을 의미합니다.',
+            '👎 <b>성장 둔화 우려 (0.3% 미만):</b> 경제 성장 동력이 약해지고 있음을 의미하며, 경기 둔화의 신호일 수 있습니다.'
+        ]
+    },
+    export_growth: {
+        title: '🇰🇷 수출 증가율',
+        description: '대한민국 경제의 핵심 동력인 수출이 얼마나 늘고 줄었는지를 보여줍니다. 수출이 잘 되어야 기업들의 생산과 투자가 늘고, 일자리도 증가하는 선순환이 일어납니다.',
+        criteria: [
+            '📈 <b>플러스 전환 (2.0% 이상):</b> 수출이 강하게 회복되고 있으며, 경제 전반에 긍정적인 영향을 줍니다.',
+            '📊 <b>소폭 개선 (0% ~ 2.0%):</b> 수출이 부진에서 벗어나 점차 개선되고 있음을 의미합니다.',
+            '📉 <b>수출 부진 (0% 미만):</b> 수출이 감소하고 있어 기업 실적과 경제 성장에 부담을 줍니다.'
+        ]
+    },
+    cpi: {
+        title: '🇰🇷 소비자물가지수 (CPI)',
+        description: '소비자가 일상생활에서 구매하는 상품과 서비스의 가격 변동을 나타내는 지표로, 인플레이션 수준을 측정하는 데 사용됩니다. 물가가 너무 가파르게 오르면 가계의 실질 소득이 줄어 소비가 위축될 수 있습니다.',
+        criteria: [
+            '😌 <b>물가 안정세 (3.0% 이하):</b> 물가가 관리 가능한 범위 내에서 안정적으로 움직이고 있습니다.',
+            '😐 <b>인플레이션 둔화 (3.0% ~ 4.0%):</b> 물가 상승 압력이 다소 완화되었지만 여전히 높은 수준입니다.',
+            '🔥 <b>물가 압력 지속 (4.0% 초과):</b> 높은 물가 상승으로 인해 가계 부담이 커지고 중앙은행의 금리 인상 가능성이 높아집니다.'
+        ]
+    },
+    unemployment: {
+        title: '🇰🇷 실업률',
+        description: '경제활동인구 중에서 실업자가 차지하는 비율을 나타냅니다. 실업률이 낮다는 것은 고용 시장이 안정되어 있고, 가계 소득이 튼튼해져 소비가 늘어날 수 있다는 긍정적인 신호입니다.',
+        criteria: [
+            '💪 <b>완전고용 수준 (3.0% 이하):</b> 고용 시장이 매우 안정적이고 건강한 상태입니다.',
+            '😥 <b>고용 시장 악화 (3.0% 초과):</b> 일자리를 찾는 사람이 늘어나고 있어 경기 둔화의 신호일 수 있습니다.'
+        ]
+    },
+    base_rate: {
+        title: '🇰🇷 기준금리',
+        description: '중앙은행(한국은행)이 결정하는 정책 금리로, 시중 금리의 기준이 됩니다. 금리가 낮으면 시중에 돈이 많이 풀려 경기가 활성화되고(긍정), 높으면 긴축 효과로 경기가 둔화될 수 있습니다(부정).',
+        criteria: [
+            '💰 <b>완화적 통화정책 (2.5% 이하):</b> 경기 부양을 위해 금리를 낮은 수준으로 유지하고 있음을 의미합니다.',
+            '⚖️ <b>중립적 금리 수준 (2.5% ~ 3.5%):</b> 경제가 안정적이라고 판단하여 금리를 중립적인 수준으로 유지하고 있음을 의미합니다.',
+            '🔒 <b>긴축적 통화정책 (3.5% 초과):</b> 물가 안정을 위해 금리를 높은 수준으로 유지하고 있음을 의미합니다.'
+        ]
+    },
+    exchange_rate: {
+        title: '🇰🇷 원/달러 환율',
+        description: '1달러를 사는 데 필요한 원화의 양입니다. 환율이 오르면(원화 약세) 수출 기업의 가격 경쟁력은 높아지지만, 수입 물가가 올라 국내 물가 상승 압력으로 작용합니다. 반대로 환율이 내리면(원화 강세) 수입 물가 안정에는 도움이 되지만 수출 기업의 실적에는 부담이 될 수 있습니다.',
+        criteria: [
+            '💵 <b>환율 안정 (1300원 이하):</b> 수출입 기업 모두에게 안정적인 환경을 제공합니다.',
+            ' fluctuating <b>환율 변동성 확대 (1300원 ~ 1350원):</b> 시장의 불확실성이 커지고 있음을 의미합니다.',
+            '💸 <b>원화 약세 심화 (1350원 초과):</b> 수입 물가 상승으로 인한 인플레이션 압력이 커지고, 외국인 자금 유출 우려가 높아집니다.'
+        ]
+    },
+    vix: {
+        title: '😱 VIX 지수 (공포 지수)',
+        description: '시장의 불안감을 나타내는 지표입니다. 주식 시장의 변동성이 앞으로 30일간 얼마나 클지를 예측하며, 지수가 높을수록 시장 참여자들이 느끼는 공포와 불안감이 크다는 의미입니다.',
+        criteria: [
+            '😌 <b>시장 안정 (20 이하):</b> 투자 심리가 안정적이며, 시장의 불확실성이 낮은 상태입니다.',
+            '😟 <b>불안 심리 존재 (20 ~ 30):</b> 시장에 불안 요소가 있어 변동성이 커질 수 있는 상태입니다.',
+            '😱 <b>공포 심리 확산 (30 초과):</b> 시장에 대한 공포가 극에 달해 주가가 급락할 가능성이 높은 위험한 상태입니다.'
+        ]
+    },
+    industrial_production: {
+        title: '🇰🇷 산업생산지수',
+        description: '국내 제조업, 광업 등 주요 산업의 생산 활동이 얼마나 활발한지를 보여줍니다. 이 지표가 상승하면 기업들의 생산이 활발하고 실물 경제가 튼튼하다는 신호로 해석됩니다.',
+        criteria: [
+            '🏭 <b>생산 활발 (1.0% 이상):</b> 제조업 경기가 확장 국면에 있음을 의미합니다.',
+            '😐 <b>생산 보합 (0% ~ 1.0%):</b> 생산 활동이 정체되어 있음을 의미합니다.',
+            '📉 <b>생산 위축 (0% 미만):</b> 생산 활동이 감소하고 있어 경기 둔화의 신호로 해석됩니다.'
+        ]
+    },
+    consumer_sentiment: {
+        title: '🇰🇷 소비자심리지수 (CSI)',
+        description: '소비자들이 현재 경제 상황을 어떻게 느끼고 미래를 어떻게 전망하는지를 나타냅니다. 이 지수가 100을 넘으면 미래 경기를 긍정적으로 보는 사람이 더 많다는 뜻으로, 향후 소비가 늘어날 가능성이 높음을 시사합니다.',
+        criteria: [
+            '😊 <b>소비 심리 낙관 (100 이상):</b> 소비자들이 경기를 긍정적으로 보고 있어 향후 소비가 늘어날 가능성이 높습니다.',
+            '😐 <b>소비 심리 중립 (90 ~ 100):</b> 소비자들이 경기 상황을 관망하고 있습니다.',
+            '😟 <b>소비 심리 비관 (90 미만):</b> 소비자들이 경기를 부정적으로 보고 있어 지갑을 닫을 가능성이 높습니다.'
+        ]
+    },
+    corp_bond_spread: {
+        title: '🇰🇷 회사채 스프레드',
+        description: '신용도가 낮은 회사채(BBB-)와 안전자산인 국고채 간의 금리 차이입니다. 이 스프레드가 커진다는 것은 기업들의 자금 조달이 어려워지고 부도 위험이 높아졌다고 시장이 판단하는 것을 의미합니다.',
+        criteria: [
+            '✅ <b>신용 위험 완화 (0.8%p 이하):</b> 기업들의 자금 조달 환경이 안정적입니다.',
+            '⚠️ <b>신용 위험 보통 (0.8%p ~ 1.2%p):</b> 기업 신용 위험에 대한 경계감이 다소 있는 상태입니다.',
+            '🚨 <b>신용 위험 증가 (1.2%p 초과):</b> 기업 부도 위험이 높아져 금융시장의 불안 요인이 될 수 있습니다.'
+        ]
+    },
+    dollar_index: {
+        title: '💲 달러 인덱스',
+        description: '세계 주요 6개국 통화 대비 달러의 평균적인 가치를 보여줍니다. 달러 인덱스가 높으면 달러가 강세라는 뜻으로, 글로벌 자금이 안전자산인 달러로 몰려 신흥국 증시에는 부담이 될 수 있습니다.',
+        criteria: [
+            '💲 <b>달러 약세 (100 이하):</b> 달러 가치가 하락하여 신흥국 등 위험자산에 대한 투자 심리가 개선됩니다.',
+            '💰 <b>달러 강세 (100 초과):</b> 달러 가치가 상승하여 안전자산 선호 심리가 강해집니다.'
+        ]
+    },
+    wti_price: {
+        title: '🛢️ WTI 유가',
+        description: '서부 텍사스산 원유(WTI) 가격으로, 세계 경제의 혈액과도 같습니다. 유가는 전 세계 물가와 기업들의 생산 비용에 직접적인 영향을 미칩니다.',
+        criteria: [
+            '⛽ <b>유가 안정 (80달러 이하):</b> 물가 안정과 기업 생산 비용 절감에 긍정적입니다.',
+            '🔺 <b>유가 상승 압력 (80달러 ~ 100달러):</b> 전 세계적으로 인플레이션 우려를 키우는 요인입니다.',
+            '🔥 <b>고유가 부담 (100달러 초과):</b> 기업과 가계에 큰 부담을 주어 경기 둔화를 유발할 수 있습니다.'
+        ]
+    },
+    kospi: {
+        title: '🇰🇷 코스피 지수',
+        description: '한국을 대표하는 주가 지수로, 국내 증권거래소에 상장된 기업들의 주가 움직임을 종합하여 표시합니다. 한국 경제의 전반적인 상황과 기업들의 실적을 반영하는 거울과도 같습니다.',
+        criteria: [
+            '📊 <b>주요 시장 지수:</b> 이 지수 자체는 분석 대상이기보다는 다른 지표들과 함께 종합적으로 해석하는 참고 자료입니다.'
+        ]
+    },
+    producer_price_index: {
+        title: '🇰🇷 생산자물가지수 (PPI)',
+        description: '생산자가 시장에 공급하는 상품과 서비스의 가격 변동을 나타냅니다. 생산자물가는 보통 1~3개월의 시차를 두고 최종 소비자가 구매하는 소비자물가에 영향을 미치는 선행 지표 역할을 합니다.',
+        criteria: [
+            '😌 <b>생산자 물가 안정 (3.0% 이하):</b> 향후 소비자 물가 안정에 기여할 수 있는 긍정적인 신호입니다.',
+            '🔺 <b>생산자 물가 부담 (3.0% 초과):</b> 기업들의 비용 부담이 커지고, 이는 결국 소비자 가격 인상으로 이어질 수 있습니다.'
+        ]
+    }
+};
 
 document.addEventListener('DOMContentLoaded', main);
 
@@ -56,6 +210,7 @@ async function main() {
         return;
     }
     
+    setupModal();
     renderInitialPlaceholders();
 
     try {
@@ -182,7 +337,6 @@ async function fetchAllKoreanData() {
     return Object.values(foundIndicators);
 }
 
-// --- 분석 및 렌더링 함수 ---
 function analyzeIndicators(indicators) {
     return indicators.map(indicator => {
         let analysis = {};
@@ -254,7 +408,6 @@ function analyzeIndicators(indicators) {
                 else analysis = { status: 'negative', score: -1, text: '고유가 부담', icon: '🔥' };
                 break;
             case 'kospi':
-                // KOSPI는 점수 계산에 직접적인 영향을 주기보다 참고용으로 표시
                 analysis = { status: 'neutral', score: 0, text: '주요 시장 지수', icon: '📊' };
                 break;
             case 'producer_price_index':
@@ -266,6 +419,7 @@ function analyzeIndicators(indicators) {
         return { ...indicator, ...analysis };
     });
 }
+
 function getMarketOutlook(analyzedIndicators) {
     const totalScore = analyzedIndicators.reduce((acc, indicator) => acc + (indicator.score || 0), 0);
     if (totalScore >= 5) return { status: 'positive', signal: '📈', title: '상승 기대', analysis: "다수의 핵심 경제 지표가 긍정적인 신호를 보내고 있습니다. 경기 확장, 물가 안정, 위험자산 선호 심리가 복합적으로 나타나며 투자 환경이 우호적일 가능성이 높습니다." };
@@ -274,12 +428,7 @@ function getMarketOutlook(analyzedIndicators) {
 }
 
 function renderInitialPlaceholders() {
-    const ids = [
-        "🇺🇸 장단기 금리차", "🇰🇷 GDP 성장률", "🇰🇷 수출 증가율", "🇰🇷 소비자물가지수", "🇰🇷 실업률",
-        "🇰🇷 기준금리", "🇰🇷 원/달러 환율", "😱 VIX 지수", "🇰🇷 산업생산지수",
-        "🇰🇷 소비자심리지수", "🇰🇷 회사채 스프레드", "💲 달러 인덱스", "🛢️ WTI 유가",
-        "🇰🇷 코스피", "🇰🇷 생산자물가지수"
-    ];
+    const ids = Object.values(indicatorDetails).map(detail => detail.title);
     const grid = document.getElementById('indicator-grid');
     grid.innerHTML = ids.map(name => `<div class="indicator-card"><h4>${name}</h4><p class="loading-text">Loading...</p></div>`).join('');
 }
@@ -294,7 +443,7 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
     indicatorGrid.innerHTML = '';
     
     analyzedIndicators.forEach(indicator => {
-        if (!indicator.id) return; // Skip if indicator is not found
+        if (!indicator.id) return;
         const card = document.createElement('div');
         card.className = 'indicator-card';
         const valueText = (typeof indicator.value === 'number' && !isNaN(indicator.value)) 
@@ -302,15 +451,52 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
             : `<span class="loading-text">${indicator.value}</span>`;
             
         card.innerHTML = `
-            <h4>${indicator.name} <span class="date">(${indicator.date})</span></h4>
-            <p class="indicator-value">${valueText}</p>
-            <div class="indicator-status">
-                <span class="status-icon">${indicator.icon}</span>
-                <span class="status-text ${indicator.status}-icon">${indicator.text}</span>
-            </div>`;
+            <div>
+                <h4>${indicator.name} <span class="date">(${indicator.date})</span></h4>
+                <p class="indicator-value">${valueText}</p>
+                <div class="indicator-status">
+                    <span class="status-icon">${indicator.icon}</span>
+                    <span class="status-text ${indicator.status}-icon">${indicator.text}</span>
+                </div>
+            </div>
+            <button class="details-btn" onclick="showModal('${indicator.id}')">자세히 보기</button>`;
         indicatorGrid.appendChild(card);
     });
     document.getElementById('analysis-section').innerHTML = `<p>${marketOutlook.analysis}</p>`;
+}
+
+// Modal Functions
+function setupModal() {
+    const modal = document.getElementById('modal');
+    const closeBtn = document.getElementsByClassName('close-btn')[0];
+
+    closeBtn.onclick = () => {
+        modal.style.display = 'none';
+    };
+
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    };
+}
+
+function showModal(indicatorId) {
+    const details = indicatorDetails[indicatorId];
+    if (!details) return;
+
+    document.getElementById('modal-title').innerHTML = details.title;
+    document.getElementById('modal-description').innerHTML = details.description;
+    
+    const criteriaList = document.getElementById('modal-criteria');
+    criteriaList.innerHTML = '';
+    details.criteria.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = item;
+        criteriaList.appendChild(li);
+    });
+
+    document.getElementById('modal').style.display = 'block';
 }
 
 </script>
