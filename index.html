@@ -129,14 +129,15 @@ async function fetchEcosData(displayName, statCode, period) {
         startTime = `${year - 1}${month}`;
     }
     
-    // ECOS API URL 전체를 변수에 저장합니다.
     const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/?pClassName=KR&STAT_CODE=${statCode}&CYCLE=${period}&START_TIME=${startTime}&END_TIME=${endTime}`;
-    
-    // 우리 서버(proxy.js)로 보낼 최종 URL. ecosApiUrl 전체를 encodeURIComponent로 감싸줍니다.
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
     
     try {
-        const response = await fetch(finalUrl); // 수정된 최종 URL 사용
+        const response = await fetch(finalUrl);
+        // 응답이 성공적이지 않을 경우를 대비
+        if (!response.ok) {
+            throw new Error(`서버 응답 오류: ${response.status} ${response.statusText}`);
+        }
         const data = await response.json();
 
         if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
@@ -157,6 +158,11 @@ async function fetchEcosData(displayName, statCode, period) {
         };
 
     } catch (error) {
+        // --- ★★★ 디버깅 코드 ★★★ ---
+        // 오류 발생 시, 어떤 URL로 요청했는지 콘솔에 Raw 데이터를 출력합니다.
+        console.error(`[디버깅] 실패한 ECOS API 요청 URL:\n${ecosApiUrl}`);
+        // --- ★★★ 디버깅 코드 끝 ★★★
+        
         console.error(`Failed to fetch ${displayName}:`, error);
         return {
             id: displayName, name: `🇰🇷 ${displayName}`,
