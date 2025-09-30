@@ -173,7 +173,7 @@ async function fetchAllKoreanData() {
                     name: value.name,
                     value: parseFloat(stat.DATA_VALUE),
                     unit: stat.UNIT_NAME,
-                    date: stat.TIME.substring(4, 6) + '월'
+                    date: (stat.TIME && typeof stat.TIME === 'string') ? stat.TIME.substring(4, 6) + '월' : '최신'
                 };
             }
         }
@@ -182,7 +182,7 @@ async function fetchAllKoreanData() {
     return Object.values(foundIndicators);
 }
 
-// --- 분석 및 렌더링 함수 (수정 없음) ---
+// --- 분석 및 렌더링 함수 ---
 function analyzeIndicators(indicators) {
     return indicators.map(indicator => {
         let analysis = {};
