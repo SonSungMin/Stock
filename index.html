@@ -72,16 +72,13 @@ async function main() {
 async function fetchAllData() {
     const promises = [
         fetchYieldSpread(),
-        // GDP 성장률 (분기)
-        fetchEcosData('GDP 성장률', '102Y004', 'Q', '200Y001'),
-        // 소비자물가지수 (월별)
-        fetchEcosData('소비자물가지수', '901Y001', 'M'),
-        // 수출금액증감률 (월별)
-        fetchEcosData('수출 증가율', '200Y009', 'M', '403Y003'),
-        // 실업률 (월별)
-        fetchEcosData('실업률', '401Y003', 'M', 'I2A00'),
-        // 원/달러 환율 (일별) - 필요 시 추가
-        // fetchEcosData('원/달러 환율', '402Y007', 'D', '0000001'),
+        // --- ★★★ ECOS 공식 문서 기반 최종 코드 ★★★ ---
+        // fetchEcosData('이름', '통계표 코드', '주기', '세부 항목 코드') 형식
+        fetchEcosData('GDP 성장률', '102Y004', 'Q', '200Y001'),      // 통계표: 경제활동별 GDP, 항목: 실질 GDP(전기비)
+        fetchEcosData('수출 증가율', '200Y009', 'M', '403Y003'),      // 통계표: 수출입총괄, 항목: 수출금액증감률
+        fetchEcosData('소비자물가지수', '901Y001', 'M', '010Y002'), // 통계표: 소비자물가지수, 항목: 등락률(전년동월비)
+        fetchEcosData('실업률', '401Y003', 'M', 'I2A00')         // 통계표: 실업률, 항목: 계절변동조정
+        // --- ★★★ 수정 끝 ★★★ ---
     ];
     return await Promise.all(promises);
 }
@@ -121,43 +118,43 @@ async function fetchEcosData(displayName, tableCode, period, ...itemCodes) {
     const now = new Date();
     let endTime, startTime;
 
-    // --- ★★★ 조회 기간 1년으로 확대 ★★★ ---
+    // 조회 기간을 1년으로 설정
     if (period === 'Q') {
         const year = now.getFullYear();
         const quarter = Math.floor(now.getMonth() / 3) + 1;
         endTime = `${year}Q${quarter}`;
-        startTime = `${year - 1}Q${quarter}`; // 1년 전 동일 분기
+        startTime = `${year - 1}Q${quarter}`;
     } else { // Monthly data
         const year = now.getFullYear();
         const month = (now.getMonth() + 1).toString().padStart(2, '0');
         endTime = `${year}${month}`;
-        startTime = `${year - 1}${month}`; // 1년 전 동일 월
+        startTime = `${year - 1}${month}`;
     }
-    // --- ★★★ 수정 끝 ★★★ ---
 
+    // --- ★★★ ECOS 공식 문서 기반 최종 URL 구조 ★★★ ---
+    // 구조: .../통계표코드/주기/시작일/종료일/세부항목코드1/세부항목코드2...
     const itemCodePath = itemCodes.join('/');
-    // 1년치 데이터를 모두 요청(최대 100개)
     const ecosApiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${API_KEYS.ECOS}/json/kr/1/100/${tableCode}/${period}/${startTime}/${endTime}/${itemCodePath}`;
+    // --- ★★★ 수정 끝 ★★★ ---
+    
     const finalUrl = `/.netlify/functions/proxy?targetUrl=${encodeURIComponent(ecosApiUrl)}`;
-
+    
     try {
         const response = await fetch(finalUrl);
-        if (!response.ok) {
-            throw new Error(`서버 응답 오류: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`서버 응답 오류: ${response.status}`);
         
         const data = await response.json();
         
-        if (!data.StatisticSearch || data.StatisticSearch.list_total_count === 0) {
-            throw new Error(`${displayName} 데이터를 찾을 수 없거나 아직 발표되지 않았습니다.`);
+        if (!data.StatisticSearch) {
+            if(data.RESULT) throw new Error(`ECOS API Error: ${data.RESULT.MESSAGE}`);
+            throw new Error('ECOS API로부터 유효한 응답을 받지 못했습니다.');
         }
 
-        if (data.RESULT && data.RESULT.CODE !== 'INFO-000') {
-            throw new Error(`ECOS API Error: ${data.RESULT.MESSAGE}`);
+        if (data.StatisticSearch.list_total_count === 0) {
+            throw new Error(`${displayName} 데이터가 아직 발표되지 않았거나 없습니다.`);
         }
         
-        // --- ★★★ 가장 최신 데이터 선택 ★★★ ---
-        const latestData = data.StatisticSearch.row.pop(); // 배열의 마지막 데이터가 가장 최신
+        const latestData = data.StatisticSearch.row.pop();
         const dateStr = latestData.TIME;
 
         return {
