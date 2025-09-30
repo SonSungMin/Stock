@@ -70,13 +70,14 @@ async function main() {
 }
 
 async function fetchAllData() {
-    // 이제 날짜 계산을 각 함수에 위임하므로 여기서는 호출만 합니다.
     const promises = [
         fetchYieldSpread(),
-        fetchEcosData('GDP 성장률', '200Y001', 'Q'),      // 분기
-        fetchEcosData('수출 증가율', '403Y003', 'M'),      // 월별
-        fetchEcosData('소비자물가지수', '901Y001', 'M'), // 월별
-        fetchEcosData('실업률', '401Y003', 'M')        // 월별
+        // --- ★★★ 통계 코드(STAT_CODE) 수정 ★★★ ---
+        fetchEcosData('GDP 성장률', '2.1.1', 'Q'),         // 200Y001 -> 2.1.1 (실질 국내총생산(전기대비 증감률))
+        fetchEcosData('수출 증가율', '4.1.1', 'M'),         // 403Y003 -> 4.1.1 (수출금액증감률(총))
+        fetchEcosData('소비자물가지수', '010Y002', 'M'),   // 901Y001 -> 010Y002 (소비자물가등락률(전년동월대비))
+        fetchEcosData('실업률', 'I2A00', 'M')           // 401Y003 -> I2A00 (실업률(계절변동조정))
+        // --- ★★★ 통계 코드(STAT_CODE) 수정 끝 ★★★ ---
     ];
     return await Promise.all(promises);
 }
