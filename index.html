@@ -25,7 +25,8 @@
 
         /* Compact Indicator Card Styles */
         .indicator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; }
-        .indicator-card { background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; }
+        .indicator-card { background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: background-color 0.3s ease; }
+        .indicator-card.card-negative-bg { background-color: #f8d7da; border-color: #f5c6cb; }
         .indicator-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .indicator-card h4 { margin: 0; color: #343a40; font-size: 1.05em; line-height: 1.3; }
         .indicator-card .date { font-size: 0.75em; color: #6c757d; font-weight: normal; }
@@ -274,7 +275,6 @@ async function fetchAllMacroData() {
         fetchAdditionalFredData(),
         fetchAllKoreanData()
     ]);
-    // fetchYieldSpread는 배열이 아니므로 배열로 감싸서 합칩니다.
     return [yieldData, ...additionalFredData, ...koreanIndicators];
 }
 
@@ -341,9 +341,9 @@ async function fetchAllKoreanData() {
 
 async function fetchAllSectorData() {
     const series = {
-        sox: 'SOX', // 필라델피아 반도체 지수
-        drg: 'DRG', // NYSE 제약 지수
-        auto_sales: 'TOTALSA' // 미국 총 자동차 판매량
+        sox: 'SOX',
+        drg: 'DRG',
+        auto_sales: 'TOTALSA'
     };
     
     const urls = Object.values(series).map(id => `https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=1`);
@@ -359,7 +359,6 @@ async function fetchAllSectorData() {
         format(drgData, 'pharma_index', '💊 NYSE 제약 지수', '')
     ];
 }
-
 
 function analyzeIndicators(indicators) {
     const weights = {
@@ -445,9 +444,7 @@ function analyzeIndicators(indicators) {
             case 'kospi':
                 analysis = { ...analysis, status: 'neutral', score: 0, text: '주요 시장 지수', icon: '📊' };
                 break;
-            // 섹터 지표 분석 로직 추가
             case 'sox_index':
-                 // 단순 참고용, 점수화는 추후 고도화
                  analysis = { ...analysis, status: 'neutral', score: 0, text: '반도체 업황 지수', icon: '💡' };
                  break;
             case 'auto_sales':
@@ -486,16 +483,14 @@ function getMarketOutlook(analyzedIndicators) {
 function getSectorOutlook(analyzedIndicators) {
     const find = (id) => analyzedIndicators.find(i => i.id === id) || {};
 
-    // 1. 전기/전자 (반도체) 전망
     const exchange_rate = find('exchange_rate');
     let electronicsOutlook = { status: 'neutral', text: '중립적', reason: '글로벌 수요와 환율 효과가 혼재되어 있습니다.'};
-    if (exchange_rate.score >= 0) { // 원화 약세/보합
+    if (exchange_rate.score >= 0) {
         electronicsOutlook = { status: 'positive', text: '긍정적', reason: '반도체 업황 개선과 우호적인 환율 환경으로 실적 개선 기대감이 높습니다.'};
-    } else { // 원화 강세
+    } else {
         electronicsOutlook = { status: 'neutral', text: '중립적', reason: '반도체 업황은 긍정적이나, 원화 강세가 수출 기업의 수익성을 일부 상쇄합니다.'};
     }
 
-    // 2. 자동차 전망
     const auto = find('auto_sales');
     const wti = find('wti_price');
     let autoOutlook = { status: 'neutral', text: '중립적', reason: '판매량과 유가 변동을 주시해야 합니다.'};
@@ -507,7 +502,6 @@ function getSectorOutlook(analyzedIndicators) {
         autoOutlook = { status: 'neutral', text: '중립적', reason: '판매량은 양호하나, 고유가가 소비자의 구매 부담을 높일 수 있습니다.'};
     }
 
-    // 3. 의약/바이오 전망
     const vix = find('vix');
     let pharmaOutlook = { status: 'neutral', text: '중립적', reason: '경기 방어적 성격과 성장 기대감이 공존합니다.'};
     if (vix.score < 0) {
@@ -570,6 +564,10 @@ function renderDashboard(analyzedIndicators, marketOutlook, sectorOutlook) {
         
         const card = document.createElement('div');
         card.className = 'indicator-card';
+        if (indicator.status === 'negative') {
+            card.classList.add('card-negative-bg');
+        }
+
         const valueText = (typeof indicator.value === 'number' && !isNaN(indicator.value)) 
             ? `${indicator.value.toLocaleString()}${indicator.unit || ''}` 
             : `<span class="loading-text">${indicator.value}</span>`;
