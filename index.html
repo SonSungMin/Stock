@@ -16,11 +16,12 @@
 
         <div class="search-section">
             <div class="autocomplete-container">
-                <input type="text" id="stock-code-input" placeholder="종목명 또는 코드를 입력하세요 (예: 삼성전자)">
+                <input type="text" id="stock-code-input" placeholder="종목 목록을 불러오는 중입니다..." disabled>
                 <div class="autocomplete-items" id="autocomplete-list"></div>
             </div>
             <button id="stock-search-btn">종목 조회</button>
         </div>
+        <p id="stock-list-status">Initializing...</p>
 
         <div id="stock-details-section" class="stock-details-section" style="display: none;">
             <div class="stock-header">
