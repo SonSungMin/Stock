@@ -2,17 +2,16 @@
 // API 키와 프록시 URL 설정
 // ==================================================================
 const API_KEYS = {
-    FRED: '480b8d74e3d546674e8180193c30dbf6', // 실제 FRED API 키로 교체해야 합니다.
-    ECOS: 'C4UHXGGIUUZ1TNZJOXFM'      // 실제 한국은행 ECOS API 키로 교체해야 합니다.
+    FRED: '480b8d74e3d546674e8180193c30dbf6',
+    ECOS: 'C4UHXGGIUUZ1TNZJOXFM'
 };
 const PROXY_URL = '/.netlify/functions/proxy?targetUrl=';
 const STOCK_INFO_URL = '/.netlify/functions/stock-info?code=';
 const STOCK_SEARCH_URL = '/.netlify/functions/stock-list?query='; 
 
-let indicatorChart = null; // 차트 인스턴스를 저장할 전역 변수
+let indicatorChart = null;
 let stockPriceChart = null;
 let stockFinanceChart = null;
-
 
 // ==================================================================
 // 지표 상세 정보 (설명, 판단 기준, FRED Series ID 등)
@@ -270,9 +269,6 @@ async function main() {
         alert('script.js 파일 상단에 API 키를 먼저 입력해주세요.');
         return;
     }
-    
-    // 종목 목록 상태를 확인하던 로직을 완전히 제거합니다.
-    // checkStockListStatus(); 
 
     setupEventListeners();
     renderInitialPlaceholders();
@@ -297,9 +293,8 @@ async function main() {
     }
 }
 
-
 // ==================================================================
-// 이벤트 리스너 설정 (수정된 함수)
+// 이벤트 리스너 설정 (개선된 버전)
 // ==================================================================
 function setupEventListeners() {
     // Accordion
@@ -317,38 +312,30 @@ function setupEventListeners() {
     closeBtn.onclick = () => { modal.style.display = 'none'; };
     window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
 
-    // Stock Search (자동완성 및 최종 조회 로직)
+    // Stock Search
     const searchInput = document.getElementById('stock-code-input');
     const searchBtn = document.getElementById('stock-search-btn');
     const autocompleteList = document.getElementById('autocomplete-list');
 
     // '종목 조회' 버튼 클릭 이벤트
     searchBtn.addEventListener('click', async () => {
-        // 자동완성 목록에서 항목을 선택했다면, 데이터 속성에 코드가 저장되어 있음
         let stockCode = searchInput.dataset.stockCode;
         const stockName = searchInput.value.trim();
 
-        // 1. 이미 종목 코드가 있는 경우 (정상)
         if (stockCode) {
             fetchAndRenderStockData(stockCode);
-        } 
-        // 2. 코드는 없지만, 입력창에 이름이 있는 경우
-        else if (stockName) {
+        } else if (stockName) {
             try {
-                // 서버에 해당 이름으로 검색 요청을 보내 종목 코드를 찾아옴
-                const response = await fetch(`${STOCK_SEARCH_URL}${stockName}`);
+                const response = await fetch(`${STOCK_SEARCH_URL}${encodeURIComponent(stockName)}`);
                 const stocks = await response.json();
 
                 if (stocks && stocks.length > 0) {
-                    // 가장 첫 번째 검색 결과를 사용
                     const firstMatch = stocks[0];
                     console.log(`자동으로 종목 코드를 찾았습니다: ${firstMatch.name} (${firstMatch.code})`);
                     
-                    // 찾은 정보로 입력창과 데이터 속성을 업데이트
                     searchInput.value = firstMatch.name;
                     searchInput.dataset.stockCode = firstMatch.code;
                     
-                    // 상세 정보 조회 실행
                     fetchAndRenderStockData(firstMatch.code);
                 } else {
                     alert(`'${stockName}'에 해당하는 종목을 찾을 수 없습니다. 다시 입력해주세요.`);
@@ -361,59 +348,77 @@ function setupEventListeners() {
             alert('종목명 또는 코드를 입력해주세요.');
         }
 
-        autocompleteList.style.display = 'none'; // 어떤 경우든 자동완성 목록은 닫음
+        autocompleteList.style.display = 'none';
     });
 
-    // 입력창에서 Enter 키를 눌렀을 때 '종목 조회' 버튼 클릭을 실행
+    // Enter 키 이벤트
     searchInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             searchBtn.click();
         }
     });
     
-    // 실시간 자동완성 목록 생성
+    // 실시간 자동완성 (개선됨)
     searchInput.addEventListener('input', async () => {
         const query = searchInput.value.trim();
-        // 입력이 변경되면, 저장된 종목 코드를 초기화
         searchInput.dataset.stockCode = ''; 
 
-        if (query.length < 2) {
+        if (query.length < 1) {
             autocompleteList.style.display = 'none';
             return;
         }
 
         try {
-            const response = await fetch(`${STOCK_SEARCH_URL}${query}`);
+            const response = await fetch(`${STOCK_SEARCH_URL}${encodeURIComponent(query)}`);
+            
+            if (!response.ok) {
+                throw new Error(`Search failed: ${response.status}`);
+            }
+            
             const stocks = await response.json();
             
             autocompleteList.innerHTML = '';
             if (stocks && stocks.length > 0) {
                 stocks.forEach(stock => {
                     const item = document.createElement('div');
-                    item.textContent = `${stock.name} (${stock.code})`;
+                    item.className = 'autocomplete-item';
+                    const marketBadge = stock.market ? `<span class="market-badge">${stock.market}</span>` : '';
+                    item.innerHTML = `
+                        <span class="stock-name">${stock.name}</span>
+                        <span class="stock-code-small">${stock.code}</span>
+                        ${marketBadge}
+                    `;
+                    
                     item.addEventListener('click', () => {
                         searchInput.value = stock.name;
-                        // 사용자가 항목을 클릭하면, 데이터 속성에 종목 코드를 저장
                         searchInput.dataset.stockCode = stock.code; 
                         autocompleteList.style.display = 'none';
-                        fetchAndRenderStockData(stock.code); // 클릭 시 바로 조회
+                        fetchAndRenderStockData(stock.code);
                     });
                     autocompleteList.appendChild(item);
                 });
                 autocompleteList.style.display = 'block';
             } else {
-                autocompleteList.innerHTML = `<div class="autocomplete-message">검색 결과 없음</div>`;
+                const noResult = document.createElement('div');
+                noResult.className = 'autocomplete-message';
+                noResult.textContent = '검색 결과가 없습니다';
+                autocompleteList.appendChild(noResult);
                 autocompleteList.style.display = 'block';
             }
         } catch (error) {
             console.error('종목 검색 실패:', error);
-            autocompleteList.style.display = 'none';
+            autocompleteList.innerHTML = '';
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'autocomplete-message error';
+            errorMsg.textContent = '검색 중 오류가 발생했습니다';
+            autocompleteList.appendChild(errorMsg);
+            autocompleteList.style.display = 'block';
         }
     });
 
-    // 다른 곳을 클릭하면 자동완성 목록 닫기
+    // 다른 곳 클릭 시 자동완성 닫기
     document.addEventListener('click', (e) => {
-        if (e.target !== searchInput) {
+        if (e.target !== searchInput && !autocompleteList.contains(e.target)) {
             autocompleteList.style.display = 'none';
         }
     });
@@ -423,7 +428,6 @@ function setupEventListeners() {
 // 개별 종목 데이터 처리
 // ==================================================================
 async function fetchAndRenderStockData(stockCode) {
-    // 입력된 stockCode가 유효한 6자리 숫자인지 확인
     if (!stockCode || !/^\d{6}$/.test(stockCode)) {
         alert('정확한 6자리 종목 코드를 입력하거나, 검색 결과에서 종목을 선택해주세요.');
         return;
@@ -433,24 +437,64 @@ async function fetchAndRenderStockData(stockCode) {
     section.style.display = 'block';
     section.scrollIntoView({ behavior: 'smooth' });
     
+    // 로딩 표시
+    section.innerHTML = '<div style="text-align:center; padding:40px;"><p class="loading-text">종목 정보를 불러오는 중...</p></div>';
+    
     try {
         const response = await fetch(`${STOCK_INFO_URL}${stockCode}`);
         if (!response.ok) {
             throw new Error(`서버 오류: ${response.status}`);
         }
         const data = await response.json();
+        
+        // 원래 HTML 구조 복원
+        section.innerHTML = `
+            <div class="stock-header">
+                <h2 id="stock-name"></h2>
+                <p class="stock-code" id="stock-code"></p>
+            </div>
+            <div class="stock-grid">
+                <div class="stock-info-card main-price">
+                    <p class="card-title">현재가</p>
+                    <p class="card-value" id="stock-price"></p>
+                    <p class="card-change" id="stock-change"></p>
+                </div>
+                <div class="stock-info-card">
+                    <p class="card-title">시가총액</p>
+                    <p class="card-value small" id="stock-market-cap"></p>
+                </div>
+                <div class="stock-info-card">
+                    <p class="card-title">PER / PBR</p>
+                    <p class="card-value small" id="stock-per-pbr"></p>
+                </div>
+                <div class="stock-info-card">
+                    <p class="card-title">배당수익률</p>
+                    <p class="card-value small" id="stock-dividend-yield"></p>
+                </div>
+            </div>
+            <div class="chart-grid">
+                <div class="stock-chart-container">
+                    <h4>일봉 차트</h4>
+                    <canvas id="stock-price-chart"></canvas>
+                </div>
+                <div class="stock-chart-container">
+                    <h4>연간 실적</h4>
+                    <canvas id="stock-finance-chart"></canvas>
+                </div>
+            </div>
+        `;
+        
         renderStockDetails(data);
 
     } catch (error) {
         console.error('종목 정보 조회 실패:', error);
-        alert('종목 정보를 불러오는 데 실패했습니다.');
+        section.innerHTML = '<div style="text-align:center; padding:40px;"><p style="color:#dc3545;">종목 정보를 불러오는 데 실패했습니다.</p></div>';
     }
 }
 
 function renderStockDetails(data) {
     const { priceInfo, dailyChart, financialInfo } = data;
 
-    // --- 기본 정보 렌더링 ---
     document.getElementById('stock-name').innerText = priceInfo.stck_kr_abrv || 'N/A';
     document.getElementById('stock-code').innerText = priceInfo.stck_shrn_iscd || 'N/A';
     
@@ -463,16 +507,15 @@ function renderStockDetails(data) {
     changeEl.innerText = `${change > 0 ? '▲' : '▼'} ${Math.abs(change).toLocaleString()}원 (${changeRate}%)`;
     changeEl.style.color = change > 0 ? '#dc3545' : '#0056b3';
 
-    const marketCap = parseInt(priceInfo.hts_avls) / 100000000; // 조 단위로 변환
+    const marketCap = parseInt(priceInfo.hts_avls) / 100000000;
     document.getElementById('stock-market-cap').innerText = `${marketCap.toFixed(1)}조 원`;
     document.getElementById('stock-per-pbr').innerText = `${priceInfo.per} / ${priceInfo.pbr}`;
     
     const dividendYield = (parseInt(priceInfo.dps.replace(/,/g, '')) / currentPrice * 100).toFixed(2);
     document.getElementById('stock-dividend-yield').innerText = `${dividendYield}%`;
 
-    // --- 차트 렌더링 ---
     renderStockPriceChart(dailyChart);
-    renderStockFinanceChart(financialInfo); // 샘플 데이터에만 존재
+    renderStockFinanceChart(financialInfo);
 }
 
 function renderStockPriceChart(chartData) {
@@ -506,7 +549,7 @@ function renderStockPriceChart(chartData) {
 }
 
 function renderStockFinanceChart(financialData) {
-    if (!financialData) return; // API 응답에 재무정보가 없을 수 있음
+    if (!financialData) return;
     
     const ctx = document.getElementById('stock-finance-chart').getContext('2d');
     if (stockFinanceChart) {
