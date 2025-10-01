@@ -5,10 +5,14 @@ const API_KEYS = {
     FRED: '480b8d74e3d546674e8180193c30dbf6', // 실제 FRED API 키로 교체해야 합니다.
     ECOS: 'C4UHXGGIUUZ1TNZJOXFM'      // 실제 한국은행 ECOS API 키로 교체해야 합니다.
 };
-// 넷리파이(Netlify) 프록시를 사용하지 않을 경우, CORS 이슈 해결을 위한 별도 프록시 서버 주소가 필요합니다.
 const PROXY_URL = '/.netlify/functions/proxy?targetUrl=';
+const STOCK_INFO_URL = '/.netlify/functions/stock-info?code=';
+
 
 let indicatorChart = null; // 차트 인스턴스를 저장할 전역 변수
+let stockPriceChart = null;
+let stockFinanceChart = null;
+
 
 // ==================================================================
 // 지표 상세 정보 (설명, 판단 기준, FRED Series ID 등)
@@ -291,7 +295,7 @@ async function main() {
 }
 
 // ==================================================================
-// 이벤트 리스너 설정 (아코디언, 모달)
+// 이벤트 리스너 설정
 // ==================================================================
 function setupEventListeners() {
     // Accordion
@@ -299,7 +303,6 @@ function setupEventListeners() {
     accordions.forEach(accordion => {
         accordion.addEventListener("click", () => {
             const panel = accordion.nextElementSibling;
-            // panel.classList.toggle("show"); // Use class for CSS transitions if needed
             if (panel.style.display === "block") {
                 panel.style.display = "none";
             } else {
@@ -313,6 +316,141 @@ function setupEventListeners() {
     const closeBtn = document.querySelector('.close-btn');
     closeBtn.onclick = () => { modal.style.display = 'none'; };
     window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
+
+    // Stock Search
+    const searchBtn = document.getElementById('stock-search-btn');
+    const searchInput = document.getElementById('stock-code-input');
+    searchBtn.addEventListener('click', fetchAndRenderStockData);
+    searchInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            fetchAndRenderStockData();
+        }
+    });
+}
+
+// ==================================================================
+// 개별 종목 데이터 처리
+// ==================================================================
+async function fetchAndRenderStockData() {
+    const input = document.getElementById('stock-code-input');
+    const stockCode = input.value.trim();
+    if (stockCode.length !== 6 || !/^\d{6}$/.test(stockCode)) {
+        alert('정확한 6자리 종목 코드를 입력해주세요.');
+        return;
+    }
+
+    const section = document.getElementById('stock-details-section');
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth' });
+    
+    try {
+        const response = await fetch(`${STOCK_INFO_URL}${stockCode}`);
+        if (!response.ok) {
+            throw new Error(`서버 오류: ${response.status}`);
+        }
+        const data = await response.json();
+        renderStockDetails(data);
+
+    } catch (error) {
+        console.error('종목 정보 조회 실패:', error);
+        alert('종목 정보를 불러오는 데 실패했습니다.');
+    }
+}
+
+function renderStockDetails(data) {
+    const { priceInfo, dailyChart, financialInfo } = data;
+
+    // --- 기본 정보 렌더링 ---
+    document.getElementById('stock-name').innerText = priceInfo.stck_kr_abrv || 'N/A';
+    document.getElementById('stock-code').innerText = priceInfo.stck_shrn_iscd || 'N/A';
+    
+    const currentPrice = parseInt(priceInfo.stck_prpr.replace(/,/g, ''));
+    const change = parseInt(priceInfo.prdy_vrss.replace(/,/g, ''));
+    const changeRate = parseFloat(priceInfo.prdy_ctrt);
+
+    document.getElementById('stock-price').innerText = `${currentPrice.toLocaleString()}원`;
+    const changeEl = document.getElementById('stock-change');
+    changeEl.innerText = `${change > 0 ? '▲' : '▼'} ${Math.abs(change).toLocaleString()}원 (${changeRate}%)`;
+    changeEl.style.color = change > 0 ? '#dc3545' : '#0056b3';
+
+    const marketCap = parseInt(priceInfo.hts_avls) / 100000000; // 조 단위로 변환
+    document.getElementById('stock-market-cap').innerText = `${marketCap.toFixed(1)}조 원`;
+    document.getElementById('stock-per-pbr').innerText = `${priceInfo.per} / ${priceInfo.pbr}`;
+    
+    const dividendYield = (parseInt(priceInfo.dps.replace(/,/g, '')) / currentPrice * 100).toFixed(2);
+    document.getElementById('stock-dividend-yield').innerText = `${dividendYield}%`;
+
+    // --- 차트 렌더링 ---
+    renderStockPriceChart(dailyChart);
+    renderStockFinanceChart(financialInfo); // 샘플 데이터에만 존재
+}
+
+function renderStockPriceChart(chartData) {
+    const ctx = document.getElementById('stock-price-chart').getContext('2d');
+    if (stockPriceChart) {
+        stockPriceChart.destroy();
+    }
+    
+    const labels = chartData.map(d => `${d.stck_bsop_date.substring(4,6)}-${d.stck_bsop_date.substring(6,8)}`);
+    const data = chartData.map(d => parseInt(d.stck_clpr));
+
+    stockPriceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '종가',
+                data: data,
+                borderColor: '#0056b3',
+                backgroundColor: 'rgba(0, 86, 179, 0.1)',
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+function renderStockFinanceChart(financialData) {
+    if (!financialData) return; // API 응답에 재무정보가 없을 수 있음
+    
+    const ctx = document.getElementById('stock-finance-chart').getContext('2d');
+    if (stockFinanceChart) {
+        stockFinanceChart.destroy();
+    }
+
+    const labels = financialData.annual.map(d => d.year);
+    const revenues = financialData.annual.map(d => parseFloat(d.revenue.replace('조', '')));
+    const profits = financialData.annual.map(d => parseFloat(d.profit.replace('조', '')));
+
+    stockFinanceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '매출액(조)',
+                    data: revenues,
+                    backgroundColor: '#17a2b8',
+                },
+                {
+                    label: '영업이익(조)',
+                    data: profits,
+                    backgroundColor: '#6c757d',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
 }
 
 // ==================================================================
@@ -379,7 +517,6 @@ async function fetchAdditionalFredData() {
             unit = '%';
         }
         
-        // indicatorDetails[key]가 존재하는지 확인
         const details = indicatorDetails[key];
         if (!details) {
             console.error(`indicatorDetails에서 '${key}'를 찾을 수 없습니다.`);
@@ -461,7 +598,7 @@ async function fetchHistoricalData(indicatorId) {
     if (!detail || !detail.seriesId) return null;
 
     const seriesId = detail.seriesId;
-    const limit = 12; // 12개월 데이터
+    const limit = 12;
 
     if (indicatorId === 'yield_spread') {
         const [data10Y, data2Y] = await Promise.all([
@@ -814,7 +951,6 @@ function renderInvestmentSuggestions(analyzedIndicators) {
 }
 
 function renderEconomicCalendar() {
-    // 실제 서비스에서는 이 부분을 API 호출로 대체하는 것이 이상적입니다.
     const events = [
         { date: '2025-10-02', title: '🇰🇷 한국 소비자물가지수 (CPI)', importance: '높음', description: '한국은행의 기준금리 결정에 핵심적인 영향을 미치는 물가 지표입니다.' },
         { date: '2025-10-03', title: '🇺🇸 미국 비농업 고용지수 (NFP)', importance: '매우 높음', description: '미국 고용 시장 상태를 나타내는 핵심 지표로, 연준의 통화정책 방향에 큰 영향을 줍니다.' },
@@ -863,7 +999,6 @@ function getNormalRange(indicatorId) {
     const details = indicatorDetails[indicatorId];
     if (!details || !details.criteria) return null;
 
-    // 긍정적/정상 상태를 나타내는 마커 목록 확장
     const positiveMarkers = ['✅', '👍', '📈', '💪', '😌', '😊', '💰', '💵', '💲', '⛽', '🏭', '정상', '안정', '완화', '낙관'];
     const normalCriterion = details.criteria.find(c => positiveMarkers.some(marker => c.includes(marker)));
     
@@ -875,21 +1010,18 @@ function getNormalRange(indicatorId) {
     const text = rangeText[1];
     let min = -Infinity, max = Infinity;
 
-    // Case: X 이상 / X 초과
     let match = text.match(/(-?\d+\.?\d*)\s*(?:이상|초과)/);
     if (match) {
         min = parseFloat(match[1]);
         return { min, max };
     }
 
-    // Case: X 이하 / X 미만
     match = text.match(/(-?\d+\.?\d*)\s*(?:이하|미만)/);
     if (match) {
         max = parseFloat(match[1]);
         return { min, max };
     }
 
-    // Case: X ~ Y
     match = text.match(/(-?\d+\.?\d*)\s*~\s*(-?\d+\.?\d*)/);
     if (match) {
         min = parseFloat(match[1]);
@@ -900,7 +1032,6 @@ function getNormalRange(indicatorId) {
     return null;
 }
 
-// Custom Chart.js plugin to draw the normal range
 const rangeAnnotationPlugin = {
     id: 'rangeAnnotation',
     beforeDatasetsDraw: (chart, args, options) => {
@@ -954,7 +1085,6 @@ async function showModal(indicatorId) {
     document.getElementById('modal-description').innerHTML = details.description;
     document.getElementById('modal-criteria').innerHTML = details.criteria.map(item => `<li>${item}</li>`).join('');
     
-    // --- 관련 종목 정보 렌더링 ---
     const relatedStocksContainer = document.getElementById('modal-related-stocks');
     if (details.related_stocks) {
         let stocksHtml = '';
