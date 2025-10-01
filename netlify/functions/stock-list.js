@@ -100,3 +100,68 @@ function getSampleStockList() {
         { code: '017670', name: 'SK텔레콤', market: 'KOSPI' }
     ];
 }
+
+// Netlify 함수의 메인 핸들러
+exports.handler = async function (event, context) {
+    const query = (event.queryStringParameters.query || '').trim().toLowerCase();
+
+    // 검색어가 없거나 너무 짧으면 빈 배열 반환
+    if (!query || query.length < 1) {
+        return {
+            statusCode: 200,
+            headers: { 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify([]),
+        };
+    }
+
+    try {
+        // 1. KRX에서 전체 종목 목록 가져오기 (캐시 활용)
+        const fullStockList = await fetchAllStocksFromKRX();
+
+        if (!fullStockList || fullStockList.length === 0) {
+            throw new Error('Failed to fetch stock list');
+        }
+
+        // 2. 검색어로 필터링
+        const filteredStocks = fullStockList
+            .filter(stock => {
+                // 종목명 또는 종목코드로 검색
+                const nameMatch = stock.name.toLowerCase().includes(query);
+                const codeMatch = stock.code.includes(query);
+                return nameMatch || codeMatch;
+            })
+            .slice(0, 10); // 최대 10개 결과만 반환
+
+        // 3. 결과 반환
+        return {
+            statusCode: 200,
+            headers: { 
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(filteredStocks),
+        };
+
+    } catch (error) {
+        console.error('Error in stock-list handler:', error);
+        
+        // 에러 발생 시에도 샘플 데이터 필터링 시도
+        const sampleList = getSampleStockList();
+        const filteredSample = sampleList
+            .filter(stock => {
+                const nameMatch = stock.name.toLowerCase().includes(query);
+                const codeMatch = stock.code.includes(query);
+                return nameMatch || codeMatch;
+            })
+            .slice(0, 10);
+
+        return {
+            statusCode: 200,
+            headers: { 
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(filteredSample),
+        };
+    }
+};
