@@ -833,7 +833,10 @@ function getNormalRange(indicatorId) {
     const details = indicatorDetails[indicatorId];
     if (!details || !details.criteria) return null;
 
-    const normalCriterion = details.criteria.find(c => c.includes('✅') || c.includes('정상') || c.includes('안정') || c.includes('완화'));
+    // 긍정적/정상 상태를 나타내는 마커 목록 확장
+    const positiveMarkers = ['✅', '👍', '📈', '💪', '😌', '😊', '💰', '💵', '💲', '⛽', '🏭', '정상', '안정', '완화', '낙관'];
+    const normalCriterion = details.criteria.find(c => positiveMarkers.some(marker => c.includes(marker)));
+    
     if (!normalCriterion) return null;
 
     const rangeText = normalCriterion.match(/\(([^)]+)\)/);
@@ -938,6 +941,33 @@ async function showModal(indicatorId) {
         const ctx = document.getElementById('indicator-chart').getContext('2d');
         
         const normalRange = getNormalRange(indicatorId);
+        
+        // --- Y축 스케일 계산 로직 ---
+        const dataValues = historicalData.map(d => parseFloat(d.value));
+        const dataMax = Math.max(...dataValues);
+        const dataMin = Math.min(...dataValues);
+
+        let yAxisTop = dataMax;
+
+        if (normalRange) {
+            if (normalRange.max !== Infinity) {
+                yAxisTop = Math.max(yAxisTop, normalRange.max);
+            }
+            if (normalRange.min !== -Infinity) {
+                // "(0.7% 이상)"과 같은 케이스를 처리
+                yAxisTop = Math.max(yAxisTop, normalRange.min);
+            }
+        }
+        
+        let finalMax;
+        // 동적 상단 여백 계산
+        const rangeSpan = yAxisTop - dataMin;
+        if (rangeSpan > 0) {
+            finalMax = yAxisTop + rangeSpan * 0.2; // 보이는 범위의 20%를 여백으로 추가
+        } else {
+             // 데이터가 모두 같은 값이거나 하나일 경우
+            finalMax = yAxisTop > 0 ? yAxisTop * 1.2 : yAxisTop + 1; 
+        }
 
         indicatorChart = new Chart(ctx, {
             type: 'line',
@@ -945,7 +975,7 @@ async function showModal(indicatorId) {
                 labels: historicalData.map(d => d.date.substring(5)), // 월-일만 표시
                 datasets: [{
                     label: details.title.split('(')[0].trim(),
-                    data: historicalData.map(d => d.value),
+                    data: dataValues,
                     borderColor: '#0056b3',
                     backgroundColor: 'rgba(0, 86, 179, 0.1)',
                     fill: true,
@@ -963,7 +993,10 @@ async function showModal(indicatorId) {
                 },
                 scales: {
                     x: { title: { display: true, text: '날짜' } },
-                    y: { title: { display: true, text: '값' } }
+                    y: { 
+                        title: { display: true, text: '값' },
+                        max: finalMax // 계산된 y축 최댓값 설정
+                    }
                 }
             },
             plugins: [rangeAnnotationPlugin]
