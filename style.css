@@ -5,6 +5,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 .header p { margin: 5px 0 0; color: #6c757d; }
 .section-title { font-size: 1.8em; color: #17a2b8; margin-top: 40px; margin-bottom: 20px; border-left: 5px solid #17a2b8; padding-left: 10px; }
 
+/* Search Section */
+.search-section { display: flex; gap: 10px; margin-bottom: 30px; }
+#stock-code-input { flex-grow: 1; padding: 12px; font-size: 1em; border: 1px solid #dee2e6; border-radius: 8px; }
+#stock-search-btn { padding: 12px 20px; font-size: 1em; background-color: #0056b3; color: white; border: none; border-radius: 8px; cursor: pointer; }
+#stock-search-btn:hover { background-color: #004494; }
+
+/* Stock Details Section */
+.stock-details-section { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 25px; margin-bottom: 30px; }
+.stock-header { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; }
+.stock-header h2 { margin: 0; color: #343a40; font-size: 2.2em; }
+.stock-code { margin: 0; font-size: 1.2em; color: #6c757d; }
+.stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.stock-info-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+.stock-info-card.main-price { background-color: #e7f0ff; }
+.stock-info-card .card-title { font-size: 0.9em; color: #6c757d; margin: 0 0 8px 0; }
+.stock-info-card .card-value { font-size: 1.8em; font-weight: bold; margin: 0; color: #343a40; }
+.stock-info-card .card-value.small { font-size: 1.4em; }
+.stock-info-card .card-change { font-size: 1.1em; font-weight: bold; margin-top: 5px; }
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.stock-chart-container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+.stock-chart-container h4 { margin: 0 0 15px 0; }
+
+
 /* Accordion Styles */
 .accordion { margin-bottom: 15px; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; }
 .accordion-header { background-color: #f8f9fa; color: #0056b3; cursor: pointer; padding: 18px 25px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.5em; font-weight: bold; transition: background-color 0.3s ease; }
