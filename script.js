@@ -7,7 +7,7 @@ const API_KEYS = {
 };
 const PROXY_URL = '/.netlify/functions/proxy?targetUrl=';
 const STOCK_INFO_URL = '/.netlify/functions/stock-info?code=';
-
+const STOCK_SEARCH_URL = '/.netlify/functions/stock-list?query='; 
 
 let indicatorChart = null; // 차트 인스턴스를 저장할 전역 변수
 let stockPriceChart = null;
