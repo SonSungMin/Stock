@@ -829,6 +829,90 @@ function renderEconomicCalendar() {
 // ==================================================================
 // 모달 및 차트 관련 함수
 // ==================================================================
+function getNormalRange(indicatorId) {
+    const details = indicatorDetails[indicatorId];
+    if (!details || !details.criteria) return null;
+
+    const normalCriterion = details.criteria.find(c => c.includes('✅') || c.includes('정상') || c.includes('안정') || c.includes('완화'));
+    if (!normalCriterion) return null;
+
+    const rangeText = normalCriterion.match(/\(([^)]+)\)/);
+    if (!rangeText || !rangeText[1]) return null;
+
+    const text = rangeText[1];
+    let min = -Infinity, max = Infinity;
+
+    // Case: X 이상 / X 초과
+    let match = text.match(/(-?\d+\.?\d*)\s*(?:이상|초과)/);
+    if (match) {
+        min = parseFloat(match[1]);
+        return { min, max };
+    }
+
+    // Case: X 이하 / X 미만
+    match = text.match(/(-?\d+\.?\d*)\s*(?:이하|미만)/);
+    if (match) {
+        max = parseFloat(match[1]);
+        return { min, max };
+    }
+
+    // Case: X ~ Y
+    match = text.match(/(-?\d+\.?\d*)\s*~\s*(-?\d+\.?\d*)/);
+    if (match) {
+        min = parseFloat(match[1]);
+        max = parseFloat(match[2]);
+        return { min, max };
+    }
+
+    return null;
+}
+
+// Custom Chart.js plugin to draw the normal range
+const rangeAnnotationPlugin = {
+    id: 'rangeAnnotation',
+    beforeDatasetsDraw: (chart, args, options) => {
+        const { range } = options;
+        if (!range) return;
+        
+        const { ctx, chartArea: { left, right, top, bottom }, scales: { y } } = chart;
+        
+        const getPixel = (value, fallback) => {
+            if (value === -Infinity || value === Infinity) {
+                return fallback;
+            }
+            return y.getPixelForValue(value);
+        };
+
+        const yMinPixel = getPixel(range.min, bottom);
+        const yMaxPixel = getPixel(range.max, top);
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(40, 167, 69, 0.15)';
+        
+        const rectY = Math.min(yMinPixel, yMaxPixel);
+        const rectHeight = Math.abs(yMaxPixel - yMinPixel);
+        
+        const finalY = Math.max(rectY, top);
+        const finalHeight = Math.min(rectHeight, bottom - finalY);
+
+        ctx.fillRect(left, finalY, right - left, finalHeight);
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        
+        let textY = (finalY + finalY + finalHeight) / 2;
+        if (textY < top + 10) textY = top + 10;
+        if (textY > bottom - 10) textY = bottom - 10;
+        
+        ctx.fillText('정상 범위', left + 5, textY);
+
+        ctx.restore();
+    }
+};
+
+
 async function showModal(indicatorId) {
     const details = indicatorDetails[indicatorId];
     if (!details) return;
@@ -853,6 +937,8 @@ async function showModal(indicatorId) {
         chartContainer.innerHTML = '<canvas id="indicator-chart"></canvas>';
         const ctx = document.getElementById('indicator-chart').getContext('2d');
         
+        const normalRange = getNormalRange(indicatorId);
+
         indicatorChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -870,13 +956,17 @@ async function showModal(indicatorId) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    rangeAnnotation: {
+                        range: normalRange
+                    }
                 },
                 scales: {
                     x: { title: { display: true, text: '날짜' } },
                     y: { title: { display: true, text: '값' } }
                 }
-            }
+            },
+            plugins: [rangeAnnotationPlugin]
         });
     } else {
         chartContainer.innerHTML = '<p>이 지표의 과거 데이터는 제공되지 않거나 로드에 실패했습니다.</p>';
