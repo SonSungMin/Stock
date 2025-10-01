@@ -271,6 +271,9 @@ async function main() {
         return;
     }
     
+    // **새로운 로직: 종목 목록 준비 상태 확인**
+    checkStockListStatus(); 
+
     setupEventListeners();
     renderInitialPlaceholders();
     renderEconomicCalendar();
@@ -281,7 +284,7 @@ async function main() {
             fetchAllSectorData()
         ]);
         
-        const allIndicators = [...macroData, ...sectorData].filter(i => i); // null 값 제거
+        const allIndicators = [...macroData, ...sectorData].filter(i => i);
         const analyzedIndicators = analyzeIndicators(allIndicators);
         
         const marketOutlook = getMarketOutlook(analyzedIndicators);
@@ -290,8 +293,114 @@ async function main() {
 
     } catch (error) {
         console.error("전체 데이터 로딩 실패:", error);
-        document.getElementById('update-time').innerText = "데이터 로딩에 실패했습니다. API 키 또는 네트워크 상태를 확인해주세요.";
+        document.getElementById('update-time').innerText = "데이터 로딩에 실패했습니다.";
     }
+}
+
+// **새로운 함수: 서버의 종목 목록 캐시 상태를 주기적으로 확인**
+function checkStockListStatus() {
+    const statusEl = document.getElementById('stock-list-status');
+    const searchInput = document.getElementById('stock-code-input');
+    
+    statusEl.textContent = '서버에서 전체 종목 목록을 불러오는 중입니다... (최대 10초 소요)';
+
+    const intervalId = setInterval(async () => {
+        try {
+            const response = await fetch(`${STOCK_SEARCH_URL}status=true`);
+            const data = await response.json();
+
+            if (data.ready) {
+                clearInterval(intervalId); // 상태 확인 중단
+                statusEl.textContent = `✅ 총 ${data.count.toLocaleString()}개 종목 로딩 완료!`;
+                searchInput.disabled = false; // 검색창 활성화
+                searchInput.placeholder = '종목명 또는 코드를 입력하세요 (예: 삼성전자)';
+                console.log('Stock list is ready!');
+            } else {
+                console.log('Stock list not ready yet, checking again...');
+            }
+        } catch (error) {
+            console.error('Failed to check stock list status:', error);
+            statusEl.textContent = '⚠️ 종목 목록 로딩에 실패했습니다. 페이지를 새로고침해주세요.';
+            clearInterval(intervalId);
+        }
+    }, 2000); // 2초마다 확인
+}
+
+// ==================================================================
+// 이벤트 리스너 설정 (수정된 함수)
+// ==================================================================
+function setupEventListeners() {
+    // Accordion
+    const accordions = document.querySelectorAll(".accordion-header");
+    accordions.forEach(accordion => {
+        accordion.addEventListener("click", () => {
+            const panel = accordion.nextElementSibling;
+            panel.style.display = panel.style.display === "block" ? "none" : "block";
+        });
+    });
+
+    // Modal
+    const modal = document.getElementById('modal');
+    const closeBtn = document.querySelector('.close-btn');
+    closeBtn.onclick = () => { modal.style.display = 'none'; };
+    window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
+
+    // Stock Search (자동완성 기능)
+    const searchInput = document.getElementById('stock-code-input');
+    const searchBtn = document.getElementById('stock-search-btn');
+    const autocompleteList = document.getElementById('autocomplete-list');
+
+    searchBtn.addEventListener('click', () => {
+        const stockCode = searchInput.dataset.stockCode || searchInput.value.trim();
+        fetchAndRenderStockData(stockCode);
+    });
+
+    searchInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            searchBtn.click(); // 검색 버튼 클릭 이벤트 트리거
+        }
+    });
+    
+    searchInput.addEventListener('input', async () => {
+        const query = searchInput.value.trim();
+        if (query.length < 2) {
+            autocompleteList.style.display = 'none';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${STOCK_SEARCH_URL}${query}`);
+            const stocks = await response.json();
+            
+            autocompleteList.innerHTML = '';
+            if (stocks.length > 0) {
+                stocks.forEach(stock => {
+                    const item = document.createElement('div');
+                    item.textContent = `${stock.name} (${stock.code})`;
+                    item.addEventListener('click', () => {
+                        searchInput.value = stock.name;
+                        searchInput.dataset.stockCode = stock.code; 
+                        autocompleteList.style.display = 'none';
+                        fetchAndRenderStockData(stock.code);
+                    });
+                    autocompleteList.appendChild(item);
+                });
+                autocompleteList.style.display = 'block';
+            } else {
+                autocompleteList.innerHTML = `<div class="autocomplete-message">결과 없음</div>`;
+                autocompleteList.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('종목 검색 실패:', error);
+            autocompleteList.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            autocompleteList.style.display = 'none';
+        }
+    });
 }
 
 // ==================================================================
