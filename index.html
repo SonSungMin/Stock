@@ -15,7 +15,10 @@
         </header>
 
         <div class="search-section">
-            <input type="text" id="stock-code-input" placeholder="종목코드 6자리를 입력하세요 (예: 005930)">
+            <div class="autocomplete-container">
+                <input type="text" id="stock-code-input" placeholder="종목명 또는 코드를 입력하세요 (예: 삼성전자)">
+                <div class="autocomplete-items" id="autocomplete-list"></div>
+            </div>
             <button id="stock-search-btn">종목 조회</button>
         </div>
 
