@@ -317,25 +317,82 @@ function setupEventListeners() {
     closeBtn.onclick = () => { modal.style.display = 'none'; };
     window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
 
-    // Stock Search
-    const searchBtn = document.getElementById('stock-search-btn');
+    // Stock Search (자동완성 기능 추가)
     const searchInput = document.getElementById('stock-code-input');
-    searchBtn.addEventListener('click', fetchAndRenderStockData);
+    const searchBtn = document.getElementById('stock-search-btn');
+    const autocompleteList = document.getElementById('autocomplete-list');
+
+    // 검색 버튼 클릭 시
+    searchBtn.addEventListener('click', () => {
+        const stockCode = searchInput.dataset.stockCode || searchInput.value.trim();
+        fetchAndRenderStockData(stockCode);
+        autocompleteList.style.display = 'none';
+    });
+
+    // 입력창에서 Enter 키 입력 시
     searchInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
-            fetchAndRenderStockData();
+            const stockCode = searchInput.dataset.stockCode || searchInput.value.trim();
+            fetchAndRenderStockData(stockCode);
+            autocompleteList.style.display = 'none';
+        }
+    });
+    
+    // 사용자가 입력을 할 때마다 자동완성 목록을 요청
+    searchInput.addEventListener('input', async () => {
+        const query = searchInput.value.trim();
+        // 검색어가 너무 짧으면 목록을 지움
+        if (query.length < 2) {
+            autocompleteList.style.display = 'none';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${STOCK_SEARCH_URL}${query}`);
+            const stocks = await response.json();
+            
+            autocompleteList.innerHTML = '';
+            if (stocks.length > 0) {
+                stocks.forEach(stock => {
+                    const item = document.createElement('div');
+                    item.textContent = `${stock.name} (${stock.code})`;
+                    // 자동완성 목록의 항목을 클릭했을 때
+                    item.addEventListener('click', () => {
+                        searchInput.value = stock.name;
+                        // 선택한 종목의 코드를 data-stock-code 속성에 저장
+                        searchInput.dataset.stockCode = stock.code; 
+                        autocompleteList.style.display = 'none';
+                        // 해당 종목의 상세 정보를 바로 조회
+                        fetchAndRenderStockData(stock.code);
+                    });
+                    autocompleteList.appendChild(item);
+                });
+                autocompleteList.style.display = 'block';
+            } else {
+                autocompleteList.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('종목 검색 실패:', error);
+            autocompleteList.style.display = 'none';
+        }
+    });
+
+    // 페이지의 다른 곳을 클릭하면 자동완성 목록을 닫음
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchInput) {
+            autocompleteList.style.display = 'none';
         }
     });
 }
 
+
 // ==================================================================
 // 개별 종목 데이터 처리
 // ==================================================================
-async function fetchAndRenderStockData() {
-    const input = document.getElementById('stock-code-input');
-    const stockCode = input.value.trim();
-    if (stockCode.length !== 6 || !/^\d{6}$/.test(stockCode)) {
-        alert('정확한 6자리 종목 코드를 입력해주세요.');
+async function fetchAndRenderStockData(stockCode) {
+    // 입력된 stockCode가 유효한 6자리 숫자인지 확인
+    if (!stockCode || !/^\d{6}$/.test(stockCode)) {
+        alert('정확한 6자리 종목 코드를 입력하거나, 검색 결과에서 종목을 선택해주세요.');
         return;
     }
 
