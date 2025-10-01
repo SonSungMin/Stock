@@ -14,6 +14,48 @@
             <p id="update-time">데이터 로딩 중...</p>
         </header>
 
+        <div class="search-section">
+            <input type="text" id="stock-code-input" placeholder="종목코드 6자리를 입력하세요 (예: 005930)">
+            <button id="stock-search-btn">종목 조회</button>
+        </div>
+
+        <div id="stock-details-section" class="stock-details-section" style="display: none;">
+            <div class="stock-header">
+                <h2 id="stock-name"></h2>
+                <p class="stock-code" id="stock-code"></p>
+            </div>
+            <div class="stock-grid">
+                <div class="stock-info-card main-price">
+                    <p class="card-title">현재가</p>
+                    <p class="card-value" id="stock-price"></p>
+                    <p class="card-change" id="stock-change"></p>
+                </div>
+                <div class="stock-info-card">
+                    <p class="card-title">시가총액</p>
+                    <p class="card-value small" id="stock-market-cap"></p>
+                </div>
+                <div class="stock-info-card">
+                    <p class="card-title">PER / PBR</p>
+                    <p class="card-value small" id="stock-per-pbr"></p>
+                </div>
+                <div class="stock-info-card">
+                    <p class="card-title">배당수익률</p>
+                    <p class="card-value small" id="stock-dividend-yield"></p>
+                </div>
+            </div>
+            <div class="chart-grid">
+                <div class="stock-chart-container">
+                     <h4>일봉 차트</h4>
+                    <canvas id="stock-price-chart"></canvas>
+                </div>
+                <div class="stock-chart-container">
+                    <h4>연간 실적</h4>
+                    <canvas id="stock-finance-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+
         <div class="accordion">
             <button class="accordion-header">시장 종합 전망</button>
             <div class="accordion-panel">
