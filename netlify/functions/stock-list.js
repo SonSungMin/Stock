@@ -1,7 +1,5 @@
 // /netlify/functions/stock-list.js
 
-const fetch = require('node-fetch'); // node-fetch를 사용하기 위해 추가
-
 // KRX 정보데이터시스템의 전체 종목 목록 API
 const KRX_LIST_URL = 'http://data.krx.co.kr/comm/bld/JTI/stock/age/03001/ALL_M.jspx';
 
@@ -16,8 +14,11 @@ async function fetchAllStocksFromKRX() {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
             }
         });
+        if (!response.ok) {
+            throw new Error(`KRX data request failed with status ${response.status}`);
+        }
         const data = await response.json();
-        
+
         // KRX 응답 형식에 맞춰 파싱
         return data.block1.map(item => ({
             code: item.isu_cd.slice(1), // 'A005930' -> '005930'
@@ -33,7 +34,7 @@ async function fetchAllStocksFromKRX() {
 exports.handler = async function (event, context) {
     const query = (event.queryStringParameters.query || '').toLowerCase();
     const now = new Date();
-    
+
     // 하루 이상 지났거나 캐시가 없으면 KRX에서 새로 데이터를 가져옴
     if (!cachedStockList || !lastFetchTime || now - lastFetchTime > 24 * 60 * 60 * 1000) {
         console.log('Fetching new stock list from KRX...');
