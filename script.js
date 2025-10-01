@@ -341,39 +341,54 @@ function setupEventListeners() {
     // 사용자가 입력을 할 때마다 자동완성 목록을 요청
     searchInput.addEventListener('input', async () => {
         const query = searchInput.value.trim();
-        // 검색어가 너무 짧으면 목록을 지움
+        autocompleteList.innerHTML = ''; // 이전 결과 즉시 지우기
+
         if (query.length < 2) {
             autocompleteList.style.display = 'none';
+            searchInput.dataset.stockCode = ''; // 코드 초기화
             return;
         }
 
+        // 검색 중 메시지를 표시
+        const loadingItem = document.createElement('div');
+        loadingItem.textContent = '검색 중...';
+        loadingItem.classList.add('autocomplete-message');
+        autocompleteList.appendChild(loadingItem);
+        autocompleteList.style.display = 'block';
+
         try {
             const response = await fetch(`${STOCK_SEARCH_URL}${query}`);
+            if (!response.ok) throw new Error('서버 응답 오류');
             const stocks = await response.json();
             
-            autocompleteList.innerHTML = '';
+            autocompleteList.innerHTML = ''; // '검색 중...' 메시지 제거
+
             if (stocks.length > 0) {
                 stocks.forEach(stock => {
                     const item = document.createElement('div');
                     item.textContent = `${stock.name} (${stock.code})`;
-                    // 자동완성 목록의 항목을 클릭했을 때
                     item.addEventListener('click', () => {
                         searchInput.value = stock.name;
-                        // 선택한 종목의 코드를 data-stock-code 속성에 저장
-                        searchInput.dataset.stockCode = stock.code; 
+                        searchInput.dataset.stockCode = stock.code; // 선택된 종목 코드 저장
                         autocompleteList.style.display = 'none';
-                        // 해당 종목의 상세 정보를 바로 조회
-                        fetchAndRenderStockData(stock.code);
+                        fetchAndRenderStockData(stock.code); // 클릭 시 바로 조회
                     });
                     autocompleteList.appendChild(item);
                 });
-                autocompleteList.style.display = 'block';
             } else {
-                autocompleteList.style.display = 'none';
+                // 결과 없음 메시지를 표시
+                const noResultItem = document.createElement('div');
+                noResultItem.textContent = '결과 없음 (잠시 후 다시 시도해주세요)';
+                noResultItem.classList.add('autocomplete-message');
+                autocompleteList.appendChild(noResultItem);
             }
         } catch (error) {
             console.error('종목 검색 실패:', error);
-            autocompleteList.style.display = 'none';
+            autocompleteList.innerHTML = ''; // 오류 발생 시 목록 지우기
+            const errorItem = document.createElement('div');
+            errorItem.textContent = '검색 중 오류 발생';
+            errorItem.classList.add('autocomplete-message');
+            autocompleteList.appendChild(errorItem);
         }
     });
 
