@@ -5,6 +5,7 @@ const API_KEYS = {
     FRED: '480b8d74e3d546674e8180193c30dbf6', // 실제 FRED API 키로 교체해야 합니다.
     ECOS: 'C4UHXGGIUUZ1TNZJOXFM'      // 실제 한국은행 ECOS API 키로 교체해야 합니다.
 };
+// 넷리파이(Netlify) 프록시를 사용하지 않을 경우, CORS 이슈 해결을 위한 별도 프록시 서버 주소가 필요합니다.
 const PROXY_URL = '/.netlify/functions/proxy?targetUrl=';
 
 let indicatorChart = null; // 차트 인스턴스를 저장할 전역 변수
@@ -109,7 +110,7 @@ const indicatorDetails = {
             '😐 <b>소비 심리 중립 (90 ~ 100):</b> 소비자들이 경기 상황을 관망하고 있습니다.',
             '😟 <b>소비 심리 비관 (90 미만):</b> 소비자들이 경기를 부정적으로 보고 있어 지갑을 닫을 가능성이 높습니다.'
         ],
-        seriesId: 'CSENTKOR' // OECD 데이터
+        seriesId: 'CSENTKOR'
     },
     corp_bond_spread: {
         title: '🇰🇷 회사채 스프레드',
@@ -144,8 +145,7 @@ const indicatorDetails = {
         description: '한국을 대표하는 주가 지수로, 국내 증권거래소에 상장된 기업들의 주가 움직임을 종합하여 표시합니다. 한국 경제의 전반적인 상황과 기업들의 실적을 반영하는 거울과도 같습니다.',
         criteria: [
             '📊 <b>주요 시장 지수:</b> 이 지수 자체는 분석 대상이기보다는 다른 지표들과 함께 종합적으로 해석하는 참고 자료입니다.'
-        ],
-        seriesId: 'KOSPI' // FRED에 없음, ECOS로 조회
+        ]
     },
     producer_price_index: {
         title: '🇰🇷 생산자물가지수 (PPI)',
@@ -156,13 +156,13 @@ const indicatorDetails = {
         ]
     },
     sox_index: {
-        title: '⚡️ 美 반도체 지수 (SOXX)',
-        description: '미국 증시에 상장된 대표적인 반도체 기업 ETF(SOXX)의 가격입니다. 필라델피아 반도체 지수를 추종하며, 전 세계 반도체 산업의 업황을 가장 잘 보여주는 핵심 선행 지표로 활용됩니다.',
+        title: '⚡️ 美 반도체 지수 (SOX)',
+        description: '미국 증시에 상장된 대표적인 반도체 기업들의 주가를 추종하는 필라델피아 반도체 지수입니다. 전 세계 반도체 산업의 업황을 가장 잘 보여주는 핵심 선행 지표로 활용됩니다.',
         criteria: [
             '📈 <b>상승:</b> 반도체 수요가 견조하고 업황이 긍정적임을 의미합니다.',
             '📉 <b>하락:</b> 반도체 수요 둔화 및 업황 악화 우려를 반영합니다.'
         ],
-        seriesId: 'SOX' // NASDAQSOX (Index)가 더 적합
+        seriesId: 'SOX'
     },
     auto_sales: {
         title: '🚗 美 자동차 판매량',
@@ -275,8 +275,12 @@ function setupEventListeners() {
     accordions.forEach(accordion => {
         accordion.addEventListener("click", () => {
             const panel = accordion.nextElementSibling;
-            accordion.classList.toggle("active");
-            panel.classList.toggle("show");
+            // panel.classList.toggle("show"); // Use class for CSS transitions if needed
+            if (panel.style.display === "block") {
+                panel.style.display = "none";
+            } else {
+                panel.style.display = "block";
+            }
         });
     });
 
@@ -293,7 +297,7 @@ function setupEventListeners() {
 
 // FRED API 호출을 위한 헬퍼 함수
 async function fetchFredData(seriesId, limit = 1) {
-    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=${limit}&observation_start=2023-01-01`;
+    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=${limit}`;
     try {
         const res = await fetch(`${PROXY_URL}${encodeURIComponent(url)}`);
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -328,8 +332,8 @@ async function fetchYieldSpread() {
 async function fetchAdditionalFredData() {
     const series = { 
         vix: 'VIXCLS', 
-        dollarIndex: 'DTWEXBGS', 
-        wti: 'MCOILWTICO',
+        dollar_index: 'DTWEXBGS', // 수정된 키
+        wti_price: 'MCOILWTICO', // 수정된 키
         nfp: 'PAYEMS',
         us_cpi: 'CPIAUCSL',
         philly_fed: 'PHLMAN'
@@ -345,14 +349,20 @@ async function fetchAdditionalFredData() {
         if (key === 'nfp') {
             value = parseFloat((value / 1000).toFixed(1)); // 천명 -> 만명 단위 변경
             unit = '만명';
-        } else if (key === 'wti') {
+        } else if (key === 'wti_price') {
             unit = '$/bbl';
         } else if (key === 'us_cpi') {
-             // CPI는 전년 동월 대비 데이터(CPIAUCSL)를 그대로 사용
             unit = '%';
         }
+        
+        // indicatorDetails[key]가 존재하는지 확인
+        const details = indicatorDetails[key];
+        if (!details) {
+            console.error(`indicatorDetails에서 '${key}'를 찾을 수 없습니다.`);
+            return null;
+        }
 
-        return { id: key, name: indicatorDetails[key].title, value, unit, date: obs[0].date.substring(5) };
+        return { id: key, name: details.title, value, unit, date: obs[0].date.substring(5) };
     });
 
     return Promise.all(promises);
@@ -427,15 +437,15 @@ async function fetchHistoricalData(indicatorId) {
     if (!detail || !detail.seriesId) return null;
 
     const seriesId = detail.seriesId;
+    const limit = 12; // 12개월 데이터
 
     if (indicatorId === 'yield_spread') {
         const [data10Y, data2Y] = await Promise.all([
-            fetchFredData(seriesId[0], 12),
-            fetchFredData(seriesId[1], 12)
+            fetchFredData(seriesId[0], limit),
+            fetchFredData(seriesId[1], limit)
         ]);
         if (!data10Y || !data2Y) return null;
         
-        // 날짜를 기준으로 데이터 병합
         const dataMap = new Map();
         data10Y.forEach(obs => dataMap.set(obs.date, { val10: obs.value }));
         data2Y.forEach(obs => {
@@ -454,10 +464,10 @@ async function fetchHistoricalData(indicatorId) {
             }
         });
         
-        return combinedData.sort((a,b) => new Date(a.date) - new Date(b.date)); // 날짜순 정렬
+        return combinedData.sort((a,b) => new Date(a.date) - new Date(b.date));
 
     } else {
-        const data = await fetchFredData(seriesId, 12);
+        const data = await fetchFredData(seriesId, limit);
         if (!data) return null;
         return data.map(obs => ({ date: obs.date, value: obs.value })).reverse();
     }
@@ -580,7 +590,7 @@ function getMarketOutlook(analyzedIndicators) {
     analyzedIndicators.forEach(indicator => {
         if (typeof indicator.score === 'number' && indicator.weight > 0) {
             totalWeightedScore += indicator.score * indicator.weight;
-            const maxScore = Math.abs(indicator.score) > 1 ? 2 : 1; // score가 -2~2 범위이므로 maxScore도 2로 설정
+            const maxScore = Math.abs(indicator.score) > 1 ? 2 : 1;
             totalPossibleScore += maxScore * indicator.weight;
         }
     });
@@ -671,7 +681,7 @@ function renderSectorOutlook(analyzedIndicators) {
     const exchange = find('exchange_rate');
     let electronicsReason = `美 반도체 지수(${sox.value})와 원/달러 환율(${exchange.value}원)이 핵심 변수입니다. `;
     let electronicsStatus = 'neutral';
-    if(exchange.score > 0) { // 원화 약세
+    if(exchange.score > 0) {
         electronicsStatus = 'positive';
         electronicsReason += '우호적인 환율 환경이 수출 기업의 수익성을 높여줍니다.';
     } else {
@@ -693,7 +703,7 @@ function renderSectorOutlook(analyzedIndicators) {
     const vix = find('vix');
     let pharmaReason = `대표적인 경기 방어주로, VIX 지수(${vix.value})가 높을 때 주목받습니다. `;
     let pharmaStatus = 'neutral';
-    if(vix.score < 0) { // VIX 높음
+    if(vix.score < 0) {
         pharmaStatus = 'positive';
         pharmaReason += '시장 변동성 확대 시, 안정적인 피난처가 될 수 있습니다.'
     } else {
@@ -713,7 +723,7 @@ function renderSectorOutlook(analyzedIndicators) {
     const rate = find('base_rate');
     let constructionStatus = 'neutral';
     let constructionReason = `美 주택가격(${home.value})과 국내 기준금리(${rate.value}%)가 건설 경기에 영향을 줍니다.`;
-    if(rate.score > 0) { // 금리 인하 기대
+    if(rate.score > 0) {
         constructionStatus = 'positive';
         constructionReason += '금리 인하 기대감은 부동산 시장에 긍정적입니다.'
     }
@@ -848,7 +858,7 @@ async function showModal(indicatorId) {
             data: {
                 labels: historicalData.map(d => d.date.substring(5)), // 월-일만 표시
                 datasets: [{
-                    label: details.title.split('(')[0].trim(), // 이모지 포함 이름
+                    label: details.title.split('(')[0].trim(),
                     data: historicalData.map(d => d.value),
                     borderColor: '#0056b3',
                     backgroundColor: 'rgba(0, 86, 179, 0.1)',
