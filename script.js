@@ -22,7 +22,11 @@ const indicatorDetails = {
             '⚠️ <b>역전폭 축소 (-0.1 ~ 0):</b> 경기 침체 우려가 일부 완화되었지만 여전히 불안한 상태입니다.',
             '🚨 <b>경기 침체 우려 (-0.1 미만):</b> 가까운 미래에 경기 침체가 올 가능성이 매우 높다고 시장이 판단하는 상태입니다.'
         ],
-        seriesId: ['DGS10', 'DGS2'] // 10년물, 2년물
+        seriesId: ['DGS10', 'DGS2'], // 10년물, 2년물
+        related_stocks: {
+            '금리 역전 시 (부정적)': '경기민감주 (화학, 철강, IT), 금융주',
+            '금리차 확대 시 (긍정적)': '성장주, 기술주'
+        }
     },
     gdp_growth: {
         title: '🇰🇷 GDP 성장률',
@@ -42,7 +46,11 @@ const indicatorDetails = {
             '📊 <b>소폭 개선 (0% ~ 2.0%):</b> 수출이 부진에서 벗어나 점차 개선되고 있음을 의미합니다.',
             '📉 <b>수출 부진 (0% 미만):</b> 수출이 감소하고 있어 기업 실적과 경제 성장에 부담을 줍니다.'
         ],
-        seriesId: 'XTEXVA01KRQ667S'
+        seriesId: 'XTEXVA01KRQ667S',
+        related_stocks: {
+            '수출 증가 시': '반도체, 자동차, 화학 등 수출주',
+            '수출 부진 시': '내수주, 경기방어주'
+        }
     },
     cpi: {
         title: '🇰🇷 소비자물가지수 (CPI)',
@@ -70,7 +78,11 @@ const indicatorDetails = {
             '💰 <b>완화적 통화정책 (2.5% 이하):</b> 경기 부양을 위해 금리를 낮은 수준으로 유지하고 있음을 의미합니다.',
             '⚖️ <b>중립적 금리 수준 (2.5% ~ 3.5%):</b> 경제가 안정적이라고 판단하여 금리를 중립적인 수준으로 유지하고 있음을 의미합니다.',
             '🔒 <b>긴축적 통화정책 (3.5% 초과):</b> 물가 안정을 위해 금리를 높은 수준으로 유지하고 있음을 의미합니다.'
-        ]
+        ],
+        related_stocks: {
+            '금리 인상기': '은행, 보험 등 금융주',
+            '금리 인하기': '성장주, 기술주, 건설주'
+        }
     },
     exchange_rate: {
         title: '🇰🇷 원/달러 환율',
@@ -80,7 +92,11 @@ const indicatorDetails = {
             ' fluctuating <b>환율 변동성 확대 (1300원 ~ 1350원):</b> 시장의 불확실성이 커지고 있음을 의미합니다.',
             '💸 <b>원화 약세 심화 (1350원 초과):</b> 수입 물가 상승으로 인한 인플레이션 압력이 커지고, 외국인 자금 유출 우려가 높아집니다.'
         ],
-        seriesId: 'DEXKOUS'
+        seriesId: 'DEXKOUS',
+        related_stocks: {
+            '환율 상승 시 (원화 약세)': '자동차, 반도체 등 수출 기업 (예: 현대차, 삼성전자)',
+            '환율 하락 시 (원화 강세)': '항공, 전력 등 수입 의존 기업 (예: 대한항공, 한국전력)'
+        }
     },
     vix: {
         title: '😱 VIX 지수 (공포 지수)',
@@ -90,7 +106,11 @@ const indicatorDetails = {
             '😟 <b>불안 심리 존재 (20 ~ 30):</b> 시장에 불안 요소가 있어 변동성이 커질 수 있는 상태입니다.',
             '😱 <b>공포 심리 확산 (30 초과):</b> 시장에 대한 공포가 극에 달해 주가가 급락할 가능성이 높은 위험한 상태입니다.'
         ],
-        seriesId: 'VIXCLS'
+        seriesId: 'VIXCLS',
+        related_stocks: {
+            'VIX 급등 시': '안전자산 (금, 달러), 경기방어주 (통신, 유틸리티)',
+            'VIX 안정 시': '위험자산 (주식), 경기민감주'
+        }
     },
     industrial_production: {
         title: '🇰🇷 산업생산지수',
@@ -138,7 +158,11 @@ const indicatorDetails = {
             '🔺 <b>유가 상승 압력 (80달러 ~ 100달러):</b> 전 세계적으로 인플레이션 우려를 키우는 요인입니다.',
             '🔥 <b>고유가 부담 (100달러 초과):</b> 기업과 가계에 큰 부담을 주어 경기 둔화를 유발할 수 있습니다.'
         ],
-        seriesId: 'MCOILWTICO'
+        seriesId: 'MCOILWTICO',
+        related_stocks: {
+            '유가 상승 시': '정유, 화학, 종합상사 (예: S-Oil, SK이노베이션)',
+            '유가 하락 시': '항공, 해운, 전력 (예: 대한항공, HMM)'
+        }
     },
     kospi: {
         title: '🇰🇷 코스피 지수',
@@ -729,18 +753,24 @@ function renderSectorOutlook(analyzedIndicators) {
     }
 
     const sectors = [
-        { icon: '⚡️', name: '전기/전자', status: electronicsStatus, reason: electronicsReason },
-        { icon: '🚗', name: '자동차', status: autoStatus, reason: autoReason },
-        { icon: '💊', name: '의약/바이오', status: pharmaStatus, reason: pharmaReason },
-        { icon: '🛒', name: '유통/소비재', status: retailStatus, reason: retailReason },
-        { icon: '🏠', name: '건설/부동산', status: constructionStatus, reason: constructionReason },
+        { icon: '⚡️', name: '전기/전자', status: electronicsStatus, reason: electronicsReason, stocks: '삼성전자, SK하이닉스' },
+        { icon: '🚗', name: '자동차', status: autoStatus, reason: autoReason, stocks: '현대차, 기아' },
+        { icon: '💊', name: '의약/바이오', status: pharmaStatus, reason: pharmaReason, stocks: '삼성바이오로직스, 셀트리온' },
+        { icon: '🛒', name: '유통/소비재', status: retailStatus, reason: retailReason, stocks: '이마트, CJ제일제당' },
+        { icon: '🏠', name: '건설/부동산', status: constructionStatus, reason: constructionReason, stocks: '현대건설, GS건설' },
     ];
 
     grid.innerHTML = sectors.map(sector => `
         <div class="sector-card">
-            <h4 class="sector-title"><span class="sector-icon">${sector.icon}</span>${sector.name}</h4>
-            <p class="sector-outlook ${sector.status}-text">${{positive: '긍정적', negative: '부정적', neutral: '중립적'}[sector.status]}</p>
-            <p class="sector-reason">${sector.reason}</p>
+            <div>
+                <h4 class="sector-title"><span class="sector-icon">${sector.icon}</span>${sector.name}</h4>
+                <p class="sector-outlook ${sector.status}-text">${{positive: '긍정적', negative: '부정적', neutral: '중립적'}[sector.status]}</p>
+                <p class="sector-reason">${sector.reason}</p>
+            </div>
+            <div class="related-stocks-container">
+                <p class="related-stocks-title">핵심 종목:</p>
+                <p class="related-stocks-list">${sector.stocks}</p>
+            </div>
         </div>
     `).join('');
 }
@@ -924,6 +954,24 @@ async function showModal(indicatorId) {
     document.getElementById('modal-description').innerHTML = details.description;
     document.getElementById('modal-criteria').innerHTML = details.criteria.map(item => `<li>${item}</li>`).join('');
     
+    // --- 관련 종목 정보 렌더링 ---
+    const relatedStocksContainer = document.getElementById('modal-related-stocks');
+    if (details.related_stocks) {
+        let stocksHtml = '';
+        for (const [condition, stocks] of Object.entries(details.related_stocks)) {
+            stocksHtml += `
+                <div class="related-stocks-item">
+                    <p class="related-stocks-title">${condition}:</p>
+                    <p class="related-stocks-list">${stocks}</p>
+                </div>
+            `;
+        }
+        relatedStocksContainer.innerHTML = `<h4>관련 종목:</h4>${stocksHtml}`;
+        relatedStocksContainer.style.display = 'block';
+    } else {
+        relatedStocksContainer.style.display = 'none';
+    }
+
     const modal = document.getElementById('modal');
     const chartContainer = modal.querySelector('.chart-container');
     
@@ -942,7 +990,6 @@ async function showModal(indicatorId) {
         
         const normalRange = getNormalRange(indicatorId);
         
-        // --- Y축 스케일 계산 로직 ---
         const dataValues = historicalData.map(d => parseFloat(d.value));
         const dataMax = Math.max(...dataValues);
         const dataMin = Math.min(...dataValues);
@@ -954,25 +1001,22 @@ async function showModal(indicatorId) {
                 yAxisTop = Math.max(yAxisTop, normalRange.max);
             }
             if (normalRange.min !== -Infinity) {
-                // "(0.7% 이상)"과 같은 케이스를 처리
                 yAxisTop = Math.max(yAxisTop, normalRange.min);
             }
         }
         
         let finalMax;
-        // 동적 상단 여백 계산
         const rangeSpan = yAxisTop - dataMin;
         if (rangeSpan > 0) {
-            finalMax = yAxisTop + rangeSpan * 0.2; // 보이는 범위의 20%를 여백으로 추가
+            finalMax = yAxisTop + rangeSpan * 0.2;
         } else {
-             // 데이터가 모두 같은 값이거나 하나일 경우
             finalMax = yAxisTop > 0 ? yAxisTop * 1.2 : yAxisTop + 1; 
         }
 
         indicatorChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: historicalData.map(d => d.date.substring(5)), // 월-일만 표시
+                labels: historicalData.map(d => d.date.substring(5)),
                 datasets: [{
                     label: details.title.split('(')[0].trim(),
                     data: dataValues,
@@ -995,7 +1039,7 @@ async function showModal(indicatorId) {
                     x: { title: { display: true, text: '날짜' } },
                     y: { 
                         title: { display: true, text: '값' },
-                        max: finalMax // 계산된 y축 최댓값 설정
+                        max: finalMax
                     }
                 }
             },
