@@ -16,14 +16,23 @@
         .outlook-title { font-size: 1.8em; font-weight: bold; margin: 0; }
         .outlook-analysis { font-size: 1.1em; margin-top: 15px; padding: 0 20px; }
 
-        /* Sector Outlook Styles */
-        #sector-outlook-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        /* Sector & Investment Outlook Styles */
+        .sector-outlook-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .sector-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; }
         .sector-title { font-size: 1.4em; color: #343a40; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; }
         .sector-icon { font-size: 1.5em; margin-right: 10px; }
         .sector-outlook { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; }
         .sector-reason { font-size: 0.95em; color: #6c757d; flex-grow: 1; }
         .disclaimer { font-size: 0.8em; color: #6c757d; margin-top: 15px; text-align: right; }
+
+        /* Economic Calendar Styles */
+        .calendar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .calendar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; }
+        .calendar-date { font-size: 1.3em; font-weight: bold; color: #0056b3; margin-bottom: 10px; }
+        .calendar-event { border-left: 3px solid #17a2b8; padding-left: 15px; margin-bottom: 15px; }
+        .calendar-event-title { font-weight: bold; font-size: 1.1em; color: #343a40; }
+        .calendar-event-importance { font-size: 0.85em; color: #dc3545; font-weight: bold; }
+        .calendar-event-description { font-size: 0.9em; color: #6c757d; margin-top: 5px; }
 
 
         /* Compact Indicator Card Styles */
@@ -98,6 +107,11 @@
             </div>
         </div>
         <p class="disclaimer">※ 본 내용은 투자 참고 자료이며, 모든 투자의 최종 결정과 책임은 투자자 본인에게 있습니다.</p>
+        
+        <h2 class="section-title">주요 경제 일정</h2>
+        <div id="economic-calendar-grid" class="calendar-grid">
+            <p class="loading-text">경제 일정 로딩 중...</p>
+        </div>
         <h2 class="section-title">핵심 지표 대시보드</h2><div id="indicator-grid" class="indicator-grid"></div>
         <footer class="footer"><p>본 페이지의 데이터는 FRED, 한국은행 ECOS API를 통해 실시간으로 제공됩니다.</p><p>모든 투자의 책임은 투자자 본인에게 있습니다.</p></footer>
     </div>
@@ -303,6 +317,7 @@ async function main() {
     
     setupModal();
     renderInitialPlaceholders();
+    renderEconomicCalendar(); // 경제 캘린더 렌더링 함수 호출
 
     try {
         const [macroData, sectorData] = await Promise.all([
@@ -691,6 +706,55 @@ function renderDashboard(analyzedIndicators, marketOutlook, sectorOutlook) {
         indicatorGrid.appendChild(card);
     });
 }
+
+// ================== 경제 캘린더 렌더링 함수 추가 ==================
+function renderEconomicCalendar() {
+    const events = [
+        { date: '2025-10-02', title: '🇰🇷 한국 소비자물가지수 (CPI)', importance: '높음', description: '한국은행의 기준금리 결정에 핵심적인 영향을 미치는 물가 지표입니다.' },
+        { date: '2025-10-03', title: '🇺🇸 미국 비농업 고용지수 (NFP)', importance: '매우 높음', description: '미국 고용 시장 상태를 나타내는 핵심 지표로, 연준의 통화정책 방향에 큰 영향을 줍니다.' },
+        { date: '2025-10-10', title: '🇰🇷 한국 소비자심리지수 (PCSI)', importance: '보통', description: '소비자들의 경기 인식을 보여주어 내수 경기를 예측하는 데 참고됩니다.' },
+        { date: '2025-10-15', title: '🇺🇸 미국 소비자물가지수 (CPI)', importance: '매우 높음', description: '미국의 인플레이션 압력을 측정하며, 전 세계 금융 시장의 방향을 결정할 수 있습니다.' },
+        { date: '2025-10-16', title: '🇺🇸 미국 필라델피아 연은 제조업 지수', importance: '보통', description: '미국 제조업 경기의 건전성을 파악할 수 있는 선행 지표 중 하나입니다.' },
+        { date: '2025-11-07', title: '🇺🇸 미국 비농업 고용지수 (NFP)', importance: '매우 높음', description: '연말을 앞두고 미국 고용 시장의 추세를 확인할 수 있는 중요한 발표입니다.' },
+        { date: '2025-11-13', title: '🇺🇸 미국 소비자물가지수 (CPI)', importance: '매우 높음', description: '다음 해의 통화 정책에 대한 시장의 기대를 형성하는 데 결정적인 역할을 합니다.' }
+    ];
+
+    const calendarGrid = document.getElementById('economic-calendar-grid');
+    calendarGrid.innerHTML = ''; // 초기화
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 오늘 날짜의 시작으로 설정
+
+    const upcomingEvents = events
+        .map(event => ({ ...event, dateObj: new Date(event.date) }))
+        .filter(event => event.dateObj >= today)
+        .sort((a, b) => a.dateObj - b.dateObj);
+
+    if (upcomingEvents.length === 0) {
+        calendarGrid.innerHTML = '<p>향후 예정된 주요 경제 일정이 없습니다.</p>';
+        return;
+    }
+
+    upcomingEvents.forEach(event => {
+        const card = document.createElement('div');
+        card.className = 'calendar-card';
+
+        const eventDate = event.dateObj;
+        const formattedDate = `${eventDate.getFullYear()}년 ${eventDate.getMonth() + 1}월 ${eventDate.getDate()}일`;
+
+        card.innerHTML = `
+            <div class="calendar-date">${formattedDate}</div>
+            <div class="calendar-event">
+                <div class="calendar-event-title">${event.title}</div>
+                <div class="calendar-event-importance">중요도: ${event.importance}</div>
+                <div class="calendar-event-description">${event.description}</div>
+            </div>
+        `;
+        calendarGrid.appendChild(card);
+    });
+}
+// ==============================================================
+
 
 function setupModal() {
     const modal = document.getElementById('modal');
