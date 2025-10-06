@@ -591,6 +591,7 @@ function renderStockFinanceChart(financialData) {
 // ==================================================================
 
 // FRED API 호출을 위한 헬퍼 함수
+// FRED API 호출을 위한 헬퍼 함수
 async function fetchFredData(seriesId, limit = 1) {
     const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=${limit}`;
     try {
