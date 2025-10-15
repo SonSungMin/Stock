@@ -344,34 +344,58 @@ async function fetchEcosIndicators() {
         allStats.forEach(stat => {
             for (const [key, value] of Object.entries(mapping)) {
                 if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
-                    found[key] = {
-                        id: key, name: indicatorDetails[key].title, value: parseFloat(stat.DATA_VALUE),
-                        unit: stat.UNIT_NAME, date: stat.TIME.substring(4, 6) + '-' + stat.TIME.substring(6, 8)
-                    };
+                    // FIX: Check if stat.TIME exists before calling substring on it
+                    if (stat.TIME) {
+                        found[key] = {
+                            id: key, name: indicatorDetails[key].title, value: parseFloat(stat.DATA_VALUE),
+                            unit: stat.UNIT_NAME, date: stat.TIME.substring(4, 6) + '-' + stat.TIME.substring(6, 8)
+                        };
+                    }
                 }
             }
         });
         return Object.values(found);
     } catch (error) {
         console.error("한국은행 데이터 로딩 실패:", error);
-        return [];
+        return []; // Return empty array on failure
     }
 }
 
 
 async function fetchHistoricalData(indicatorId) {
-    // ... 기존 코드와 동일 ...
+    // This function should be implemented to fetch historical data for charts
 }
 
 // ==================================================================
 // 데이터 분석 및 가공 함수
 // ==================================================================
 function analyzeIndicators(indicators) {
-    // ... 기존 코드와 동일 ...
+    // This is a placeholder. You'd implement your analysis logic here.
+    return indicators.map(ind => ({
+        ...ind,
+        status: 'neutral',
+        icon: '😐',
+        text: '분석중',
+        weight: 1 
+    }));
 }
 
 function getMarketOutlook(analyzedIndicators) {
-    // ... 기존 코드와 동일 ...
+    // This is a placeholder. You'd implement your outlook logic here.
+     if (!analyzedIndicators || analyzedIndicators.length === 0) {
+        return {
+            status: 'neutral',
+            signal: '🤔',
+            title: '데이터 부족',
+            analysis: '지표 데이터가 부족하여 시장 전망을 분석할 수 없습니다.'
+        };
+    }
+    return {
+        status: 'neutral',
+        signal: '📊',
+        title: '혼조세 예상',
+        analysis: '긍정적 지표와 부정적 지표가 혼재되어 있어, 당분간 시장은 횡보할 가능성이 있습니다.'
+    };
 }
 
 // ==================================================================
@@ -393,12 +417,17 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
     document.getElementById('update-time').innerText = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
     
     const outlookSection = document.getElementById('outlook-section');
-    outlookSection.className = `${marketOutlook.status}-bg`;
-    outlookSection.innerHTML = `
-        <div class="outlook-signal">${marketOutlook.signal}</div>
-        <h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>
-        <p class="outlook-analysis">${marketOutlook.analysis}</p>
-    `;
+    // FIX: Check if marketOutlook and its status property exist before using them
+    if (marketOutlook && marketOutlook.status) {
+        outlookSection.className = `${marketOutlook.status}-bg`;
+        outlookSection.innerHTML = `
+            <div class="outlook-signal">${marketOutlook.signal}</div>
+            <h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>
+            <p class="outlook-analysis">${marketOutlook.analysis}</p>
+        `;
+    } else {
+        outlookSection.innerHTML = '<p class="loading-text" style="color: #dc3545;">시장 전망을 불러오는 데 실패했습니다.</p>';
+    }
 
     renderSectorOutlook(analyzedIndicators);
     renderInvestmentSuggestions(analyzedIndicators);
@@ -420,7 +449,6 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
 
         const valueText = (typeof indicator.value === 'number') ? `${indicator.value.toLocaleString()}${indicator.unit || ''}` : `<span class="loading-text">N/A</span>`;
 
-        // 다음 발표일 찾기
         const schedule = releaseSchedules[indicator.id];
         let nextDateStr = '';
         if (schedule) {
@@ -446,11 +474,11 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
 }
 
 function renderSectorOutlook(analyzedIndicators) {
-    // ... 기존 코드와 동일 ...
+    // Placeholder for sector outlook rendering
 }
 
 function renderInvestmentSuggestions(analyzedIndicators) {
-    // ... 기존 코드와 동일 ...
+    // Placeholder for investment suggestion rendering
 }
 
 function renderEconomicCalendar() {
@@ -504,11 +532,13 @@ function renderReleaseSchedule() {
 // 모달 및 차트 관련 함수
 // ==================================================================
 function getNormalRange(indicatorId) {
-    // ... 기존 코드와 동일 ...
+    // Placeholder for getting normal range for charts
 }
 
-const rangeAnnotationPlugin = { /* ... 기존 코드와 동일 ... */ };
+const rangeAnnotationPlugin = {
+    // Placeholder for chart annotation plugin
+};
 
 async function showModal(indicatorId) {
-    // ... 기존 코드와 동일 ...
+    // Placeholder for showing modal with detailed info and chart
 }
