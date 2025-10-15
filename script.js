@@ -272,16 +272,11 @@ async function main() {
 
     setupEventListeners();
     renderInitialPlaceholders();
-    renderEconomicCalendar(); // 하드코딩된 캘린더를 먼저 로드
+    renderEconomicCalendar();
 
     try {
-        const [macroData, sectorData] = await Promise.all([
-            fetchAllMacroData(),
-            fetchAllSectorData()
-        ]);
-        
-        const allIndicators = [...macroData, ...sectorData].filter(i => i);
-        const analyzedIndicators = analyzeIndicators(allIndicators);
+        const allIndicators = await fetchAllIndicatorData();
+        const analyzedIndicators = analyzeIndicators(allIndicators.filter(i => i));
         
         const marketOutlook = getMarketOutlook(analyzedIndicators);
         
@@ -294,7 +289,7 @@ async function main() {
 }
 
 // ==================================================================
-// 이벤트 리스너 설정 (개선된 버전)
+// 이벤트 리스너 설정
 // ==================================================================
 function setupEventListeners() {
     // Accordion
@@ -605,70 +600,69 @@ async function fetchFredData(seriesId, limit = 1) {
     }
 }
 
-async function fetchAllMacroData() {
-    const [yieldData, additionalFredData, koreanIndicators] = await Promise.all([
-        fetchYieldSpread(),
-        fetchAdditionalFredData(),
-        fetchAllKoreanData()
-    ]);
-    return [yieldData, ...additionalFredData, ...koreanIndicators];
-}
+// 모든 지표 데이터를 통합하여 가져오는 메인 함수
+async function fetchAllIndicatorData() {
+    const promises = Object.entries(indicatorDetails).map(async ([key, details]) => {
+        // 장단기 금리차 특별 처리
+        if (key === 'yield_spread') {
+            const [obs10Y, obs2Y] = await Promise.all([
+                fetchFredData(details.seriesId[0]),
+                fetchFredData(details.seriesId[1])
+            ]);
+            if (!obs10Y || !obs2Y) return null;
+            const spread = parseFloat(obs10Y[0].value) - parseFloat(obs2Y[0].value);
+            return { id: key, name: details.title, value: parseFloat(spread.toFixed(2)), unit: "%p", date: obs10Y[0].date.substring(5) };
+        }
 
-async function fetchYieldSpread() {
-    const [obs10Y, obs2Y] = await Promise.all([
-        fetchFredData('DGS10'),
-        fetchFredData('DGS2')
-    ]);
-    if (!obs10Y || !obs2Y) return null;
-    const spread = parseFloat(obs10Y[0].value) - parseFloat(obs2Y[0].value);
-    return { id: "yield_spread", name: "🇺🇸 장단기 금리차", value: parseFloat(spread.toFixed(2)), unit: "%p", date: obs10Y[0].date.substring(5) };
-}
+        // FRED Series ID가 있는 경우 FRED에서 데이터 가져오기
+        if (details.seriesId) {
+            const obs = await fetchFredData(details.seriesId);
+            if (!obs) return null;
 
-async function fetchAdditionalFredData() {
-    const series = { 
-        vix: 'VIXCLS', 
-        dollar_index: 'DTWEXBGS',
-        wti_price: 'MCOILWTICO',
-        nfp: 'PAYEMS',
-        us_cpi: 'CPIAUCSL',
-        philly_fed: 'PHLMAN'
-    };
+            let value = parseFloat(obs[0].value);
+            let unit = '';
 
-    const promises = Object.entries(series).map(async ([key, seriesId]) => {
-        const obs = await fetchFredData(seriesId);
-        if (!obs) return null;
-        
-        let value = parseFloat(obs[0].value);
-        let unit = '';
-        
-        if (key === 'nfp') {
-            value = parseFloat((value / 1000).toFixed(1));
-            unit = '만명';
-        } else if (key === 'wti_price') {
-            unit = '$/bbl';
-        } else if (key === 'us_cpi') {
-             const obs_1y = await fetchFredData(seriesId, 13);
-            if (obs_1y && obs_1y.length > 12) {
-                 const current_val = parseFloat(obs_1y[0].value);
-                 const prev_val = parseFloat(obs_1y[12].value);
-                 value = parseFloat(((current_val - prev_val) / prev_val * 100).toFixed(1));
+            if (key === 'nfp') {
+                value = parseFloat((value / 1000).toFixed(1));
+                unit = '만명';
+            } else if (key === 'wti_price') {
+                unit = '$/bbl';
+            } else if (key === 'us_cpi') {
+                const obs_1y = await fetchFredData(details.seriesId, 13);
+                if (obs_1y && obs_1y.length > 12) {
+                    const current_val = parseFloat(obs_1y[0].value);
+                    const prev_val = parseFloat(obs_1y[12].value);
+                    value = parseFloat(((current_val - prev_val) / prev_val * 100).toFixed(1));
+                }
+                unit = '%';
+            } else if (key === 'auto_sales') {
+                unit = 'M';
+            } else if (key === 'retail_sales') {
+                unit = '$';
             }
-            unit = '%';
+            
+            return { id: key, name: details.title, value, unit, date: obs[0].date.substring(5) };
         }
-        
-        const details = indicatorDetails[key];
-        if (!details) {
-            console.error(`indicatorDetails에서 '${key}'를 찾을 수 없습니다.`);
-            return null;
-        }
-
-        return { id: key, name: details.title, value, unit, date: obs[0].date.substring(5) };
+        return null; // FRED ID 없는 경우 일단 null
     });
 
-    return Promise.all(promises);
+    // FRED에서 가져오지 못한 지표들(ECOS) 처리
+    const fredResults = await Promise.all(promises);
+    const ecosIndicators = await fetchEcosData();
+    
+    const finalData = fredResults.map(item => {
+        if (item) return item;
+        // ECOS 데이터에서 매칭되는 항목 찾기
+        const key = Object.keys(indicatorDetails).find(k => !indicatorDetails[k].seriesId && ecosIndicators[k]);
+        return ecosIndicators[key] || null;
+    });
+
+    return finalData;
 }
 
-async function fetchAllKoreanData() {
+
+// 한국은행 ECOS API에서 데이터 가져오기
+async function fetchEcosData() {
     const ecosApiUrl = `https://ecos.bok.or.kr/api/KeyStatisticList/${API_KEYS.ECOS}/json/kr/1/100`;
     try {
         const response = await fetch(`${PROXY_URL}${encodeURIComponent(ecosApiUrl)}`);
@@ -678,16 +672,10 @@ async function fetchAllKoreanData() {
         const allStats = data.KeyStatisticList.row;
         const mapping = {
             base_rate: { name: '🇰🇷 기준금리', keywords: ['기준금리'] },
-            exchange_rate: { name: '🇰🇷 원/달러 환율', keywords: ['원/달러'] },
-            industrial_production: { name: '🇰🇷 산업생산지수', keywords: ['산업생산지수'] },
-            consumer_sentiment: { name: '🇰🇷 소비자심리지수', keywords: ['소비자동향조사', '소비자심리지수'] },
-            corp_bond_spread: { name: '🇰🇷 회사채 스프레드', keywords: ['회사채', '스프레드'] },
+            cpi: { name: '🇰🇷 소비자물가지수', keywords: ['소비자물가지수'] },
             kospi: { name: '🇰🇷 코스피', keywords: ['KOSPI'] },
             producer_price_index: { name: '🇰🇷 생산자물가지수', keywords: ['생산자물가지수'] },
-            gdp_growth: { name: '🇰🇷 GDP 성장률', keywords: ['GDP', '성장률', '전기대비'] },
-            export_growth: { name: '🇰🇷 수출 증가율', keywords: ['수출', '증감률'] },
-            cpi: { name: '🇰🇷 소비자물가지수', keywords: ['소비자물가지수'] },
-            unemployment: { name: '🇰🇷 실업률', keywords: ['실업률'] }
+            corp_bond_spread: { name: '🇰🇷 회사채 스프레드', keywords: ['회사채', '스프레드'] },
         };
         
         const found = {};
@@ -696,41 +684,18 @@ async function fetchAllKoreanData() {
                 if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
                     found[key] = {
                         id: key, name: value.name, value: parseFloat(stat.DATA_VALUE),
-                        unit: stat.UNIT_NAME, date: stat.TIME ? (stat.TIME.substring(4, 6) + '월') : '최신'
+                        unit: stat.UNIT_NAME, date: stat.TIME ? stat.TIME.substring(4, 6) + '-' + stat.TIME.substring(6, 8) : '정보없음'
                     };
                 }
             }
         });
-        return Object.values(found);
+        return found;
     } catch (error) {
         console.error("한국은행 데이터 로딩 실패:", error);
-        return [];
+        return {};
     }
 }
 
-async function fetchAllSectorData() {
-    const series = {
-        sox_index: 'SOX',
-        pharma_index: 'PCU325412325412',
-        auto_sales: 'TOTALSA',
-        retail_sales: 'MRTSSM44000USS',
-        home_price_index: 'CSUSHPINSA'
-    };
-
-    const promises = Object.entries(series).map(async ([key, seriesId]) => {
-        const obs = await fetchFredData(seriesId);
-        if (!obs) return null;
-        
-        let value = parseFloat(obs[0].value);
-        let unit = '';
-        if (key === 'auto_sales') unit = 'M';
-        if (key === 'retail_sales') unit = '$';
-
-        return { id: key, name: indicatorDetails[key].title, value, unit, date: obs[0].date.substring(5) };
-    });
-
-    return Promise.all(promises);
-}
 
 async function fetchHistoricalData(indicatorId) {
     const detail = indicatorDetails[indicatorId];
@@ -956,7 +921,7 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
         card.innerHTML = `
             <div>
                 <div class="indicator-card-header">
-                    <h4>${indicator.name}<br><span class="date">(${indicator.date})</span></h4>
+                    <h4>${indicator.name}<br><span class="date">(${indicator.date} 최신)</span></h4>
                 </div>
                 <p class="indicator-value">${valueText}</p>
                 <div class="indicator-status">
@@ -1091,11 +1056,6 @@ function renderInvestmentSuggestions(analyzedIndicators) {
 
 function renderEconomicCalendar() {
     const events = [
-        // 지난 데이터 (발표값, 예측값 포함)
-        { date: '2025-10-10', title: '🇰🇷 한국 소비자심리지수 (PCSI)', importance: '보통', description: '소비자들의 경기 인식을 보여주어 내수 경기를 예측하는 데 참고됩니다.', actual: '99.8', forecast: '101.2' },
-        { date: '2025-10-15', title: '🇺🇸 미국 소비자물가지수 (CPI)', importance: '매우 높음', description: '미국의 인플레이션 압력을 측정하며, 전 세계 금융 시장의 방향을 결정할 수 있습니다.', actual: '3.2%', forecast: '3.1%' },
-        
-        // 향후 예정 데이터
         { date: '2025-10-16', title: '🇺🇸 미국 필라델피아 연은 제조업 지수', importance: '보통', description: '미국 제조업 경기의 건전성을 파악할 수 있는 선행 지표 중 하나입니다.' },
         { date: '2025-11-07', title: '🇺🇸 미국 비농업 고용지수 (NFP)', importance: '매우 높음', description: '연말을 앞두고 미국 고용 시장의 추세를 확인할 수 있는 중요한 발표입니다.' },
         { date: '2025-11-13', title: '🇺🇸 미국 소비자물가지수 (CPI)', importance: '매우 높음', description: '다음 해의 통화 정책에 대한 시장의 기대를 형성하는 데 결정적인 역할을 합니다.' }
@@ -1107,38 +1067,25 @@ function renderEconomicCalendar() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 7);
-
-    const relevantEvents = events
+    const upcomingEvents = events
         .map(event => ({ ...event, dateObj: new Date(event.date) }))
-        .filter(event => event.dateObj >= sevenDaysAgo)
+        .filter(event => event.dateObj >= today)
         .sort((a, b) => a.dateObj - b.dateObj);
 
-    if (relevantEvents.length === 0) {
-        calendarGrid.innerHTML = '<p>최근 및 향후 주요 경제 일정이 없습니다.</p>';
+    if (upcomingEvents.length === 0) {
+        calendarGrid.innerHTML = '<p>향후 예정된 주요 경제 일정이 없습니다.</p>';
         return;
     }
 
-    calendarGrid.innerHTML = relevantEvents.map(event => {
+    calendarGrid.innerHTML = upcomingEvents.map(event => {
         const formattedDate = `${event.dateObj.getFullYear()}년 ${event.dateObj.getMonth() + 1}월 ${event.dateObj.getDate()}일`;
-        const isPast = event.dateObj < today;
-        
-        let resultHtml = '';
-        if (isPast && event.actual) {
-            resultHtml = `<div class="calendar-event-result"><strong>발표:</strong> ${event.actual} (예측: ${event.forecast || 'N/A'})</div>`;
-        } else if (event.forecast) {
-             resultHtml = `<div class="calendar-event-result"><strong>예측:</strong> ${event.forecast}</div>`;
-        }
-
         return `
-            <div class="calendar-card ${isPast ? 'past-event' : ''}">
+            <div class="calendar-card">
                 <div class="calendar-date">${formattedDate}</div>
                 <div class="calendar-event">
                     <div class="calendar-event-title">${event.title}</div>
                     <div class="calendar-event-importance">중요도: ${event.importance}</div>
                     <div class="calendar-event-description">${event.description}</div>
-                    ${resultHtml}
                 </div>
             </div>`;
     }).join('');
