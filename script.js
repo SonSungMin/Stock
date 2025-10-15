@@ -8,7 +8,6 @@ const API_KEYS = {
 const PROXY_URL = '/.netlify/functions/proxy?targetUrl=';
 const STOCK_INFO_URL = '/.netlify/functions/stock-info?code=';
 const STOCK_SEARCH_URL = '/.netlify/functions/stock-list?query=';
-const CALENDAR_URL = '/.netlify/functions/economic-calendar';
 
 let indicatorChart = null;
 let stockPriceChart = null;
@@ -273,7 +272,7 @@ async function main() {
 
     setupEventListeners();
     renderInitialPlaceholders();
-    fetchAndRenderCalendar(); // 캘린더를 먼저 로드
+    renderEconomicCalendar(); // 하드코딩된 캘린더를 먼저 로드
 
     try {
         const [macroData, sectorData] = await Promise.all([
@@ -648,12 +647,11 @@ async function fetchAdditionalFredData() {
         } else if (key === 'wti_price') {
             unit = '$/bbl';
         } else if (key === 'us_cpi') {
-            // FRED에서 CPI는 지수값이므로, 전년 동월 대비 성장률을 계산해야 함
-            const obs_1y = await fetchFredData(seriesId, 13);
+             const obs_1y = await fetchFredData(seriesId, 13);
             if (obs_1y && obs_1y.length > 12) {
                  const current_val = parseFloat(obs_1y[0].value);
                  const prev_val = parseFloat(obs_1y[12].value);
-                 value = ((current_val - prev_val) / prev_val * 100).toFixed(1);
+                 value = parseFloat(((current_val - prev_val) / prev_val * 100).toFixed(1));
             }
             unit = '%';
         }
@@ -774,22 +772,6 @@ async function fetchHistoricalData(indicatorId) {
         return data.map(obs => ({ date: obs.date, value: obs.value })).reverse();
     }
 }
-
-async function fetchAndRenderCalendar() {
-    try {
-        const response = await fetch(CALENDAR_URL);
-        if (!response.ok) {
-            throw new Error(`캘린더 API 응답 오류: ${response.status}`);
-        }
-        const events = await response.json();
-        renderEconomicCalendar(events);
-    } catch (error) {
-        console.error('경제 캘린더 데이터 로딩 실패:', error);
-        const calendarGrid = document.getElementById('economic-calendar-grid');
-        calendarGrid.innerHTML = '<p style="color: #dc3545;">경제 일정을 불러오는 데 실패했습니다.</p>';
-    }
-}
-
 
 // ==================================================================
 // 데이터 분석 및 가공 함수
@@ -1107,25 +1089,45 @@ function renderInvestmentSuggestions(analyzedIndicators) {
     `;
 }
 
-function renderEconomicCalendar(events) {
+function renderEconomicCalendar() {
+    const events = [
+        // 지난 데이터 (발표값, 예측값 포함)
+        { date: '2025-10-10', title: '🇰🇷 한국 소비자심리지수 (PCSI)', importance: '보통', description: '소비자들의 경기 인식을 보여주어 내수 경기를 예측하는 데 참고됩니다.', actual: '99.8', forecast: '101.2' },
+        { date: '2025-10-15', title: '🇺🇸 미국 소비자물가지수 (CPI)', importance: '매우 높음', description: '미국의 인플레이션 압력을 측정하며, 전 세계 금융 시장의 방향을 결정할 수 있습니다.', actual: '3.2%', forecast: '3.1%' },
+        
+        // 향후 예정 데이터
+        { date: '2025-10-16', title: '🇺🇸 미국 필라델피아 연은 제조업 지수', importance: '보통', description: '미국 제조업 경기의 건전성을 파악할 수 있는 선행 지표 중 하나입니다.' },
+        { date: '2025-11-07', title: '🇺🇸 미국 비농업 고용지수 (NFP)', importance: '매우 높음', description: '연말을 앞두고 미국 고용 시장의 추세를 확인할 수 있는 중요한 발표입니다.' },
+        { date: '2025-11-13', title: '🇺🇸 미국 소비자물가지수 (CPI)', importance: '매우 높음', description: '다음 해의 통화 정책에 대한 시장의 기대를 형성하는 데 결정적인 역할을 합니다.' }
+    ];
+
     const calendarGrid = document.getElementById('economic-calendar-grid');
-    if (!events || events.length === 0) {
+    calendarGrid.innerHTML = ''; 
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
+    const relevantEvents = events
+        .map(event => ({ ...event, dateObj: new Date(event.date) }))
+        .filter(event => event.dateObj >= sevenDaysAgo)
+        .sort((a, b) => a.dateObj - b.dateObj);
+
+    if (relevantEvents.length === 0) {
         calendarGrid.innerHTML = '<p>최근 및 향후 주요 경제 일정이 없습니다.</p>';
         return;
     }
 
-    calendarGrid.innerHTML = events.map(event => {
-        const eventDate = new Date(event.date);
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        
-        const formattedDate = `${eventDate.getFullYear()}년 ${eventDate.getMonth() + 1}월 ${eventDate.getDate()}일`;
-        const isPast = eventDate < today;
+    calendarGrid.innerHTML = relevantEvents.map(event => {
+        const formattedDate = `${event.dateObj.getFullYear()}년 ${event.dateObj.getMonth() + 1}월 ${event.dateObj.getDate()}일`;
+        const isPast = event.dateObj < today;
         
         let resultHtml = '';
-        if (isPast && event.actual !== null && event.actual !== undefined) {
-             resultHtml = `<div class="calendar-event-result"><strong>발표:</strong> ${event.actual} (예측: ${event.forecast || 'N/A'})</div>`;
-        } else if (event.forecast !== null && event.forecast !== undefined) {
+        if (isPast && event.actual) {
+            resultHtml = `<div class="calendar-event-result"><strong>발표:</strong> ${event.actual} (예측: ${event.forecast || 'N/A'})</div>`;
+        } else if (event.forecast) {
              resultHtml = `<div class="calendar-event-result"><strong>예측:</strong> ${event.forecast}</div>`;
         }
 
@@ -1135,6 +1137,7 @@ function renderEconomicCalendar(events) {
                 <div class="calendar-event">
                     <div class="calendar-event-title">${event.title}</div>
                     <div class="calendar-event-importance">중요도: ${event.importance}</div>
+                    <div class="calendar-event-description">${event.description}</div>
                     ${resultHtml}
                 </div>
             </div>`;
