@@ -198,3 +198,42 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
     .stock-header { flex-direction: column; align-items: flex-start; }
     .stock-header h2 { font-size: 1.8em; }
 }
+
+/* Release Schedule Section */
+.release-schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+.release-schedule-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+.release-schedule-title {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #0056b3;
+    margin-bottom: 15px;
+}
+.release-schedule-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.95em;
+    color: #343a40;
+    column-count: 2; /* 2열로 표시 */
+    column-gap: 20px;
+}
+.release-schedule-list li {
+    padding: 6px 0;
+}
+.release-schedule-message {
+    font-size: 0.95em;
+    color: #495057;
+    margin: 0;
+    padding-top: 5px;
+}
