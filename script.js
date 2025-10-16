@@ -871,6 +871,9 @@ async function showModal(indicatorId) {
 // ==================================================================
 // ===== 최종 수정: 마샬케이 차트 렌더링 함수 (로직 개선 및 로그 강화) =====
 // ==================================================================
+// ==================================================================
+// ===== 마샬케이 차트 렌더링 함수 (로직 수정) =====
+// ==================================================================
 async function renderMarshallKChart() {
     const canvas = document.getElementById('marshall-k-chart');
     if (!canvas) return;
@@ -882,97 +885,107 @@ async function renderMarshallKChart() {
     ctx.fillText("차트 데이터 로딩 중...", canvas.width / 2, canvas.height / 2);
 
     try {
-        const twentyYearsAgo = new Date();
-        twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
-        
-        // 1. 데이터 병렬로 가져오기 (20년치 이상 넉넉하게)
+        // 1. 데이터 병렬로 가져오기 (충분한 데이터 확보)
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-            fetchFredData('GDP', 100, 'asc'),       // 분기별 (25년)
-            fetchFredData('M2SL', 300, 'asc'),      // 월별 (25년)
-            fetchFredData('DGS10', 7000, 'asc')     // 일별 (약 27년치)
+            fetchFredData('GDP', 120, 'asc'),       // 분기별 (30년치)
+            fetchFredData('M2SL', 360, 'asc'),      // 월별 (30년치)
+            fetchFredData('DGS10', 7500, 'asc')     // 일별 (30년치)
         ]);
 
         if (!gdpSeries || !m2Series || !rateSeries) {
-            throw new Error("API로부터 Raw 데이터를 모두 가져오지 못했습니다.");
+            throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         }
 
-        // 2. [개선된 로직] 데이터를 분기별로 그룹화하기 위한 준비
-        const quarterlyData = new Map();
+        console.log(`로드된 데이터: GDP ${gdpSeries.length}개, M2 ${m2Series.length}개, 금리 ${rateSeries.length}개`);
 
-        // 헬퍼 함수: 날짜를 'YYYY-QX' 형식의 키로 변환
-        const getQuarterKey = (date) => {
-            const d = new Date(date);
-            const year = d.getUTCFullYear();
-            const quarter = Math.floor(d.getUTCMonth() / 3) + 1;
-            return `${year}-Q${quarter}`;
-        };
+        // 2. 데이터를 Map으로 변환 (빠른 검색을 위해)
+        const gdpMap = new Map();
+        const m2Map = new Map();
+        const rateMap = new Map();
 
-        // 3. 모든 데이터를 순회하며 분기별 버킷에 추가
+        // GDP 데이터 처리 (분기 데이터)
         gdpSeries.forEach(p => {
-            if (p.value === '.') return;
-            const key = getQuarterKey(p.date);
-            if (!quarterlyData.has(key)) quarterlyData.set(key, { gdp: null, m2: [], rate: [] });
-            quarterlyData.get(key).gdp = parseFloat(p.value);
-        });
-
-        m2Series.forEach(p => {
-            if (p.value === '.') return;
-            const key = getQuarterKey(p.date);
-            if (quarterlyData.has(key)) {
-                quarterlyData.get(key).m2.push(parseFloat(p.value));
+            if (p.value !== '.') {
+                const date = p.date;
+                gdpMap.set(date, parseFloat(p.value));
             }
         });
 
+        // M2 데이터 처리 (월별 데이터)
+        m2Series.forEach(p => {
+            if (p.value !== '.') {
+                const date = p.date.substring(0, 7); // YYYY-MM
+                m2Map.set(date, parseFloat(p.value));
+            }
+        });
+
+        // 금리 데이터 처리 (일별 데이터를 월별로 집계)
+        const rateMonthlyAvg = new Map();
         rateSeries.forEach(p => {
-            if (p.value === '.') return;
-            const key = getQuarterKey(p.date);
-            if (quarterlyData.has(key)) {
-                quarterlyData.get(key).rate.push(parseFloat(p.value));
+            if (p.value !== '.') {
+                const monthKey = p.date.substring(0, 7); // YYYY-MM
+                if (!rateMonthlyAvg.has(monthKey)) {
+                    rateMonthlyAvg.set(monthKey, []);
+                }
+                rateMonthlyAvg.get(monthKey).push(parseFloat(p.value));
             }
         });
         
-        // 4. 분기별로 그룹화된 데이터를 최종 차트 데이터로 가공
+        // 월별 평균 계산
+        rateMonthlyAvg.forEach((values, key) => {
+            const avg = values.reduce((a, b) => a + b, 0) / values.length;
+            rateMap.set(key, avg);
+        });
+
+        // 3. GDP 기준으로 데이터 매칭
         const chartData = [];
-        const debugLogs = [];
+        const twentyYearsAgo = new Date();
+        twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
 
-        // Map의 키를 날짜순으로 정렬
-        const sortedKeys = Array.from(quarterlyData.keys()).sort();
+        gdpMap.forEach((gdpValue, gdpDate) => {
+            const date = new Date(gdpDate);
+            if (date < twentyYearsAgo) return;
 
-        for (const key of sortedKeys) {
-            const year = parseInt(key.split('-')[0]);
-            if (year < twentyYearsAgo.getFullYear()) continue;
+            const year = date.getFullYear();
+            const quarter = Math.floor(date.getMonth() / 3) + 1;
+            const quarterKey = `${year} Q${quarter}`;
 
-            const data = quarterlyData.get(key);
-            let log = { quarter: key, hasGdp: false, m2Count: 0, rateCount: 0, included: false };
+            // 해당 분기의 모든 월에서 M2와 금리 데이터 수집
+            const quarterMonths = [];
+            for (let m = (quarter - 1) * 3; m < quarter * 3; m++) {
+                const monthKey = `${year}-${String(m + 1).padStart(2, '0')}`;
+                quarterMonths.push(monthKey);
+            }
 
-            if (data.gdp !== null && data.m2.length > 0 && data.rate.length > 0) {
-                const avgM2 = data.m2.reduce((a, b) => a + b, 0) / data.m2.length;
-                const avgRate = data.rate.reduce((a, b) => a + b, 0) / data.rate.length;
-                const marshallK = data.gdp > 0 ? (avgM2 / data.gdp) : 0;
-                
+            // M2와 금리의 분기 평균 계산
+            const m2Values = quarterMonths.map(m => m2Map.get(m)).filter(v => v !== undefined);
+            const rateValues = quarterMonths.map(m => rateMap.get(m)).filter(v => v !== undefined);
+
+            if (m2Values.length > 0 && rateValues.length > 0) {
+                const avgM2 = m2Values.reduce((a, b) => a + b, 0) / m2Values.length;
+                const avgRate = rateValues.reduce((a, b) => a + b, 0) / rateValues.length;
+                const marshallK = (avgM2 / gdpValue);
+
                 chartData.push({
                     label: `${year}`,
-                    fullLabel: key.replace('-Q', ' Q'),
+                    fullLabel: quarterKey,
                     marshallK: marshallK,
-                    interestRate: avgRate
+                    interestRate: avgRate,
+                    date: date
                 });
-                log.included = true;
             }
-            log.hasGdp = data.gdp !== null;
-            log.m2Count = data.m2.length;
-            log.rateCount = data.rate.length;
-            debugLogs.push(log);
-        }
+        });
 
         if (chartData.length === 0) {
-            console.group("===== 마샬케이 차트 데이터 가공 실패 상세 로그 =====");
-            console.log("최종 데이터가 0개입니다. 아래는 각 분기별 데이터 수집 현황입니다.");
-            console.table(debugLogs.filter(log => !log.included));
-            console.groupEnd();
-            throw new Error("데이터 가공 후 표시할 데이터가 없습니다. (상세 내용은 콘솔 테이블 확인)");
+            throw new Error("데이터 매칭 실패: GDP, M2, 금리를 결합할 수 없습니다.");
         }
+
+        // 날짜순 정렬
+        chartData.sort((a, b) => a.date - b.date);
+
+        console.log(`차트 데이터 생성 완료: ${chartData.length}개 분기`);
         
-        // 5. Chart.js로 그래프 생성
+        // 4. Chart.js로 그래프 생성
         if (marshallKChart) marshallKChart.destroy();
 
         marshallKChart = new Chart(ctx, {
@@ -981,20 +994,24 @@ async function renderMarshallKChart() {
                 labels: chartData.map(d => d.fullLabel),
                 datasets: [
                     {
-                        label: '국채 10년(좌)',
+                        label: '국채 10년 (%)',
                         data: chartData.map(d => d.interestRate),
-                        borderColor: 'blue',
+                        borderColor: '#0056b3',
+                        backgroundColor: 'rgba(0, 86, 179, 0.1)',
                         yAxisID: 'y',
                         borderWidth: 2,
-                        pointRadius: 0
+                        pointRadius: 0,
+                        tension: 0.1
                     },
                     {
-                        label: '마샬케이(우)',
+                        label: '마샬케이',
                         data: chartData.map(d => d.marshallK),
-                        borderColor: 'red',
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
                         yAxisID: 'y1',
                         borderWidth: 2,
-                        pointRadius: 0
+                        pointRadius: 0,
+                        tension: 0.1
                     }
                 ]
             },
@@ -1011,17 +1028,38 @@ async function renderMarshallKChart() {
                                 return currentYear !== prevYear ? currentYear : '';
                             },
                             autoSkip: false,
-                            maxRotation: 0
+                            maxRotation: 0,
+                            minRotation: 0
                         }
                     },
-                    y: { position: 'left', title: { display: true, text: '(%)' } },
-                    y1: { position: 'right', grid: { drawOnChartArea: false } },
+                    y: { 
+                        position: 'left', 
+                        title: { display: true, text: '금리 (%)' },
+                        ticks: { color: '#0056b3' }
+                    },
+                    y1: { 
+                        position: 'right', 
+                        title: { display: true, text: '마샬케이' },
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#dc3545' }
+                    }
                 },
                 plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
                     tooltip: {
                         callbacks: {
                             title: (items) => items[0].label,
-                            label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(2)}`
+                            label: (context) => {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed.y.toFixed(2);
+                                return label;
+                            }
                         }
                     }
                 }
@@ -1032,9 +1070,11 @@ async function renderMarshallKChart() {
         console.error("마샬케이 차트 렌더링 실패:", error);
         if (ctx) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "red";
+            ctx.fillStyle = "#dc3545";
             ctx.textAlign = "center";
-            ctx.fillText(error.message, canvas.width / 2, canvas.height / 2);
+            ctx.fillText("데이터 로딩 실패", canvas.width / 2, canvas.height / 2 - 10);
+            ctx.font = "12px Arial";
+            ctx.fillText(error.message, canvas.width / 2, canvas.height / 2 + 15);
         }
     }
 }
