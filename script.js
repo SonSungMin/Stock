@@ -869,7 +869,7 @@ async function showModal(indicatorId) {
 
 
 // ==================================================================
-// ===== 신규 추가 및 수정: 마샬케이 차트 렌더링 함수 (최근 20년, 디버깅 로그 추가) =====
+// ===== 최종 수정: 마샬케이 차트 렌더링 함수 (로직 개선 및 로그 강화) =====
 // ==================================================================
 async function renderMarshallKChart() {
     const canvas = document.getElementById('marshall-k-chart');
@@ -882,60 +882,54 @@ async function renderMarshallKChart() {
     ctx.fillText("차트 데이터 로딩 중...", canvas.width / 2, canvas.height / 2);
 
     try {
-        // 1. 데이터 병렬로 가져오기 (20년보다 넉넉하게 25년치 요청)
+        // 1. 데이터 병렬로 가져오기 (20년치 이상 넉넉하게)
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
             fetchFredData('GDP', 100, 'asc'),       // 분기별 (25년)
             fetchFredData('M2SL', 300, 'asc'),      // 월별 (25년)
-            fetchFredData('DGS10', 7000, 'asc')     // 일별 (25년치 데이터는 약 6500개)
+            fetchFredData('DGS10', 7000, 'asc')     // 일별 (약 27년치)
         ]);
         
-        // --- [로그] --- //
         console.log("===== 마샬케이 차트 데이터 로깅 시작 =====");
-        console.log("Raw GDP Data (최대 100개):", gdpSeries ? gdpSeries.length : '데이터 없음');
-        console.log("Raw M2 Data (최대 300개):", m2Series ? m2Series.length : '데이터 없음');
-        console.log("Raw 10Y-Rate Data (최대 7000개):", rateSeries ? rateSeries.length : '데이터 없음');
+        console.log(`Raw GDP Data: ${gdpSeries ? gdpSeries.length : 0}개`);
+        console.log(`Raw M2 Data: ${m2Series ? m2Series.length : 0}개`);
+        console.log(`Raw 10Y-Rate Data: ${rateSeries ? rateSeries.length : 0}개`);
 
         if (!gdpSeries || !m2Series || !rateSeries) {
-            throw new Error("API로부터 Raw 데이터를 하나 이상 가져오지 못했습니다.");
+            throw new Error("API로부터 Raw 데이터를 모두 가져오지 못했습니다.");
         }
         
         const chartData = [];
         const twentyYearsAgo = new Date();
         twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
 
-        // 2. 분기(GDP) 데이터 기준으로 순회하며 데이터 가공
+        // 2. 가장 낮은 빈도인 GDP(분기) 데이터를 기준으로 순회
         for (const gdpPoint of gdpSeries) {
-            if (gdpPoint.value === '.') continue;
-            
-            const gdpDate = new Date(gdpPoint.date);
-            if (gdpDate < twentyYearsAgo) continue;
+            // 유효하지 않은 값이거나 20년 이전 데이터는 건너뛰기
+            if (gdpPoint.value === '.' || new Date(gdpPoint.date) < twentyYearsAgo) {
+                continue;
+            }
 
-            // 해당 분기의 시작일과 마지막일 계산
+            const gdpDate = new Date(gdpPoint.date);
             const year = gdpDate.getUTCFullYear();
-            const quarter = Math.floor(gdpDate.getUTCMonth() / 3); // 0, 1, 2, 3
+            const quarter = Math.floor(gdpDate.getUTCMonth() / 3);
             const quarterStart = new Date(Date.UTC(year, quarter * 3, 1));
             const quarterEnd = new Date(Date.UTC(year, quarter * 3 + 3, 0));
-
-            // 해당 분기에 속하는 M2 데이터 필터링 및 평균 계산
-            const m2Values = m2Series
-                .filter(p => {
-                    const d = new Date(p.date);
-                    return d >= quarterStart && d <= quarterEnd && p.value !== '.';
-                })
-                .map(p => parseFloat(p.value));
             
-            // 해당 분기에 속하는 금리 데이터 필터링 및 평균 계산
-            const rateValues = rateSeries
-                .filter(p => {
-                    const d = new Date(p.date);
-                    return d >= quarterStart && d <= quarterEnd && p.value !== '.';
-                })
-                .map(p => parseFloat(p.value));
+            // [수정된 로직] 각 분기별로 M2, 금리 데이터를 '새로' 필터링
+            const m2InQuarter = m2Series.filter(p => {
+                const d = new Date(p.date);
+                return d >= quarterStart && d <= quarterEnd && p.value !== '.';
+            }).map(p => parseFloat(p.value));
 
-            // 모든 데이터가 존재할 때만 최종 데이터에 추가
-            if (m2Values.length > 0 && rateValues.length > 0) {
-                const avgM2 = m2Values.reduce((a, b) => a + b, 0) / m2Values.length;
-                const avgRate = rateValues.reduce((a, b) => a + b, 0) / rateValues.length;
+            const rateInQuarter = rateSeries.filter(p => {
+                const d = new Date(p.date);
+                return d >= quarterStart && d <= quarterEnd && p.value !== '.';
+            }).map(p => parseFloat(p.value));
+
+            // 모든 데이터가 해당 분기에 존재해야만 가공
+            if (m2InQuarter.length > 0 && rateInQuarter.length > 0) {
+                const avgM2 = m2InQuarter.reduce((sum, val) => sum + val, 0) / m2InQuarter.length;
+                const avgRate = rateInQuarter.reduce((sum, val) => sum + val, 0) / rateInQuarter.length;
                 const gdpValue = parseFloat(gdpPoint.value);
                 const marshallK = gdpValue > 0 ? (avgM2 / gdpValue) : 0;
                 
@@ -948,18 +942,15 @@ async function renderMarshallKChart() {
             }
         }
         
-        // --- [로그] --- //
-        console.log(`최종 가공된 데이터 ${chartData.length}개:`, chartData);
+        console.log(`최종 가공된 데이터 ${chartData.length}개:`, chartData.length > 0 ? chartData : "결과 없음");
         console.log("======================================");
 
         if (chartData.length === 0) {
             throw new Error("데이터 가공 후 표시할 데이터가 없습니다.");
         }
 
-        // 3. Chart.js를 사용하여 그래프 생성
-        if (marshallKChart) {
-            marshallKChart.destroy();
-        }
+        // 3. Chart.js로 그래프 생성
+        if (marshallKChart) marshallKChart.destroy();
 
         marshallKChart = new Chart(ctx, {
             type: 'line',
@@ -997,35 +988,17 @@ async function renderMarshallKChart() {
                                 return currentYear !== prevYear ? currentYear : '';
                             },
                             autoSkip: false,
-                            maxRotation: 0,
-                            minRotation: 0
+                            maxRotation: 0
                         }
                     },
-                    y: { 
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        title: { display: true, text: '(%)' }
-                    },
-                    y1: { 
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        grid: { drawOnChartArea: false },
-                    },
+                    y: { position: 'left', title: { display: true, text: '(%)' } },
+                    y1: { position: 'right', grid: { drawOnChartArea: false } },
                 },
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            title: (tooltipItems) => tooltipItems[0].label,
-                            label: (context) => {
-                                let label = context.dataset.label || '';
-                                if (label) { label += ': '; }
-                                if (context.parsed.y !== null) {
-                                    label += context.parsed.y.toFixed(2);
-                                }
-                                return label;
-                            }
+                            title: (items) => items[0].label,
+                            label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(2)}`
                         }
                     }
                 }
