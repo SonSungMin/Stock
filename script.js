@@ -1,5 +1,4 @@
-// script.js (index.html과 같은 위치에 있어야 합니다)
-
+// script.js
 import { API_KEYS } from './js/config.js';
 import { fetchFredIndicators, fetchEcosIndicators } from './js/api.js';
 import { analyzeIndicators, getMarketOutlook } from './js/analysis.js';
@@ -35,7 +34,7 @@ async function main() {
     renderEconomicCalendar();
     renderReleaseSchedule();
     
-    // 거시 경제 차트 렌더링과 분석을 병렬로 실행합니다.
+    // 거시 경제 차트 렌더링과 분석을 병렬로 실행
     const macroAnalysisPromise = Promise.all([
         renderMarshallKChart(macroAnalysisResults),
         renderGdpConsumptionChart(macroAnalysisResults),
@@ -52,10 +51,10 @@ async function main() {
         const allIndicators = [...fredData, ...ecosData].filter(Boolean);
         const analyzedIndicators = analyzeIndicators(allIndicators);
         
-        // 거시 경제 분석이 모두 완료될 때까지 기다립니다.
+        // 거시 경제 분석이 모두 완료될 때까지 기다림
         await macroAnalysisPromise;
         
-        // 단기 지표와 거시 분석 결과를 모두 전달하여 종합 전망을 생성합니다.
+        // 단기 지표와 거시 분석 결과를 모두 전달하여 종합 전망 생성
         const marketOutlook = getMarketOutlook(analyzedIndicators, macroAnalysisResults);
         
         renderDashboard(analyzedIndicators, marketOutlook);
