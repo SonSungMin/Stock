@@ -8,7 +8,6 @@ exports.handler = async function (event, context) {
     }
 
     try {
-        // Netlify의 내장 fetch 기능을 바로 사용합니다. (node-fetch 불필요)
         const response = await fetch(decodeURIComponent(targetUrl));
         const data = await response.json();
 
