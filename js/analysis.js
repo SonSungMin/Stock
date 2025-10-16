@@ -39,7 +39,11 @@ export function analyzeIndicators(indicators) {
                 else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; } 
                 else { status = 'negative'; icon = '👎'; text = '성장 둔화'; }
                 weight = 5; break; // 💡 경제 성장의 바로미터, 가장 높은 가중치
-            // ... 기타 지표들 ...
+            case 'exchange_rate':
+                if (value <= 1300) { status = 'positive'; icon = '💵'; text = '환율 안정'; }
+                else if (value <= 1380) { status = 'neutral'; icon = '〰️'; text = '변동성 확대'; }
+                else { status = 'negative'; icon = '💸'; text = '원화 약세'; }
+                weight = 4; break;
         }
         return { ...indicator, status, icon, text, weight };
     });
@@ -122,8 +126,6 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
 // ==================================================================
 // 자산군별 투자 의견 및 섹터 전망 (더 정교하게 수정)
 // ==================================================================
-
-// 투자 의견 함수는 UI 파일로 이동하는 것이 더 적합하나, 분석 로직과 강하게 결합되므로 여기에 둡니다.
 export function getInvestmentSuggestions(marketOutlook) {
     const status = marketOutlook.status;
     const title = marketOutlook.title;
@@ -136,8 +138,7 @@ export function getInvestmentSuggestions(marketOutlook) {
             '원자재/금': { icon: '🛢️', outlook: '비중 확대', reason: '경기 회복은 산업용 원자재(구리 등) 수요 증가로 이어지며, 금은 인플레이션 헤지 수단으로 유효합니다.' }
         };
     } else if (status === 'negative') {
-        // 스태그플레이션과 일반 침체를 구분
-        if (title.includes('스태그플레이션')) {
+        if (title.includes('스태그플레이션') || title.includes('인플레이션')) {
              return {
                 '주식': { icon: '📉', outlook: '비중 축소', reason: '성장 둔화와 비용 증가로 기업 이익이 크게 훼손될 수 있습니다. 필수소비재, 헬스케어 등 방어주 비중 확대가 필요합니다.' },
                 '채권': { icon: '🤔', outlook: '중립 (단기채 위주)', reason: '경기 둔화는 채권에 긍정적이나, 높은 물가는 부담 요인입니다. 물가연동국채(TIPS) 또는 단기채가 대안이 될 수 있습니다.' },
@@ -161,9 +162,6 @@ export function getInvestmentSuggestions(marketOutlook) {
     }
 }
 
-
-// 아래 함수들은 기존 로직을 유지하되, 분석 결과를 UI에 표시하는 역할만 담당합니다.
-
 export function analyzeMarshallKTrend(chartData, resultsObject) {
     const analysisDiv = document.getElementById('marshall-analysis');
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
@@ -174,9 +172,9 @@ export function analyzeMarshallKTrend(chartData, resultsObject) {
         const latest = chartData[chartData.length - 1];
         const avgMarshallK = chartData.reduce((sum, d) => sum + d.marshallK, 0) / chartData.length;
         
-        if (latest.marshallK > avgMarshallK && latest.interestRate > 3.5) {
-            result = { status: 'negative', outlook: '🚨 경기 둔화 우려', summary: '높은 금리에도 불구, 과잉 유동성이 관찰되어 경기 둔화 및 자산 버블 우려가 있습니다.' };
-        } else if (latest.marshallK < chartData[chartData.length-5].marshallK && latest.interestRate < chartData[chartData.length-5].interestRate){
+        if (latest.marshallK > avgMarshallK * 1.1) { // 평균보다 10% 이상 높을 때
+            result = { status: 'negative', outlook: '🚨 과잉 유동성 우려', summary: '시중에 과도한 유동성이 공급되어 자산 버블 및 경기 둔화의 위험이 있습니다.' };
+        } else if (latest.marshallK < chartData[chartData.length - 5].marshallK && latest.interestRate < chartData[chartData.length - 5].interestRate) {
              result = { status: 'positive', outlook: '✅ 경기 회복 초기 신호', summary: '유동성이 정상화되고 금리가 하락하는 추세로, 경기 회복의 초기 신호일 수 있습니다.' };
         } else {
              result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '유동성과 금리가 명확한 방향성 없이 과도기적 국면에 있습니다.' };
@@ -184,7 +182,7 @@ export function analyzeMarshallKTrend(chartData, resultsObject) {
         result.analysis = `<p><strong>현재 상황:</strong> 마샬케이 ${latest.marshallK.toFixed(2)}, 10년물 금리 ${latest.interestRate.toFixed(2)}%</p><p>${result.summary}</p>`;
     }
     
-    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
+    if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
     resultsObject.marshallK = result;
 }
 
@@ -207,12 +205,12 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
         } else {
             result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '시장이 방향성을 탐색하는 중립적 국면에 있습니다.' };
         }
-        result.analysis = `<p><strong>최신 데이터 (${gdpObs[0].date.substring(0,7)}):</strong></p><ul><li>실질 GDP: <strong>${gdpGrowth.toFixed(2)}%</strong></li><li>실질 PCE: <strong>${pceGrowth.toFixed(2)}%</strong></li></ul><p><strong>분석:</strong> ${result.summary}</p>`;
+        result.analysis = `<p><strong>최신 데이터 (${gdpObs[0].date.substring(0,7)}):</strong></p><ul><li>실질 GDP (YoY): <strong>${gdpGrowth.toFixed(2)}%</strong></li><li>실질 PCE (YoY): <strong>${pceGrowth.toFixed(2)}%</strong></li></ul><p><strong>분석:</strong> ${result.summary}</p>`;
     } catch (error) {
         result.analysis = '<p style="color:#dc3545;">GDP/소비 데이터 분석에 실패했습니다.</p>';
     }
 
-    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
+    if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
     resultsObject.gdpConsumption = result;
 }
 
@@ -234,6 +232,6 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
         result.analysis = `<p><strong>최신 데이터 (${latestGap.date.substring(0,7)}):</strong></p><ul><li>현재 GDP 갭: <strong>${latestGap.value.toFixed(2)}%</strong></li></ul><p><strong>분석:</strong> ${result.summary}</p>`;
     }
     
-    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
+    if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
     resultsObject.gdpGap = result;
 }
