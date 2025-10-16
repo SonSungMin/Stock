@@ -43,7 +43,7 @@ export async function fetchFredIndicators() {
             if (obs_1y && obs_1y.length > 12) {
                  value = parseFloat(((parseFloat(obs_1y[0].value) - parseFloat(obs_1y[12].value)) / parseFloat(obs_1y[12].value) * 100).toFixed(1));
             } else {
-                return null; // 1년 전 데이터가 없으면 계산 불가
+                return null;
             }
             unit = '%';
         }
