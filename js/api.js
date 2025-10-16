@@ -79,7 +79,8 @@ export async function fetchEcosIndicators() {
         allStats.forEach(stat => {
             for (const [key, value] of Object.entries(mapping)) {
                 if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
-                    if (stat.TIME && stat.DATA_VALUE) {
+                    // 💡 변경된 부분: stat.TIME이 유효한지 먼저 확인합니다.
+                    if (stat.TIME && stat.DATA_VALUE && stat.TIME.length >= 8) {
                         found[key] = {
                             id: key, name: indicatorDetails[key].title, value: parseFloat(stat.DATA_VALUE),
                             unit: stat.UNIT_NAME, date: stat.TIME.substring(4, 6) + '-' + stat.TIME.substring(6, 8)
