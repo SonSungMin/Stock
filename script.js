@@ -1,4 +1,5 @@
 // script.js
+import { getDetailedMarketOutlook } from './js/enhanced_analysis.js';
 import { API_KEYS } from './js/config.js';
 import { fetchFredIndicators, fetchEcosIndicators } from './js/api.js';
 import { analyzeIndicators, getMarketOutlook, analyzeMarshallKTrend, analyzeGdpConsumption, analyzeGdpGap } from './js/analysis.js';
@@ -58,7 +59,8 @@ async function main() {
         const analyzedIndicators = analyzeIndicators(allIndicators);
 
         // 3. 모든 분석이 끝난 후, 종합 전망 생성
-        const marketOutlook = getMarketOutlook(analyzedIndicators, macroAnalysisResults);
+        //const marketOutlook = getMarketOutlook(analyzedIndicators, macroAnalysisResults);
+        const marketOutlook = getDetailedMarketOutlook(analyzedIndicators, macroAnalysisResults);
         renderDashboard(analyzedIndicators, marketOutlook);
 
     } catch (error) {
