@@ -58,7 +58,7 @@ export async function renderGdpConsumptionChart() {
     
     try {
         const [gdpObs, pceObs, usrecObs] = await Promise.all([
-            fetchFredData('GDPC1', 220, 'desc'), // 데이터 기간 확장
+            fetchFredData('GDPC1', 220, 'desc'),
             fetchFredData('PCEC', 220, 'desc'),   
             fetchFredData('USRECQ', 220, 'desc')
         ]);
@@ -99,7 +99,6 @@ export async function renderGdpConsumptionChart() {
 
         const labels = chartData.map(d => d.date);
         
-        // 💡 변경된 부분: 경기 침체 구간에 라벨 추가
         const recessionPeriods = {
             '1973-11-01': '오일 쇼크',
             '1980-01-01': '더블 딥 침체',
@@ -204,10 +203,11 @@ export async function renderMarshallKChart() {
     ctx.fillText("차트 데이터 로딩 중...", canvas.width / 2, canvas.height / 2);
 
     try {
+        // 💡 변경된 부분: 데이터 조회 limit을 원래대로 늘림
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-            fetchFredData('GDP', 200, 'desc'),
-            fetchFredData('M2SL', 500, 'desc'),
-            fetchFredData('DGS10', 1500, 'desc')
+            fetchFredData('GDP', 2000, 'desc'),
+            fetchFredData('M2SL', 5000, 'desc'),
+            fetchFredData('DGS10', 15000, 'desc')
         ]);
 
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
@@ -258,7 +258,6 @@ export async function renderMarshallKChart() {
         
         if (marshallKChart) marshallKChart.destroy();
         
-        // 💡 변경된 부분: 침체 표시 색상 및 스타일 강화
         const crisisAnnotations = [
             { date: '2001-03-01', label: 'IT 버블' }, 
             { date: '2007-12-01', label: '금융위기' },
@@ -269,9 +268,9 @@ export async function renderMarshallKChart() {
             return {
                 type: 'line', mode: 'vertical', scaleID: 'x',
                 value: index,
-                borderColor: 'rgba(0, 86, 179, 0.7)', // 진한 파란색
+                borderColor: 'rgba(0, 86, 179, 0.7)',
                 borderWidth: 2,
-                borderDash: [6, 6], // 점선 스타일
+                borderDash: [6, 6],
                 label: { 
                     content: c.label, 
                     display: true, 
