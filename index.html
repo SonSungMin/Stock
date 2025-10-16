@@ -31,13 +31,7 @@
         <div class="accordion">
             <button class="accordion-header">📊 시장 종합 전망</button>
             <div class="accordion-panel" style="display: block;">
-                <!--<div id="outlook-section"><p class="loading-text">지표 분석 중...</p></div>-->
-                <div id="outlook-section">
-                    <div id="outlook-summary"></div>
-                    <div id="signal-strength" style="margin-top: 20px;"></div>
-                    <div id="risk-assessment" style="margin-top: 20px;"></div>
-                    <div id="scenarios" style="margin-top: 20px;"></div>
-                </div>
+                <div id="outlook-section"><p class="loading-text">지표 분석 중...</p></div>
                 <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">주요 섹터 전망</h3>
                 <div id="sector-outlook-grid" class="sector-outlook-grid"></div>
                 <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">자산군별 투자 의견</h3>
@@ -47,10 +41,19 @@
         </div>
 
         <div class="accordion">
-            <button class="accordion-header">🌐 주요 경제 지표</button>
-            <div class="accordion-panel">
+            <button class="accordion-header">🌐 주요 지표 & 발표 일정</button>
+            <div class="accordion-panel" style="display: block;">
+                
+                <h3 class="section-title" style="font-size: 1.4em; margin-top: 0;">실시간 주요 지표</h3>
                 <div id="indicator-grid" class="indicator-grid">
                     </div>
+
+                <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">다가오는 주요 이벤트</h3>
+                <div id="economic-calendar-grid" class="calendar-grid"></div>
+
+                <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">월별 발표일</h3>
+                <div id="release-schedule-grid" class="release-schedule-grid"></div>
+
             </div>
         </div>
         
@@ -89,16 +92,6 @@
                  <p style="font-size: 0.8em; color: #6c757d; text-align: right; margin-top: 5px;">
                     주: 녹색 선은 실질 GDP 성장률, 파란색 선은 실질 개인소비지출(PCE) 성장률, 붉은 영역은 경기 침체 기간입니다.
                 </p>
-            </div>
-        </div>
-
-        <div class="accordion">
-            <button class="accordion-header">🗓️ 주요 지표 발표 일정</button>
-            <div class="accordion-panel">
-                <h3 class="section-title" style="font-size: 1.4em; margin-top: 0;">다가오는 주요 이벤트</h3>
-                <div id="economic-calendar-grid" class="calendar-grid"></div>
-                <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">월별 발표일</h3>
-                <div id="release-schedule-grid" class="release-schedule-grid"></div>
             </div>
         </div>
     </div>
