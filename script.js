@@ -2,7 +2,7 @@
 import { API_KEYS } from './js/config.js';
 import { fetchFredIndicators, fetchEcosIndicators } from './js/api.js';
 import { analyzeIndicators, getMarketOutlook, analyzeGdpConsumption } from './js/analysis.js';
-import { renderMarshallKChart, renderGdpConsumptionChart } from './js/charts.js';
+import { renderMarshallKChart, renderGdpConsumptionChart, renderGdpGapChart } from './js/charts.js'; // 💡 renderGdpGapChart import
 import {
     renderInitialPlaceholders,
     renderDashboard,
@@ -27,9 +27,11 @@ async function main() {
     renderEconomicCalendar();
     renderReleaseSchedule();
     
+    // 💡 변경된 부분: 3개의 차트를 병렬로 로딩
     await Promise.all([
         renderMarshallKChart(),
         renderGdpConsumptionChart(),
+        renderGdpGapChart(), // 💡 GDP 갭 차트 렌더링 함수 호출
         analyzeGdpConsumption()
     ]);
 
@@ -39,7 +41,7 @@ async function main() {
             fetchEcosIndicators()
         ]);
         
-        const allIndicators = [...fredData, ...ecosData].filter(Boolean); // null, undefined 값 제거
+        const allIndicators = [...fredData, ...ecosData].filter(Boolean);
         const analyzedIndicators = analyzeIndicators(allIndicators);
         const marketOutlook = getMarketOutlook(analyzedIndicators);
         
