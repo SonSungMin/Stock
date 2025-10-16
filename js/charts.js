@@ -100,12 +100,8 @@ export async function renderGdpConsumptionChart() {
         const labels = chartData.map(d => d.date);
         
         const recessionPeriods = {
-            '1973-11-01': '오일 쇼크',
-            '1980-01-01': '더블 딥 침체',
-            '1990-07-01': '걸프전 침체',
-            '2001-03-01': 'IT 버블',
-            '2007-12-01': '금융위기',
-            '2020-02-01': '팬데믹'
+            '1973-11-01': '오일 쇼크', '1980-01-01': '더블 딥 침체', '1990-07-01': '걸프전 침체',
+            '2001-03-01': 'IT 버블', '2007-12-01': '금융위기', '2020-02-01': '팬데믹'
         };
 
         const recessionAnnotations = [];
@@ -120,21 +116,24 @@ export async function renderGdpConsumptionChart() {
                 const labelKey = Object.keys(recessionPeriods).find(key => 
                     new Date(key) >= new Date(recessionStartDate) && new Date(key) < new Date(d.date)
                 );
-                const labelContent = labelKey ? recessionPeriods[labelKey] : '';
-
-                recessionAnnotations.push({
+                const annotation = {
                     type: 'box', xMin: startRecession, xMax: index,
-                    backgroundColor: 'rgba(0, 0, 0, 0.1)', 
-                    borderColor: 'transparent',
-                    label: {
-                        content: labelContent,
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)', // 붉은 계열 배경
+                    borderColor: 'transparent'
+                };
+
+                // 💡 변경된 부분: 레이블이 있을 때만 label 객체 추가
+                if (labelKey) {
+                    annotation.label = {
+                        content: recessionPeriods[labelKey],
                         display: true,
                         position: 'start',
-                        yAdjust: -10,
+                        yAdjust: 10,
                         font: { size: 11, weight: 'bold' },
-                        color: 'rgba(0, 0, 0, 0.6)'
-                    }
-                });
+                        color: 'rgba(220, 53, 69, 0.8)' // 붉은 계열 텍스트
+                    };
+                }
+                recessionAnnotations.push(annotation);
                 startRecession = null;
                 recessionStartDate = null;
             }
@@ -147,7 +146,7 @@ export async function renderGdpConsumptionChart() {
                 labels: labels,
                 datasets: [
                     { label: '실질 GDP 성장률 (%)', data: chartData.map(d => d.gdpGrowth), borderColor: '#28a745', borderWidth: 2, pointRadius: 0, tension: 0.1 },
-                    { label: '실질 PCE(소비) 성장률 (%)', data: chartData.map(d => d.pceGrowth), borderColor: '#dc3545', borderWidth: 2, pointRadius: 0, tension: 0.1 }
+                    { label: '실질 PCE(소비) 성장률 (%)', data: chartData.map(d => d.pceGrowth), borderColor: '#0056b3', borderWidth: 2, pointRadius: 0, tension: 0.1 }
                 ]
             },
             options: {
@@ -203,7 +202,6 @@ export async function renderMarshallKChart() {
     ctx.fillText("차트 데이터 로딩 중...", canvas.width / 2, canvas.height / 2);
 
     try {
-        // 💡 변경된 부분: 데이터 조회 limit을 원래대로 늘림
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
             fetchFredData('GDP', 2000, 'desc'),
             fetchFredData('M2SL', 5000, 'desc'),
@@ -258,6 +256,7 @@ export async function renderMarshallKChart() {
         
         if (marshallKChart) marshallKChart.destroy();
         
+        // 💡 변경된 부분: 침체 표시 색상을 붉은 계열로 수정하고 가독성 향상
         const crisisAnnotations = [
             { date: '2001-03-01', label: 'IT 버블' }, 
             { date: '2007-12-01', label: '금융위기' },
@@ -266,9 +265,10 @@ export async function renderMarshallKChart() {
             const index = chartData.findIndex(d => new Date(d.date) >= new Date(c.date));
             if (index === -1) return null;
             return {
-                type: 'line', mode: 'vertical', scaleID: 'x',
+                type: 'line',
+                scaleID: 'x',
                 value: index,
-                borderColor: 'rgba(0, 86, 179, 0.7)',
+                borderColor: 'rgba(220, 53, 69, 0.7)', // 붉은 계열 색상
                 borderWidth: 2,
                 borderDash: [6, 6],
                 label: { 
@@ -277,7 +277,7 @@ export async function renderMarshallKChart() {
                     position: 'end',
                     yAdjust: 20,
                     font: { size: 12, weight: 'bold' },
-                    backgroundColor: 'rgba(0, 86, 179, 0.7)',
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)', // 붉은 계열 배경
                     color: 'white',
                     padding: 4,
                     borderRadius: 4
@@ -291,7 +291,7 @@ export async function renderMarshallKChart() {
                 labels: chartData.map(d => d.label),
                 datasets: [
                     { label: '국채 10년 (%)', data: chartData.map(d => d.interestRate), borderColor: '#0056b3', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
-                    { label: '마샬케이', data: chartData.map(d => d.marshallK), borderColor: '#dc3545', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
+                    { label: '마샬케이', data: chartData.map(d => d.marshallK), borderColor: '#212529', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 } // 마샬케이 색상 변경
                 ]
             },
             options: {
@@ -314,9 +314,12 @@ export async function renderMarshallKChart() {
                         }
                     },
                     y: { position: 'left', title: { display: true, text: '금리 (%)' }, ticks: { color: '#0056b3' } },
-                    y1: { position: 'right', title: { display: true, text: '마샬케이' }, grid: { drawOnChartArea: false }, ticks: { color: '#dc3545' } }
+                    y1: { position: 'right', title: { display: true, text: '마샬케이' }, grid: { drawOnChartArea: false }, ticks: { color: '#212529' } }
                 },
-                plugins: { legend: { position: 'top' }, annotation: { annotations: crisisAnnotations } }
+                plugins: { 
+                    legend: { position: 'top' }, 
+                    annotation: { annotations: crisisAnnotations } 
+                }
             }
         });
 
