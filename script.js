@@ -17,8 +17,8 @@ import {
 document.addEventListener('DOMContentLoaded', main);
 
 async function main() {
-    if (API_KEYS.FRED.includes('YOUR_APP_KEY') || API_KEYS.ECOS.includes('YOUR_APP_KEY')) {
-        alert('js/config.js 파일 상단에 API 키를 먼저 입력해주세요.');
+    if (API_KEYS.FRED.includes('YOUR') || API_KEYS.ECOS.includes('YOUR')) {
+        alert('js/config.js 파일에 API 키를 먼저 입력해주세요.');
         return;
     }
 
@@ -27,13 +27,11 @@ async function main() {
     renderEconomicCalendar();
     renderReleaseSchedule();
     
-    // 마샬케이, GDP/소비 차트 및 분석을 병렬로 호출
     await Promise.all([
         renderMarshallKChart(),
         renderGdpConsumptionChart(),
         analyzeGdpConsumption()
     ]);
-
 
     try {
         const [fredData, ecosData] = await Promise.all([
@@ -41,9 +39,8 @@ async function main() {
             fetchEcosIndicators()
         ]);
         
-        const allIndicators = [...fredData, ...ecosData].filter(i => i && typeof i.value === 'number' && !isNaN(i.value));
+        const allIndicators = [...fredData, ...ecosData].filter(Boolean);
         const analyzedIndicators = analyzeIndicators(allIndicators);
-        
         const marketOutlook = getMarketOutlook(analyzedIndicators);
         
         renderDashboard(analyzedIndicators, marketOutlook);
