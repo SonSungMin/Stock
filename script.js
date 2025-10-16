@@ -39,7 +39,7 @@ async function main() {
             fetchEcosIndicators()
         ]);
         
-        const allIndicators = [...fredData, ...ecosData].filter(Boolean);
+        const allIndicators = [...fredData, ...ecosData].filter(Boolean); // null, undefined 값 제거
         const analyzedIndicators = analyzeIndicators(allIndicators);
         const marketOutlook = getMarketOutlook(analyzedIndicators);
         
