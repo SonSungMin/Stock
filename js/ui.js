@@ -215,8 +215,19 @@ export function setupEventListeners() {
     });
 
     const modal = document.getElementById('modal');
-    document.querySelector('.close-btn').onclick = () => { modal.style.display = 'none'; };
-    window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
+    // 💡 변경된 부분: 닫기 버튼을 찾아서 이벤트 리스너를 추가하기 전에, 버튼이 존재하는지 먼저 확인합니다.
+    const closeBtn = document.querySelector('.close-btn');
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            if (modal) modal.style.display = 'none';
+        };
+    }
+    
+    window.onclick = (event) => { 
+        if (event.target === modal) {
+            modal.style.display = 'none'; 
+        }
+    };
 
     const searchInput = document.getElementById('stock-code-input');
     const searchBtn = document.getElementById('stock-search-btn');
