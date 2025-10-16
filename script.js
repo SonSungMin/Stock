@@ -1,4 +1,4 @@
-// script.js (should be in the same root folder as index.html)
+// script.js (index.html과 같은 위치에 있어야 합니다)
 
 import { API_KEYS } from './js/config.js';
 import { fetchFredIndicators, fetchEcosIndicators } from './js/api.js';
