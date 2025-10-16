@@ -348,3 +348,59 @@ export async function analyzeGdpConsumption() {
         analysisDiv.innerHTML = '<p style="color:#dc3545;">GDP/소비 데이터 분석에 실패했습니다.</p>';
     }
 }
+
+/**
+ * GDP 갭 데이터를 분석하여 결과를 HTML에 렌더링합니다.
+ * @param {Array<object>} gdpGapData - {date, value} 형태의 GDP 갭 데이터 배열.
+ */
+export function analyzeGdpGap(gdpGapData) {
+    const analysisDiv = document.getElementById('gdp-gap-analysis');
+    if (!analysisDiv) return; // 분석을 표시할 div가 없으면 종료
+
+    if (!gdpGapData || gdpGapData.length < 2) {
+        analysisDiv.innerHTML = '<p class="loading-text">분석할 데이터가 부족합니다.</p>';
+        return;
+    }
+
+    const latestGap = gdpGapData[gdpGapData.length - 1];
+    const previousGap = gdpGapData[gdpGapData.length - 2];
+    const trend = latestGap.value - previousGap.value; // 최근 추세
+
+    let outlook = '';
+    let outlookClass = 'neutral';
+    let analysis = `
+        <p><strong>최신 데이터 (${latestGap.date.substring(0, 7)}):</strong></p>
+        <ul>
+            <li>현재 GDP 갭: <strong>${latestGap.value.toFixed(2)}%</strong></li>
+            <li>최근 분기 변동: <strong>${trend > 0 ? '▲' : '▼'} ${Math.abs(trend).toFixed(2)}%p</strong></li>
+        </ul>
+    `;
+
+    if (latestGap.value > 0.5) {
+        outlook = '🔥 인플레이션 압력';
+        outlookClass = 'negative';
+        analysis += `<p><strong>분석:</strong> 잠재 GDP를 초과하는 생산이 이루어지고 있어 <strong>수요 견인 인플레이션 압력</strong>이 높아진 상태입니다. 연준의 긴축 정책이 지속될 수 있습니다.</p>`;
+    } else if (latestGap.value < -0.5) {
+        outlook = '📉 경기 침체 우려';
+        outlookClass = 'negative';
+        analysis += `<p><strong>분석:</strong> 잠재 GDP에 미치지 못하는 생산으로 인해 <strong>경기 둔화 또는 침체 우려</strong>가 있습니다. 실업률이 상승하고 디플레이션 압력이 나타날 수 있습니다.</p>`;
+    } else {
+        outlook = '✅ 안정적인 상태';
+        outlookClass = 'positive';
+        analysis += `<p><strong>분석:</strong> 실제 GDP가 잠재 GDP 수준에서 안정적으로 움직이고 있어 <strong>경제가 균형 상태</strong>에 가까움을 시사합니다. 물가와 고용이 안정될 가능성이 높습니다.</p>`;
+    }
+
+    if (trend > 0.2) {
+        analysis += `<p><strong>추세:</strong> 갭이 플러스(+) 방향으로 빠르게 확대되고 있어 향후 인플레이션 압력이 더욱 커질 수 있습니다.</p>`;
+    } else if (trend < -0.2) {
+        analysis += `<p><strong>추세:</strong> 갭이 마이너스(-) 방향으로 빠르게 확대되고 있어 경기 둔화 속도가 빨라질 수 있습니다.</p>`;
+    }
+
+    analysisDiv.innerHTML = `
+        <div class="market-outlook-badge ${outlookClass}">${outlook}</div>
+        <div class="analysis-text">${analysis}</div>
+         <p class="analysis-footnote">
+            <strong>참고:</strong> GDP 갭은 (실질 GDP / 잠재 GDP - 1) * 100으로 계산되며, 경제의 과열 또는 침체 상태를 판단하는 데 사용됩니다.
+        </p>
+    `;
+}
