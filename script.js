@@ -868,6 +868,150 @@ async function showModal(indicatorId) {
 }
 
 // ==================================================================
+// 마샬케이 트렌드 분석 함수
+// ==================================================================
+function analyzeMarshallKTrend(chartData) {
+    const analysisDiv = document.getElementById('marshall-analysis');
+    if (!chartData || chartData.length < 8) {
+        analysisDiv.innerHTML = '<p class="loading-text">분석할 데이터가 부족합니다.</p>';
+        return;
+    }
+
+    // 최근 데이터 (최신 2년, 8개 분기)
+    const recentData = chartData.slice(-8);
+    const currentMarshallK = recentData[recentData.length - 1].marshallK;
+    const currentRate = recentData[recentData.length - 1].interestRate;
+    const currentQuarter = recentData[recentData.length - 1].fullLabel;
+    
+    // 1년 전 데이터
+    const oneYearAgo = recentData[recentData.length - 5];
+    const marshallKChange = currentMarshallK - oneYearAgo.marshallK;
+    const rateChange = currentRate - oneYearAgo.interestRate;
+    
+    // 역사적 평균 (전체 기간)
+    const avgMarshallK = chartData.reduce((sum, d) => sum + d.marshallK, 0) / chartData.length;
+    const marshallKDeviation = ((currentMarshallK - avgMarshallK) / avgMarshallK) * 100;
+    
+    // 최고점 대비
+    const maxMarshallK = Math.max(...chartData.map(d => d.marshallK));
+    const marshallKFromPeak = ((currentMarshallK - maxMarshallK) / maxMarshallK) * 100;
+    
+    // 분석 판단
+    let marketOutlook = '';
+    let outlookClass = '';
+    let analysis = '';
+    
+    // 마샬케이가 높고 금리가 높은 상황
+    if (currentMarshallK > avgMarshallK && currentRate > 3.5) {
+        marketOutlook = '🚨 경기 둔화 및 자산 버블 우려';
+        outlookClass = 'warning';
+        analysis = `
+            <p><strong>현재 상황:</strong></p>
+            <ul>
+                <li>마샬케이: <strong>${currentMarshallK.toFixed(2)}</strong> (역사적 평균 대비 <strong>${marshallKDeviation > 0 ? '+' : ''}${marshallKDeviation.toFixed(1)}%</strong>)</li>
+                <li>10년물 국채 금리: <strong>${currentRate.toFixed(2)}%</strong> (1년 전 대비 <strong>${rateChange > 0 ? '+' : ''}${rateChange.toFixed(2)}%p</strong>)</li>
+            </ul>
+            <p><strong>⚠️ 위험 신호:</strong></p>
+            <ul>
+                <li><strong>유동성 과잉:</strong> 마샬케이가 역사적 평균보다 높아 시중에 통화가 과도하게 공급된 상태입니다. 이는 과거 자산 버블과 인플레이션의 선행 지표였습니다.</li>
+                <li><strong>긴축 정책의 지연 효과:</strong> 높은 금리에도 불구하고 마샬케이가 높다는 것은 금리 인상의 효과가 아직 경제 전반에 충분히 반영되지 않았음을 의미합니다. 향후 6-12개월 내 경기 둔화가 본격화될 가능성이 있습니다.</li>
+                <li><strong>역사적 패턴:</strong> 2008년 금융위기 전에도 유사한 패턴(높은 마샬케이 + 금리 인상)이 관찰되었으며, 이후 급격한 경기 침체가 발생했습니다.</li>
+            </ul>
+            <p><strong>📉 투자 전략 제안:</strong></p>
+            <ul>
+                <li><strong>방어적 포지션:</strong> 성장주보다는 배당주, 필수소비재, 헬스케어 등 방어주 중심으로 포트폴리오를 재구성하는 것이 안전합니다.</li>
+                <li><strong>현금 비중 확대:</strong> 향후 조정 시 매수 기회를 위해 현금 비중을 30-40% 이상 유지하는 것이 유리합니다.</li>
+                <li><strong>채권 투자 고려:</strong> 금리가 정점에 가까워지면 장기 국채 투자로 안정적인 수익을 확보할 수 있습니다.</li>
+                <li><strong>리스크 관리:</strong> 레버리지 투자는 최소화하고, 손절매 라인을 명확히 설정해야 합니다.</li>
+            </ul>
+        `;
+    }
+    // 마샬케이가 낮아지고 금리가 하락하는 상황
+    else if (marshallKChange < 0 && rateChange < 0) {
+        marketOutlook = '✅ 경기 회복 초기 신호';
+        outlookClass = 'positive';
+        analysis = `
+            <p><strong>현재 상황:</strong></p>
+            <ul>
+                <li>마샬케이: <strong>${currentMarshallK.toFixed(2)}</strong> (1년 전 대비 <strong>${marshallKChange.toFixed(2)} 하락</strong>)</li>
+                <li>10년물 국채 금리: <strong>${currentRate.toFixed(2)}%</strong> (1년 전 대비 <strong>${rateChange.toFixed(2)}%p 하락</strong>)</li>
+            </ul>
+            <p><strong>✅ 긍정적 신호:</strong></p>
+            <ul>
+                <li><strong>유동성 정상화:</strong> 마샬케이 하락은 과잉 유동성이 해소되고 있음을 의미하며, 건강한 경제 구조로 회귀하고 있습니다.</li>
+                <li><strong>금리 인하 사이클:</strong> 금리 하락은 연준의 통화 완화 정책을 시사하며, 기업의 자금 조달 비용이 낮아져 투자와 소비가 증가할 수 있습니다.</li>
+                <li><strong>경기 회복 초기:</strong> 역사적으로 이런 조합은 경기 침체 후 회복 초기 국면에서 나타나며, 주식 시장에 좋은 진입 시점이 될 수 있습니다.</li>
+            </ul>
+            <p><strong>📈 투자 전략 제안:</strong></p>
+            <ul>
+                <li><strong>성장주 관심:</strong> 금리 하락은 성장주에 유리한 환경이며, 기술주와 신산업 섹터에 대한 비중 확대를 고려할 수 있습니다.</li>
+                <li><strong>분할 매수:</strong> 아직 초기 신호이므로 한 번에 올인하기보다는 3-6개월에 걸쳐 분할 매수하는 것이 안전합니다.</li>
+                <li><strong>섹터 다각화:</strong> 경기 민감주(반도체, 자동차), 금융주 등 회복 수혜주를 포트폴리오에 포함하세요.</li>
+            </ul>
+        `;
+    }
+    // 마샬케이가 역사적 최고점 근처
+    else if (marshallKFromPeak > -5) {
+        marketOutlook = '⚠️ 유동성 피크, 조정 가능성 주의';
+        outlookClass = 'warning';
+        analysis = `
+            <p><strong>현재 상황:</strong></p>
+            <ul>
+                <li>마샬케이: <strong>${currentMarshallK.toFixed(2)}</strong> (역사적 최고점 <strong>${maxMarshallK.toFixed(2)}</strong> 대비 <strong>${Math.abs(marshallKFromPeak).toFixed(1)}%</strong> 하락)</li>
+                <li>10년물 국채 금리: <strong>${currentRate.toFixed(2)}%</strong></li>
+            </ul>
+            <p><strong>⚠️ 주의 신호:</strong></p>
+            <ul>
+                <li><strong>유동성 최고점:</strong> 마샬케이가 역사적 최고점 근처에 있다는 것은 시중 유동성이 극대화된 상태로, 더 이상의 상승 여력이 제한적일 수 있습니다.</li>
+                <li><strong>조정 가능성:</strong> 과거 데이터를 보면 마샬케이가 정점을 찍은 후 6-18개월 내에 시장 조정이 발생하는 경우가 많았습니다.</li>
+                <li><strong>정책 전환 리스크:</strong> 연준이 긴축으로 방향을 틀 경우 유동성 축소가 급격하게 진행될 수 있습니다.</li>
+            </ul>
+            <p><strong>📊 투자 전략 제안:</strong></p>
+            <ul>
+                <li><strong>이익 실현:</strong> 큰 수익을 본 종목은 일부 이익 실현을 통해 리스크를 줄이는 것이 현명합니다.</li>
+                <li><strong>변동성 대비:</strong> VIX가 낮더라도 옵션 등을 활용한 헤지 전략을 고려하세요.</li>
+                <li><strong>단기 트레이딩:</strong> 장기 투자보다는 단기 관점에서 접근하고, 손절매 원칙을 엄격히 지켜야 합니다.</li>
+            </ul>
+        `;
+    }
+    // 중립적 상황
+    else {
+        marketOutlook = '😐 중립적 국면, 신중한 관찰 필요';
+        outlookClass = 'neutral';
+        analysis = `
+            <p><strong>현재 상황:</strong></p>
+            <ul>
+                <li>마샬케이: <strong>${currentMarshallK.toFixed(2)}</strong> (역사적 평균 대비 <strong>${marshallKDeviation > 0 ? '+' : ''}${marshallKDeviation.toFixed(1)}%</strong>)</li>
+                <li>10년물 국채 금리: <strong>${currentRate.toFixed(2)}%</strong></li>
+            </ul>
+            <p><strong>📊 현재 평가:</strong></p>
+            <ul>
+                <li><strong>과도기 국면:</strong> 마샬케이와 금리가 모두 중립적 범위에 있어, 시장이 명확한 방향성을 찾지 못하고 있습니다.</li>
+                <li><strong>관망 필요:</strong> 향후 2-3개 분기 동안의 추세 변화를 주의 깊게 관찰해야 합니다.</li>
+                <li><strong>경제 지표 주시:</strong> 고용, 물가, GDP 등 다른 경제 지표들과 함께 종합적으로 판단해야 합니다.</li>
+            </ul>
+            <p><strong>⚖️ 투자 전략 제안:</strong></p>
+            <ul>
+                <li><strong>균형 포트폴리오:</strong> 성장주와 가치주, 국내외 자산을 적절히 배분하여 리스크를 분산하세요.</li>
+                <li><strong>선별적 투자:</strong> 시장 전체보다는 펀더멘털이 우수한 개별 종목에 집중하는 것이 유리합니다.</li>
+                <li><strong>유연성 유지:</strong> 시장 상황 변화에 따라 신속하게 전략을 조정할 수 있도록 준비하세요.</li>
+            </ul>
+        `;
+    }
+    
+    analysisDiv.innerHTML = `
+        <div class="market-outlook-badge ${outlookClass}">${marketOutlook}</div>
+        <div class="analysis-text">${analysis}</div>
+        <p class="analysis-footnote">
+            <strong>참고:</strong> 마샬케이(Marshall K-ratio)는 통화량(M2)을 GDP로 나눈 값으로, 경제 내 유동성 수준을 나타냅니다. 
+            높은 값은 시중에 돈이 많이 풀렸음을(유동성 과잉), 낮은 값은 상대적으로 긴축 상태를 의미합니다. 
+            역사적으로 마샬케이의 급등 후 하락은 자산 버블 붕괴와 경기 침체의 선행 지표로 활용되어 왔습니다.
+        </p>
+    `;
+}
+
+
+// ==================================================================
 // ===== 마샬케이 차트 렌더링 함수 (로직 수정) =====
 // ==================================================================
 async function renderMarshallKChart() {
@@ -1021,6 +1165,9 @@ async function renderMarshallKChart() {
         chartData.sort((a, b) => a.date - b.date);
 
         console.log(`차트 데이터 생성 완료: ${chartData.length}개 분기`);
+        
+        // 분석 의견 생성
+        analyzeMarshallKTrend(chartData);
         
         // 4. Chart.js로 그래프 생성
         if (marshallKChart) marshallKChart.destroy();
