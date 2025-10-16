@@ -118,11 +118,10 @@ export async function renderGdpConsumptionChart() {
                 );
                 const annotation = {
                     type: 'box', xMin: startRecession, xMax: index,
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)', // 붉은 계열 배경
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
                     borderColor: 'transparent'
                 };
 
-                // 💡 변경된 부분: 레이블이 있을 때만 label 객체 추가
                 if (labelKey) {
                     annotation.label = {
                         content: recessionPeriods[labelKey],
@@ -130,7 +129,7 @@ export async function renderGdpConsumptionChart() {
                         position: 'start',
                         yAdjust: 10,
                         font: { size: 11, weight: 'bold' },
-                        color: 'rgba(220, 53, 69, 0.8)' // 붉은 계열 텍스트
+                        color: 'rgba(220, 53, 69, 0.8)'
                     };
                 }
                 recessionAnnotations.push(annotation);
@@ -256,7 +255,6 @@ export async function renderMarshallKChart() {
         
         if (marshallKChart) marshallKChart.destroy();
         
-        // 💡 변경된 부분: 침체 표시 색상을 붉은 계열로 수정하고 가독성 향상
         const crisisAnnotations = [
             { date: '2001-03-01', label: 'IT 버블' }, 
             { date: '2007-12-01', label: '금융위기' },
@@ -268,16 +266,17 @@ export async function renderMarshallKChart() {
                 type: 'line',
                 scaleID: 'x',
                 value: index,
-                borderColor: 'rgba(220, 53, 69, 0.7)', // 붉은 계열 색상
+                borderColor: 'rgba(220, 53, 69, 0.7)',
                 borderWidth: 2,
                 borderDash: [6, 6],
                 label: { 
                     content: c.label, 
                     display: true, 
-                    position: 'end',
-                    yAdjust: 20,
+                    // 💡 변경된 부분: 레이블 위치를 위쪽으로 조정
+                    position: 'start',
+                    yAdjust: -5,
                     font: { size: 12, weight: 'bold' },
-                    backgroundColor: 'rgba(220, 53, 69, 0.8)', // 붉은 계열 배경
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
                     color: 'white',
                     padding: 4,
                     borderRadius: 4
@@ -291,7 +290,7 @@ export async function renderMarshallKChart() {
                 labels: chartData.map(d => d.label),
                 datasets: [
                     { label: '국채 10년 (%)', data: chartData.map(d => d.interestRate), borderColor: '#0056b3', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
-                    { label: '마샬케이', data: chartData.map(d => d.marshallK), borderColor: '#212529', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 } // 마샬케이 색상 변경
+                    { label: '마샬케이', data: chartData.map(d => d.marshallK), borderColor: '#212529', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
                 ]
             },
             options: {
@@ -318,7 +317,11 @@ export async function renderMarshallKChart() {
                 },
                 plugins: { 
                     legend: { position: 'top' }, 
-                    annotation: { annotations: crisisAnnotations } 
+                    annotation: { 
+                        annotations: crisisAnnotations,
+                        // 💡 추가된 부분: 레이블이 차트 영역을 벗어나도 보이게 함
+                        clip: false
+                    } 
                 }
             }
         });
