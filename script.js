@@ -882,74 +882,97 @@ async function renderMarshallKChart() {
     ctx.fillText("차트 데이터 로딩 중...", canvas.width / 2, canvas.height / 2);
 
     try {
+        const twentyYearsAgo = new Date();
+        twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
+        
         // 1. 데이터 병렬로 가져오기 (20년치 이상 넉넉하게)
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
             fetchFredData('GDP', 100, 'asc'),       // 분기별 (25년)
             fetchFredData('M2SL', 300, 'asc'),      // 월별 (25년)
             fetchFredData('DGS10', 7000, 'asc')     // 일별 (약 27년치)
         ]);
-        
-        console.log("===== 마샬케이 차트 데이터 로깅 시작 =====");
-        console.log(`Raw GDP Data: ${gdpSeries ? gdpSeries.length : 0}개`);
-        console.log(`Raw M2 Data: ${m2Series ? m2Series.length : 0}개`);
-        console.log(`Raw 10Y-Rate Data: ${rateSeries ? rateSeries.length : 0}개`);
 
         if (!gdpSeries || !m2Series || !rateSeries) {
             throw new Error("API로부터 Raw 데이터를 모두 가져오지 못했습니다.");
         }
-        
-        const chartData = [];
-        const twentyYearsAgo = new Date();
-        twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
 
-        // 2. 가장 낮은 빈도인 GDP(분기) 데이터를 기준으로 순회
-        for (const gdpPoint of gdpSeries) {
-            // 유효하지 않은 값이거나 20년 이전 데이터는 건너뛰기
-            if (gdpPoint.value === '.' || new Date(gdpPoint.date) < twentyYearsAgo) {
-                continue;
+        // 2. [개선된 로직] 데이터를 분기별로 그룹화하기 위한 준비
+        const quarterlyData = new Map();
+
+        // 헬퍼 함수: 날짜를 'YYYY-QX' 형식의 키로 변환
+        const getQuarterKey = (date) => {
+            const d = new Date(date);
+            const year = d.getUTCFullYear();
+            const quarter = Math.floor(d.getUTCMonth() / 3) + 1;
+            return `${year}-Q${quarter}`;
+        };
+
+        // 3. 모든 데이터를 순회하며 분기별 버킷에 추가
+        gdpSeries.forEach(p => {
+            if (p.value === '.') return;
+            const key = getQuarterKey(p.date);
+            if (!quarterlyData.has(key)) quarterlyData.set(key, { gdp: null, m2: [], rate: [] });
+            quarterlyData.get(key).gdp = parseFloat(p.value);
+        });
+
+        m2Series.forEach(p => {
+            if (p.value === '.') return;
+            const key = getQuarterKey(p.date);
+            if (quarterlyData.has(key)) {
+                quarterlyData.get(key).m2.push(parseFloat(p.value));
             }
+        });
 
-            const gdpDate = new Date(gdpPoint.date);
-            const year = gdpDate.getUTCFullYear();
-            const quarter = Math.floor(gdpDate.getUTCMonth() / 3);
-            const quarterStart = new Date(Date.UTC(year, quarter * 3, 1));
-            const quarterEnd = new Date(Date.UTC(year, quarter * 3 + 3, 0));
-            
-            // [수정된 로직] 각 분기별로 M2, 금리 데이터를 '새로' 필터링
-            const m2InQuarter = m2Series.filter(p => {
-                const d = new Date(p.date);
-                return d >= quarterStart && d <= quarterEnd && p.value !== '.';
-            }).map(p => parseFloat(p.value));
+        rateSeries.forEach(p => {
+            if (p.value === '.') return;
+            const key = getQuarterKey(p.date);
+            if (quarterlyData.has(key)) {
+                quarterlyData.get(key).rate.push(parseFloat(p.value));
+            }
+        });
+        
+        // 4. 분기별로 그룹화된 데이터를 최종 차트 데이터로 가공
+        const chartData = [];
+        const debugLogs = [];
 
-            const rateInQuarter = rateSeries.filter(p => {
-                const d = new Date(p.date);
-                return d >= quarterStart && d <= quarterEnd && p.value !== '.';
-            }).map(p => parseFloat(p.value));
+        // Map의 키를 날짜순으로 정렬
+        const sortedKeys = Array.from(quarterlyData.keys()).sort();
 
-            // 모든 데이터가 해당 분기에 존재해야만 가공
-            if (m2InQuarter.length > 0 && rateInQuarter.length > 0) {
-                const avgM2 = m2InQuarter.reduce((sum, val) => sum + val, 0) / m2InQuarter.length;
-                const avgRate = rateInQuarter.reduce((sum, val) => sum + val, 0) / rateInQuarter.length;
-                const gdpValue = parseFloat(gdpPoint.value);
-                const marshallK = gdpValue > 0 ? (avgM2 / gdpValue) : 0;
+        for (const key of sortedKeys) {
+            const year = parseInt(key.split('-')[0]);
+            if (year < twentyYearsAgo.getFullYear()) continue;
+
+            const data = quarterlyData.get(key);
+            let log = { quarter: key, hasGdp: false, m2Count: 0, rateCount: 0, included: false };
+
+            if (data.gdp !== null && data.m2.length > 0 && data.rate.length > 0) {
+                const avgM2 = data.m2.reduce((a, b) => a + b, 0) / data.m2.length;
+                const avgRate = data.rate.reduce((a, b) => a + b, 0) / data.rate.length;
+                const marshallK = data.gdp > 0 ? (avgM2 / data.gdp) : 0;
                 
                 chartData.push({
                     label: `${year}`,
-                    fullLabel: `${year} Q${quarter + 1}`,
+                    fullLabel: key.replace('-Q', ' Q'),
                     marshallK: marshallK,
                     interestRate: avgRate
                 });
+                log.included = true;
             }
+            log.hasGdp = data.gdp !== null;
+            log.m2Count = data.m2.length;
+            log.rateCount = data.rate.length;
+            debugLogs.push(log);
         }
-        
-        console.log(`최종 가공된 데이터 ${chartData.length}개:`, chartData.length > 0 ? chartData : "결과 없음");
-        console.log("======================================");
 
         if (chartData.length === 0) {
-            throw new Error("데이터 가공 후 표시할 데이터가 없습니다.");
+            console.group("===== 마샬케이 차트 데이터 가공 실패 상세 로그 =====");
+            console.log("최종 데이터가 0개입니다. 아래는 각 분기별 데이터 수집 현황입니다.");
+            console.table(debugLogs.filter(log => !log.included));
+            console.groupEnd();
+            throw new Error("데이터 가공 후 표시할 데이터가 없습니다. (상세 내용은 콘솔 테이블 확인)");
         }
-
-        // 3. Chart.js로 그래프 생성
+        
+        // 5. Chart.js로 그래프 생성
         if (marshallKChart) marshallKChart.destroy();
 
         marshallKChart = new Chart(ctx, {
