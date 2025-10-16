@@ -35,8 +35,8 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
     const indicatorGrid = document.getElementById('indicator-grid');
     indicatorGrid.innerHTML = '';
     
-    if (analyzedIndicators.length === 0) {
-        indicatorGrid.innerHTML = '<p class="loading-text" style="padding: 20px;">표시할 지표 데이터가 없습니다. API 키나 네트워크 연결을 확인해주세요.</p>';
+    if (!analyzedIndicators || analyzedIndicators.length === 0) {
+        indicatorGrid.innerHTML = '<p class="loading-text" style="padding: 20px;">표시할 지표 데이터가 없습니다.</p>';
         return;
     }
     
@@ -46,6 +46,7 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
     analyzedIndicators.sort((a, b) => (b.weight || 0) - (a.weight || 0));
     
     analyzedIndicators.forEach(indicator => {
+        if (!indicator) return;
         const card = document.createElement('div');
         card.className = 'indicator-card';
         if (indicator.status === 'negative') card.classList.add('card-negative-bg');
@@ -58,33 +59,13 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
 
         if (specificSchedule) {
             const today = new Date();
-            const todayInScheduleYear = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            todayInScheduleYear.setFullYear(2025);
-
-            const nextDate = specificSchedule.dates.find(d => {
-                const scheduleDate = new Date(`2025-${d}`);
-                return scheduleDate > todayInScheduleYear;
-            });
-            
-            if(nextDate) {
-                nextDateStr = ` <span class="next-date">[다음:${nextDate}]</span>`;
-            }
+            const todayInScheduleYear = new Date(2025, today.getMonth(), today.getDate());
+            const nextDate = specificSchedule.dates.find(d => new Date(`2025-${d}`) > todayInScheduleYear);
+            if(nextDate) nextDateStr = ` <span class="next-date">[다음:${nextDate}]</span>`;
         } else if (cycleSchedule && cycleSchedule.periodicity !== 'daily') {
-            const dateParts = indicator.date.split('-');
-            const currentMonth = parseInt(dateParts[0], 10);
-            
-            let nextMonth = currentMonth;
-            if (cycleSchedule.periodicity === 'monthly') {
-                nextMonth += cycleSchedule.offset;
-            } else if (cycleSchedule.periodicity === 'quarterly') {
-                const currentQuarterStartMonth = Math.floor((currentMonth - 1) / 3) * 3 + 1;
-                nextMonth = currentQuarterStartMonth + 3 + cycleSchedule.offset;
-            }
-            
-            if (nextMonth > 12) {
-                nextMonth = ((nextMonth - 1) % 12) + 1;
-            }
-
+            const currentMonth = parseInt(indicator.date.split('-')[0], 10);
+            let nextMonth = currentMonth + (cycleSchedule.periodicity === 'monthly' ? cycleSchedule.offset : 3 + cycleSchedule.offset);
+            if (nextMonth > 12) nextMonth = (nextMonth - 1) % 12 + 1;
             nextDateStr = ` <span class="next-date-approx">[다음:${nextMonth}월경]</span>`;
         }
         
@@ -92,12 +73,9 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
 
         card.innerHTML = `
             <div>
-                <div class="indicator-card-header">
-                    <h4>${indicator.name}</h4>
-                </div>
+                <div class="indicator-card-header"><h4>${indicator.name}</h4></div>
                 <div class="date-info">
-                    <span class="current-date">[현재:${indicator.date}]</span>
-                    ${nextDateStr}
+                    <span class="current-date">[현재:${indicator.date}]</span>${nextDateStr}
                 </div>
                 <p class="indicator-value">${valueText}</p>
                 <div class="indicator-status">
@@ -114,10 +92,9 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
     });
 }
 
-
 export function renderSectorOutlook(analyzedIndicators) {
     const grid = document.getElementById('sector-outlook-grid');
-    const getIndicator = id => analyzedIndicators.find(i => i.id === id);
+    const getIndicator = id => analyzedIndicators.find(i => i && i.id === id);
 
     const sectors = {
         '반도체': { icon: '⚡️', indicators: [getIndicator('export_growth'), getIndicator('sox_index')] },
@@ -131,12 +108,7 @@ export function renderSectorOutlook(analyzedIndicators) {
         const validIndicators = data.indicators.filter(i => i);
         if (validIndicators.length === 0) continue;
         
-        let score = 0;
-        validIndicators.forEach(ind => {
-            if(ind.status === 'positive') score++;
-            else if(ind.status === 'negative') score--;
-        });
-        
+        let score = validIndicators.reduce((acc, ind) => acc + (ind.status === 'positive' ? 1 : (ind.status === 'negative' ? -1 : 0)), 0);
         let outlook, reason;
         const reasonText = validIndicators.map(i => `'${i.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}'(${i.text})`).join(', ');
 
@@ -148,7 +120,7 @@ export function renderSectorOutlook(analyzedIndicators) {
             reason = `${reasonText} 등이 부담으로 작용합니다.`;
         } else {
             outlook = '<span>중립적</span>';
-            reason = '관련 지표들이 혼조세를 보이며 명확한 방향성을 나타내지 않고 있습니다.';
+            reason = '관련 지표들이 혼조세를 보입니다.';
         }
 
         html += `
@@ -164,32 +136,29 @@ export function renderSectorOutlook(analyzedIndicators) {
 export function renderInvestmentSuggestions(marketOutlook) {
     const grid = document.getElementById('investment-suggestions-grid');
     let suggestions = {};
+    const status = marketOutlook.status;
 
-    switch (marketOutlook.status) {
-        case 'positive':
-            suggestions = {
-                '주식': { icon: '📈', outlook: '비중 확대', reason: '경기 회복 기대감으로 위험자산 선호 심리가 강화될 수 있습니다. 성장주 중심의 포트폴리오를 고려할 수 있습니다.' },
-                '채권': { icon: '⚖️', outlook: '비중 유지', reason: '금리 인상 가능성이 있지만, 경기 회복에 따른 안정적 이자 수익을 기대할 수 있습니다.' },
-                '달러': { icon: '💵', outlook: '비중 축소', reason: '위험자산 선호 심리가 강해지면 안전자산인 달러의 매력도가 감소할 수 있습니다.' },
-                '원자재': { icon: '🛢️', outlook: '비중 확대', reason: '경기 회복은 원자재 수요 증가로 이어져 가격 상승을 견인할 수 있습니다.' }
-            };
-            break;
-        case 'negative':
-            suggestions = {
-                '주식': { icon: '📉', outlook: '비중 축소', reason: '경기 둔화 우려로 기업 실적이 악화될 수 있습니다. 가치주, 배당주 중심의 보수적인 접근이 필요합니다.' },
-                '채권': { icon: '🛡️', outlook: '비중 확대', reason: '대표적인 안전자산으로, 경기 불확실성 시기에 자금이 몰릴 수 있습니다.' },
-                '달러': { icon: '💰', outlook: '비중 확대', reason: '글로벌 불안 심리가 커지면 안전자산인 달러 수요가 증가할 수 있습니다.' },
-                '금': { icon: '✨', outlook: '비중 확대', reason: '인플레이션 헤지 및 안전자산으로서의 가치가 부각될 수 있습니다.' }
-            };
-            break;
-        default: // neutral
-            suggestions = {
-                '주식': { icon: '📊', outlook: '중립 (섹터별 차별화)', reason: '시장 방향성이 불확실하므로, 실적이 뒷받침되는 특정 섹터나 종목 위주로 선별적인 투자가 필요합니다.' },
-                '채권': { icon: '⚖️', outlook: '비중 유지', reason: '금리 변동성을 주시하며 만기가 짧은 단기채 위주의 안정적인 포트폴리오 구성이 유효합니다.' },
-                '달러': { icon: '🔄', outlook: '중립 (분할 매수/매도)', reason: '변동성을 활용한 트레이딩 관점의 접근 또는 포트폴리오 헤지 수단으로 활용할 수 있습니다.' },
-                '대체투자': { icon: '🏘️', outlook: '관심 필요', reason: '전통 자산의 변동성이 클 때, 분산 투자 효과를 위해 부동산, 인프라 등 대체 자산에 대한 관심이 필요합니다.' }
-            };
-            break;
+    if (status === 'positive') {
+        suggestions = {
+            '주식': { icon: '📈', outlook: '비중 확대', reason: '경기 회복 기대감으로 위험자산 선호 심리가 강화될 수 있습니다.' },
+            '채권': { icon: '⚖️', outlook: '비중 유지', reason: '경기 회복에 따른 안정적 이자 수익을 기대할 수 있습니다.' },
+            '달러': { icon: '💵', outlook: '비중 축소', reason: '안전자산인 달러의 매력도가 감소할 수 있습니다.' },
+            '원자재': { icon: '🛢️', outlook: '비중 확대', reason: '경기 회복은 원자재 수요 증가로 이어질 수 있습니다.' }
+        };
+    } else if (status === 'negative') {
+        suggestions = {
+            '주식': { icon: '📉', outlook: '비중 축소', reason: '경기 둔화 우려로 기업 실적이 악화될 수 있습니다.' },
+            '채권': { icon: '🛡️', outlook: '비중 확대', reason: '대표적인 안전자산으로, 불확실성 시기에 자금이 몰릴 수 있습니다.' },
+            '달러': { icon: '💰', outlook: '비중 확대', reason: '안전자산인 달러 수요가 증가할 수 있습니다.' },
+            '금': { icon: '✨', outlook: '비중 확대', reason: '인플레이션 헤지 및 안전자산으로서의 가치가 부각될 수 있습니다.' }
+        };
+    } else {
+        suggestions = {
+            '주식': { icon: '📊', outlook: '중립 (섹터별 차별화)', reason: '실적이 뒷받침되는 특정 섹터 위주로 선별적인 투자가 필요합니다.' },
+            '채권': '⚖️', outlook: '비중 유지', reason: '만기가 짧은 단기채 위주의 안정적인 포트폴리오 구성이 유효합니다.' },
+            '달러': { icon: '🔄', outlook: '중립', reason: '포트폴리오 헤지 수단으로 활용할 수 있습니다.' },
+            '대체투자': { icon: '🏘️', outlook: '관심 필요', reason: '분산 투자 효과를 위해 대체 자산에 대한 관심이 필요합니다.' }
+        };
     }
 
     grid.innerHTML = Object.entries(suggestions).map(([name, data]) => `
@@ -202,35 +171,22 @@ export function renderInvestmentSuggestions(marketOutlook) {
 }
 
 export function renderEconomicCalendar() {
-    const events = [
-        { date: '2025-10-16', title: '🇺🇸 미국 필라델피아 연은 제조업 지수', importance: '보통', description: '미국 제조업 경기의 건전성을 파악할 수 있는 선행 지표 중 하나입니다.' },
-        { date: '2025-11-07', title: '🇺🇸 미국 비농업 고용지수 (NFP)', importance: '매우 높음', description: '연말을 앞두고 미국 고용 시장의 추세를 확인할 수 있는 중요한 발표입니다.' },
-        { date: '2025-11-13', title: '🇺🇸 미국 소비자물가지수 (CPI)', importance: '매우 높음', description: '다음 해의 통화 정책에 대한 시장의 기대를 형성하는 데 결정적인 역할을 합니다.' }
-    ];
-
-    const calendarGrid = document.getElementById('economic-calendar-grid');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const upcomingEvents = events
-        .map(event => ({ ...event, dateObj: new Date(event.date) }))
-        .filter(event => event.dateObj >= today)
-        .sort((a, b) => a.dateObj - b.dateObj);
-
-    if (upcomingEvents.length === 0) {
-        calendarGrid.innerHTML = '<p>향후 예정된 주요 경제 일정이 없습니다.</p>';
-        return;
-    }
-
-    calendarGrid.innerHTML = upcomingEvents.map(event => `
+    const grid = document.getElementById('economic-calendar-grid');
+    grid.innerHTML = `
         <div class="calendar-card">
-            <div class="calendar-date">${event.dateObj.getFullYear()}년 ${event.dateObj.getMonth() + 1}월 ${event.dateObj.getDate()}일</div>
+            <div class="calendar-date">2025년 11월 07일</div>
             <div class="calendar-event">
-                <div class="calendar-event-title">${event.title}</div>
-                <div class="calendar-event-importance">중요도: ${event.importance}</div>
-                <div class="calendar-event-description">${event.description}</div>
+                <div class="calendar-event-title">🇺🇸 미국 비농업 고용지수 (NFP)</div>
+                <div class="calendar-event-importance">중요도: 매우 높음</div>
             </div>
-        </div>`).join('');
+        </div>
+        <div class="calendar-card">
+            <div class="calendar-date">2025년 11월 13일</div>
+            <div class="calendar-event">
+                <div class="calendar-event-title">🇺🇸 미국 소비자물가지수 (CPI)</div>
+                <div class="calendar-event-importance">중요도: 매우 높음</div>
+            </div>
+        </div>`;
 }
 
 export function renderReleaseSchedule() {
@@ -250,59 +206,31 @@ export function renderReleaseSchedule() {
     `).join('');
 }
 
-// ==================================================================
-// 이벤트 리스너 설정
-// ==================================================================
 export function setupEventListeners() {
-    // Accordion
-    document.querySelectorAll(".accordion-header").forEach(accordion => {
-        accordion.addEventListener("click", () => {
-            const panel = accordion.nextElementSibling;
+    document.querySelectorAll(".accordion-header").forEach(header => {
+        header.addEventListener("click", () => {
+            const panel = header.nextElementSibling;
             panel.style.display = panel.style.display === "block" ? "none" : "block";
         });
     });
 
-    // Modal
     const modal = document.getElementById('modal');
     document.querySelector('.close-btn').onclick = () => { modal.style.display = 'none'; };
     window.onclick = (event) => { if (event.target === modal) modal.style.display = 'none'; };
 
-    // Stock Search
     const searchInput = document.getElementById('stock-code-input');
     const searchBtn = document.getElementById('stock-search-btn');
     const autocompleteList = document.getElementById('autocomplete-list');
 
-    searchBtn.addEventListener('click', async () => {
-        let stockCode = searchInput.dataset.stockCode || '';
-        const stockName = searchInput.value.trim();
-
-        if (stockCode) {
-            fetchAndRenderStockData(stockCode);
-        } else if (stockName) {
-            try {
-                const response = await fetch(`${STOCK_SEARCH_URL}${encodeURIComponent(stockName)}`);
-                const stocks = await response.json();
-                if (stocks && stocks.length > 0) {
-                    const firstMatch = stocks[0];
-                    searchInput.value = firstMatch.name;
-                    searchInput.dataset.stockCode = firstMatch.code;
-                    fetchAndRenderStockData(firstMatch.code);
-                } else {
-                    alert(`'${stockName}'에 해당하는 종목을 찾을 수 없습니다.`);
-                }
-            } catch (error) {
-                console.error('종목 검색 오류:', error);
-                alert('종목 검색 중 오류가 발생했습니다.');
-            }
-        } else {
-            alert('종목명 또는 코드를 입력해주세요.');
-        }
+    const performSearch = () => {
+        const stockCode = searchInput.dataset.stockCode || '';
+        if (stockCode) fetchAndRenderStockData(stockCode);
+        else alert('종목을 선택해주세요.');
         autocompleteList.style.display = 'none';
-    });
+    };
 
-    searchInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') searchBtn.click();
-    });
+    searchBtn.addEventListener('click', performSearch);
+    searchInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') performSearch(); });
     
     searchInput.addEventListener('input', async () => {
         const query = searchInput.value.trim();
@@ -313,7 +241,6 @@ export function setupEventListeners() {
         }
         try {
             const response = await fetch(`${STOCK_SEARCH_URL}${encodeURIComponent(query)}`);
-            if (!response.ok) throw new Error(`검색 실패: ${response.status}`);
             const stocks = await response.json();
             
             autocompleteList.innerHTML = '';
@@ -321,22 +248,21 @@ export function setupEventListeners() {
                 stocks.forEach(stock => {
                     const item = document.createElement('div');
                     item.className = 'autocomplete-item';
-                    item.innerHTML = `<span class="stock-name">${stock.name}</span><span class="stock-code-small">${stock.code}</span><span class="market-badge">${stock.market || ''}</span>`;
+                    item.innerHTML = `<span class="stock-name">${stock.name}</span><span class="stock-code-small">${stock.code}</span>`;
                     item.addEventListener('click', () => {
                         searchInput.value = stock.name;
                         searchInput.dataset.stockCode = stock.code; 
                         autocompleteList.style.display = 'none';
-                        fetchAndRenderStockData(stock.code);
                     });
                     autocompleteList.appendChild(item);
                 });
             } else {
-                autocompleteList.innerHTML = `<div class="autocomplete-message">검색 결과가 없습니다</div>`;
+                autocompleteList.innerHTML = `<div class="autocomplete-message">검색 결과 없음</div>`;
             }
             autocompleteList.style.display = 'block';
         } catch (error) {
             console.error('자동완성 오류:', error);
-            autocompleteList.innerHTML = `<div class="autocomplete-message error">검색 중 오류 발생</div>`;
+            autocompleteList.innerHTML = `<div class="autocomplete-message error">오류 발생</div>`;
             autocompleteList.style.display = 'block';
         }
     });
@@ -348,21 +274,14 @@ export function setupEventListeners() {
     });
 }
 
-
-// ==================================================================
-// 모달 관련 함수
-// ==================================================================
-export async function showModal(indicatorId) {
+export function showModal(indicatorId) {
     const details = indicatorDetails[indicatorId];
     if (!details) return;
 
-    const modal = document.getElementById('modal');
     document.getElementById('modal-title').innerText = details.title;
     document.getElementById('modal-description').innerText = details.description;
     document.getElementById('modal-criteria').innerHTML = details.criteria.map(c => `<li>${c}</li>`).join('');
+    document.getElementById('modal').style.display = 'block';
 
-    modal.style.display = 'block';
-
-    // 차트 렌더링은 chart.js 모듈에 위임
     showModalChart(indicatorId);
 }
