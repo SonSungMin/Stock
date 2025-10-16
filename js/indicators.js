@@ -3,14 +3,12 @@
 // ==================================================================
 // 지표 발표일 정보
 // ==================================================================
-// 1. 특정일 발표 (미국)
 export const releaseSchedules = {
     us_cpi: { dates: ["01-15", "02-12", "03-12", "04-10", "05-13", "06-11", "07-15", "08-12", "09-11", "10-24", "11-13", "12-10"] },
     nfp: { dates: ["01-10", "02-07", "03-07", "04-04", "05-02", "06-06", "07-03", "08-01", "09-05", "10-03", "11-07", "12-05"] },
     philly_fed: { dates: ["01-16", "02-20", "03-20", "04-17", "05-15", "06-19", "07-17", "08-21", "09-18", "10-16", "11-20", "12-18"] }
 };
 
-// 2. 주기적 발표 (월/분기 단위)
 export const releaseCycles = {
     yield_spread: { periodicity: 'daily' },
     exchange_rate: { periodicity: 'daily' },
@@ -25,7 +23,7 @@ export const releaseCycles = {
     export_growth: { periodicity: 'monthly', offset: 1 },
     cpi: { periodicity: 'monthly', offset: 1 },
     unemployment: { periodicity: 'monthly', offset: 1 },
-    base_rate: { periodicity: 'monthly', offset: 0 }, // 보통 당월 발표
+    base_rate: { periodicity: 'monthly', offset: 0 },
     industrial_production: { periodicity: 'monthly', offset: 1 },
     consumer_sentiment: { periodicity: 'monthly', offset: 0 },
     corp_bond_spread: { periodicity: 'daily' },
