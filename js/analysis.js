@@ -4,26 +4,15 @@
 // 데이터 분석 및 가공 함수
 // ==================================================================
 export function analyzeIndicators(indicators) {
-    // 이 함수는 이전과 동일하게 각 지표를 개별적으로 분석합니다.
     return indicators.map(indicator => {
         const { id, value } = indicator;
-        let status = 'neutral', icon = '😐', text = '보통', weight = 2;
+        let status = 'neutral', icon = '😐', text = '보통', weight = 2; // 기본 가중치 2
         switch (id) {
             case 'yield_spread':
-                if (value >= 0.1) { status = 'positive'; icon = '✅'; text = '정상 범위'; } 
-                else if (value > -0.2) { status = 'neutral'; icon = '⚠️'; text = '역전 우려'; } 
+                if (value >= 0.1) { status = 'positive'; icon = '✅'; text = '정상 범위'; }
+                else if (value > -0.2) { status = 'neutral'; icon = '⚠️'; text = '역전 우려'; }
                 else { status = 'negative'; icon = '🚨'; text = '침체 신호'; }
                 weight = 5; break;
-            case 'exchange_rate':
-                if (value <= 1300) { status = 'positive'; icon = '💵'; text = '환율 안정'; }
-                else if (value <= 1380) { status = 'neutral'; icon = '〰️'; text = '변동성 확대'; }
-                else { status = 'negative'; icon = '💸'; text = '원화 약세'; }
-                weight = 4; break;
-            case 'vix':
-                if (value <= 20) { status = 'positive'; icon = '😌'; text = '시장 안정'; }
-                else if (value <= 30) { status = 'neutral'; icon = '😟'; text = '불안 심리'; }
-                else { status = 'negative'; icon = '😱'; text = '공포 심리'; }
-                weight = 4; break;
             case 'us_cpi':
                 if (value <= 2.5) { status = 'positive'; icon = '😌'; text = '물가 안정'; }
                 else if (value <= 3.5) { status = 'neutral'; icon = '😐'; text = '인플레 둔화'; }
@@ -34,17 +23,22 @@ export function analyzeIndicators(indicators) {
                 else if (value >= 150) { status = 'neutral'; icon = '😐'; text = '예상 부합'; }
                 else { status = 'negative'; icon = '👎'; text = '고용 쇼크'; }
                 weight = 5; break;
-            case 'gdp_growth':
-                if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복'; }
-                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; }
-                else { status = 'negative'; icon = '👎'; text = '성장 둔화'; }
-                weight = 5; break;
+            case 'vix':
+                if (value <= 20) { status = 'positive'; icon = '😌'; text = '시장 안정'; }
+                else if (value <= 30) { status = 'neutral'; icon = '😟'; text = '불안 심리'; }
+                else { status = 'negative'; icon = '😱'; text = '공포 심리'; }
+                weight = 4; break;
             case 'export_growth':
                 if (value >= 2.0) { status = 'positive'; icon = '📈'; text = '수출 호조'; }
                 else if (value >= 0) { status = 'neutral'; icon = '📊'; text = '소폭 개선'; }
                 else { status = 'negative'; icon = '📉'; text = '수출 부진'; }
+                weight = 4; break;
+            case 'gdp_growth':
+                 if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복'; }
+                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; }
+                else { status = 'negative'; icon = '👎'; text = '성장 둔화'; }
                 weight = 5; break;
-            // ... 기타 지표들은 기존 로직 유지 ...
+            // ... 기타 지표들 ...
         }
         return { ...indicator, status, icon, text, weight };
     });
@@ -55,71 +49,72 @@ export function analyzeIndicators(indicators) {
  * 모든 단기/장기 지표를 종합하여 복합적인 시장 시나리오를 분석하고 구체적인 전망을 생성합니다.
  */
 export function getMarketOutlook(analyzedIndicators, macroResults) {
-    if (!analyzedIndicators) analyzedIndicators = [];
-
-    // 1. 거시 경제 분석 결과 정리
-    const { marshallK, gdpGap, gdpConsumption } = macroResults;
-    const macroSignals = {
-        isInflationary: gdpGap?.status === 'negative' && gdpGap.outlook.includes('인플레이션'),
-        isRecessionary: gdpGap?.status === 'negative' && gdpGap.outlook.includes('침체'),
-        isLiquidityExcess: marshallK?.status === 'negative',
-        isConsumptionWeak: gdpConsumption?.status === 'negative',
-        isRecovery: gdpConsumption?.status === 'positive' || marshallK?.status === 'positive',
-    };
-
-    // 2. 단기 핵심 지표 상태 확인
-    const findIndicator = (id) => analyzedIndicators.find(i => i && i.id === id);
-    const shortTermSignals = {
-        cpi: findIndicator('us_cpi'),
-        nfp: findIndicator('nfp'),
-        yieldSpread: findIndicator('yield_spread'),
-        vix: findIndicator('vix'),
-    };
-
-    // 3. 시나리오 분석
-    let finalStatus = 'neutral', finalSignal = '📊', finalTitle = '혼조세 전망', finalAnalysis = '';
-    
-    // 시나리오 1: 경기 과열 또는 스태그플레이션 우려 (가장 부정적)
-    if (macroSignals.isInflationary && (macroSignals.isRecessionary || shortTermSignals.yieldSpread?.status === 'negative')) {
-        finalStatus = 'negative';
-        finalSignal = '🔥';
-        finalTitle = '스태그플레이션 우려';
-        finalAnalysis = `<b>[거시 분석]</b> 잠재성장률을 상회하는 생산으로 인한 인플레이션 압력(높은 GDP 갭)과 장단기 금리차 역전 등 경기 침체 신호가 동시에 나타나고 있습니다. 이는 성장은 둔화되는데 물가는 높은 최악의 상황일 수 있습니다.<br><br><b>[단기 분석]</b> 소비자물가지수(CPI)가 여전히 높게 유지되고 있는지 주목해야 합니다. 방어적 자산 배분 전략이 시급합니다.`;
+    if (!analyzedIndicators || analyzedIndicators.length === 0) {
+        return { status: 'neutral', signal: '🤔', title: '분석 데이터 부족', analysis: '시장 종합 전망을 분석하기 위한 데이터가 부족합니다.' };
     }
-    // 시나리오 2: 명확한 경기 침체 신호
-    else if (macroSignals.isRecessionary && shortTermSignals.yieldSpread?.status === 'negative' && macroSignals.isConsumptionWeak) {
-        finalStatus = 'negative';
-        finalSignal = '📉';
-        finalTitle = '경기 침체 진입';
-        finalAnalysis = `<b>[거시 분석]</b> 소비 둔화, 잠재성장률 하회(마이너스 GDP 갭), 장단기 금리차 역전 등 여러 지표가 일관되게 경기 침체를 가리키고 있습니다.<br><br><b>[단기 분석]</b> VIX(변동성 지수)가 급등하고 고용(NFP)이 급격히 악화될 경우 침체는 가속화될 수 있습니다. 현금 및 대표 안전자산(달러, 장기 국채) 비중을 늘려야 할 시점입니다.`;
+
+    // 1. 가중치 기반 종합 점수 계산
+    let score = 0;
+    let totalWeight = 0;
+    analyzedIndicators.forEach(ind => {
+        if (ind && ind.weight > 0) {
+            totalWeight += ind.weight;
+            if (ind.status === 'positive') score += ind.weight;
+            else if (ind.status === 'negative') score -= ind.weight;
+        }
+    });
+    const finalScore = totalWeight > 0 ? (score / totalWeight) * 100 : 0;
+
+    // 2. 긍정적 / 부정적 요인 분리
+    const positiveDrivers = [];
+    const negativeDrivers = [];
+
+    // 거시 분석 요약 추가
+    if (macroResults.marshallK) {
+        if (macroResults.marshallK.status === 'positive') positiveDrivers.push('유동성 정상화(마샬케이)');
+        else if (macroResults.marshallK.status === 'negative') negativeDrivers.push('과잉 유동성 우려(마샬케이)');
     }
-    // 시나리오 3: 건강한 경기 회복 (가장 긍정적)
-    else if (macroSignals.isRecovery && shortTermSignals.cpi?.status === 'positive' && shortTermSignals.yieldSpread?.status === 'positive') {
+    if (macroResults.gdpGap) {
+        if (macroResults.gdpGap.status === 'positive') positiveDrivers.push('안정적 GDP 갭');
+        else if (macroResults.gdpGap.status === 'negative') negativeDrivers.push(macroResults.gdpGap.outlook.includes('인플레') ? '인플레이션 압력(GDP 갭)' : '경기 침체 우려(GDP 갭)');
+    }
+    if (macroResults.gdpConsumption) {
+        if (macroResults.gdpConsumption.status === 'positive') positiveDrivers.push('소비/GDP 동반 성장');
+        else if (macroResults.gdpConsumption.status === 'negative') negativeDrivers.push('소비 둔화 우려');
+    }
+
+    // 주요 단기 지표 요약 추가
+    analyzedIndicators.forEach(ind => {
+        if (ind && ind.weight >= 4) { // 가중치가 높은 주요 지표만 요약
+            if (ind.status === 'positive') positiveDrivers.push(`${ind.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}(${ind.text})`);
+            else if (ind.status === 'negative') negativeDrivers.push(`${ind.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}(${ind.text})`);
+        }
+    });
+
+    // 3. 최종 전망 생성
+    let finalStatus = 'neutral', finalSignal = '📊', finalTitle = '혼조세 국면', finalAnalysis = '';
+
+    if (finalScore > 20) {
         finalStatus = 'positive';
         finalSignal = '📈';
-        finalTitle = '견조한 회복 국면';
-        finalAnalysis = `<b>[거시 분석]</b> 소비와 GDP가 동반 성장하고, 유동성이 정상화되는 건강한 회복세를 보이고 있습니다.<br><br><b>[단기 분석]</b> 물가(CPI)가 안정되고, 장단기 금리차가 정상 범위를 유지하며, 고용(NFP)이 꾸준히 증가한다면 위험자산에 대한 긍정적 시각을 유지할 수 있습니다.`;
+        finalTitle = '완만한 회복 기대';
+    } else if (finalScore < -20) {
+        finalStatus = 'negative';
+        finalSignal = '📉';
+        finalTitle = '경기 둔화 우려';
     }
-    // 시나리오 4: 유동성 기반의 불안한 상승
-    else if (macroSignals.isLiquidityExcess && shortTermSignals.vix?.status === 'positive') {
-        finalStatus = 'neutral';
-        finalSignal = '⚠️';
-        finalTitle = '유동성 장세, 변동성 주의';
-        finalAnalysis = `<b>[거시 분석]</b> 과잉 유동성(높은 마샬케이)이 자산 가격을 밀어 올리는 상황으로 보입니다. 이는 경제 펀더멘털보다 돈의 힘으로 움직이는 시장이므로 갑작스러운 변동성에 취약할 수 있습니다.<br><br><b>[단기 분석]</b> 현재 VIX 지수가 낮아 시장이 안정적으로 보일 수 있으나, 작은 충격에도 크게 흔들릴 수 있으므로 추격 매수는 자제하고 이익 실현을 고려해야 합니다.`;
-    }
-    // 시나리오 5: 일반적인 혼조세
-    else {
-        const positiveIndicator = analyzedIndicators.find(i => i && i.status === 'positive');
-        const negativeIndicator = analyzedIndicators.find(i => i && i.status === 'negative');
-        const positiveSummary = macroSignals.isRecovery ? '소비 회복 등 긍정적 거시 신호' : positiveIndicator?.name;
-        const negativeSummary = macroSignals.isInflationary ? '인플레이션 압력' : (macroSignals.isConsumptionWeak ? '소비 둔화' : negativeIndicator?.name);
-        
-        finalAnalysis = `<b>[혼재된 신호]</b> ${positiveSummary || '일부 긍정적 지표'}와 ${negativeSummary || '일부 부정적 지표'}가 혼재되어 뚜렷한 방향성을 예측하기 어렵습니다.<br><br><b>[전략]</b> 시장이 방향성을 탐색하는 구간으로, 성장이 확인되는 특정 섹터에 선별적으로 투자하거나 관망하는 자세가 필요합니다.`;
+
+    // 분석 텍스트 생성
+    if (positiveDrivers.length > 0 && negativeDrivers.length === 0) {
+        finalAnalysis = `<b>[종합 분석]</b> 긍정적 지표들이 우세하여 점진적인 경기 회복이 기대됩니다.<br><br><b>[주요 동력]</b> ${positiveDrivers.join(', ')} 등이 시장에 긍정적인 영향을 미치고 있습니다.`;
+    } else if (positiveDrivers.length === 0 && negativeDrivers.length > 0) {
+        finalAnalysis = `<b>[종합 분석]</b> 부정적 지표들이 우세하여 경기 둔화에 대한 경계가 필요한 시점입니다.<br><br><b>[주요 위험]</b> ${negativeDrivers.join(', ')} 등이 시장에 부담으로 작용하고 있습니다.`;
+    } else {
+        finalAnalysis = `<b>[종합 분석]</b> 현재 시장은 긍정적 요인과 부정적 요인이 혼재되어 있어 뚜렷한 방향성을 보이지 않고 있습니다.<br><br><b>[긍정적 요인]</b> ${positiveDrivers.join(', ')}.<br><b>[부정적 요인]</b> ${negativeDrivers.join(', ')}.<br><br><b>[전략]</b> 향후 발표되는 주요 지표에 따라 시장의 방향성이 결정될 것으로 보이므로, 변동성에 유의하며 신중한 접근이 필요합니다.`;
     }
 
     return { status: finalStatus, signal: finalSignal, title: finalTitle, analysis: finalAnalysis };
 }
-
 // ==================================================================
 // 자산군별 투자 의견 및 섹터 전망 (더 정교하게 수정)
 // ==================================================================
