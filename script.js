@@ -15,21 +15,36 @@ let stockFinanceChart = null;
 
 
 // ==================================================================
-// 지표 발표일 정보 (2025년 기준)
+// 지표 발표일 정보
 // ==================================================================
+// 1. 특정일 발표 (미국)
 const releaseSchedules = {
-    us_cpi: {
-        title: '🇺🇸 미국 소비자물가지수 (CPI)',
-        dates: ["01-15", "02-12", "03-12", "04-10", "05-13", "06-11", "07-15", "08-12", "09-11", "10-24", "11-13", "12-10"]
-    },
-    nfp: {
-        title: '🇺🇸 비농업 고용지수 (NFP)',
-        dates: ["01-10", "02-07", "03-07", "04-04", "05-02", "06-06", "07-03", "08-01", "09-05", "10-03", "11-07", "12-05"]
-    },
-    philly_fed: {
-        title: '🇺🇸 필라델피아 연은 제조업 지수',
-        dates: ["01-16", "02-20", "03-20", "04-17", "05-15", "06-19", "07-17", "08-21", "09-18", "10-16", "11-20", "12-18"]
-    }
+    us_cpi: { dates: ["01-15", "02-12", "03-12", "04-10", "05-13", "06-11", "07-15", "08-12", "09-11", "10-24", "11-13", "12-10"] },
+    nfp: { dates: ["01-10", "02-07", "03-07", "04-04", "05-02", "06-06", "07-03", "08-01", "09-05", "10-03", "11-07", "12-05"] },
+    philly_fed: { dates: ["01-16", "02-20", "03-20", "04-17", "05-15", "06-19", "07-17", "08-21", "09-18", "10-16", "11-20", "12-18"] }
+};
+
+// 2. 주기적 발표 (월/분기 단위)
+const releaseCycles = {
+    yield_spread: { periodicity: 'daily' },
+    exchange_rate: { periodicity: 'daily' },
+    vix: { periodicity: 'daily' },
+    dollar_index: { periodicity: 'daily' },
+    wti_price: { periodicity: 'monthly', offset: 1 },
+    sox_index: { periodicity: 'daily' },
+    auto_sales: { periodicity: 'monthly', offset: 1 },
+    retail_sales: { periodicity: 'monthly', offset: 1 },
+    home_price_index: { periodicity: 'monthly', offset: 2 },
+    gdp_growth: { periodicity: 'quarterly', offset: 1 },
+    export_growth: { periodicity: 'monthly', offset: 1 },
+    cpi: { periodicity: 'monthly', offset: 1 },
+    unemployment: { periodicity: 'monthly', offset: 1 },
+    base_rate: { periodicity: 'monthly', offset: 0 }, // 보통 당월 발표
+    industrial_production: { periodicity: 'monthly', offset: 1 },
+    consumer_sentiment: { periodicity: 'monthly', offset: 0 },
+    corp_bond_spread: { periodicity: 'daily' },
+    kospi: { periodicity: 'daily' },
+    producer_price_index: { periodicity: 'monthly', offset: 1 }
 };
 
 
@@ -518,13 +533,11 @@ function getMarketOutlook(analyzedIndicators) {
     
     const outlookScore = totalWeight > 0 ? (score / totalWeight) * 100 : 0;
     
-    // 분석 근거 생성을 위한 로직
     const positiveSignals = weightedIndicators.filter(i => i.status === 'positive').sort((a,b) => b.weight - a.weight).slice(0, 3);
     const negativeSignals = weightedIndicators.filter(i => i.status === 'negative').sort((a,b) => b.weight - a.weight).slice(0, 3);
 
     const formatSignalText = (signals) => {
         if (signals.length === 0) return '';
-        // 지표 이름에서 국기 이모지를 제거하고 텍스트만 추출
         return signals.map(s => s.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()).join(', ');
     };
 
@@ -586,7 +599,6 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
         return;
     }
     
-    // 영향력 비율 계산을 위해 가중치가 있는 지표만 필터링
     const weightedIndicators = analyzedIndicators.filter(ind => ind.weight > 0);
     const totalWeight = weightedIndicators.reduce((sum, ind) => sum + ind.weight, 0);
 
@@ -599,34 +611,53 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
 
         const valueText = `${indicator.value.toLocaleString()}${indicator.unit || ''}`;
         
-        // 다음 발표일 찾기
-        const schedule = releaseSchedules[indicator.id];
+        // --- 다음 발표일 계산 로직 ---
         let nextDateStr = '';
-        if (schedule) {
-            const today = new Date();
-            // YYYY-MM-DD 형식의 오늘 날짜 문자열
-            const todayStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-            
-            // 2025년 날짜와 비교하기 위해 올해 날짜를 2025년으로 변경
-            const todayInScheduleYear = new Date(todayStr.replace(/^\d{4}/, '2025'));
+        const specificSchedule = releaseSchedules[indicator.id];
+        const cycleSchedule = releaseCycles[indicator.id];
 
-            const nextDate = schedule.dates.find(d => new Date(`2025-${d}`) > todayInScheduleYear);
+        if (specificSchedule) { // 1. 특정일 발표
+            const today = new Date();
+            const todayInScheduleYear = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            todayInScheduleYear.setFullYear(2025); // 비교를 위해 2025년으로 설정
+
+            const nextDate = specificSchedule.dates.find(d => {
+                const scheduleDate = new Date(`2025-${d}`);
+                return scheduleDate > todayInScheduleYear;
+            });
+            
             if(nextDate) {
                 nextDateStr = ` <span class="next-date">[다음:${nextDate}]</span>`;
             }
-        }
+        } else if (cycleSchedule && cycleSchedule.periodicity !== 'daily') { // 2. 주기적 발표 (daily 제외)
+            const dateParts = indicator.date.split('-');
+            const currentMonth = parseInt(dateParts[0], 10);
+            
+            let nextMonth = currentMonth;
+            if (cycleSchedule.periodicity === 'monthly') {
+                nextMonth += cycleSchedule.offset;
+            } else if (cycleSchedule.periodicity === 'quarterly') {
+                const currentQuarterStartMonth = Math.floor((currentMonth - 1) / 3) * 3 + 1;
+                nextMonth = currentQuarterStartMonth + 3 + cycleSchedule.offset;
+            }
+            
+            if (nextMonth > 12) {
+                nextMonth = ((nextMonth - 1) % 12) + 1;
+            }
 
-        // 영향력 비율 계산
+            nextDateStr = ` <span class="next-date-approx">[다음:${nextMonth}월경]</span>`;
+        }
+        
         const impactRatio = totalWeight > 0 && indicator.weight > 0 ? ((indicator.weight / totalWeight) * 100).toFixed(1) : 0;
 
         card.innerHTML = `
             <div>
                 <div class="indicator-card-header">
                     <h4>${indicator.name}</h4>
-                    <div class="date-info">
-                        <span class="current-date">[현재:${indicator.date}]</span>
-                        ${nextDateStr}
-                    </div>
+                </div>
+                <div class="date-info">
+                    <span class="current-date">[현재:${indicator.date}]</span>
+                    ${nextDateStr}
                 </div>
                 <p class="indicator-value">${valueText}</p>
                 <div class="indicator-status">
@@ -642,6 +673,7 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
         indicatorGrid.appendChild(card);
     });
 }
+
 
 function renderSectorOutlook(analyzedIndicators) {
     const grid = document.getElementById('sector-outlook-grid');
@@ -763,7 +795,12 @@ function renderEconomicCalendar() {
 
 function renderReleaseSchedule() {
     const grid = document.getElementById('release-schedule-grid');
-    grid.innerHTML = Object.values(releaseSchedules).map(schedule => `
+    const specificSchedules = Object.entries(releaseSchedules).map(([key, value]) => ({
+        title: indicatorDetails[key].title,
+        dates: value.dates
+    }));
+
+    grid.innerHTML = specificSchedules.map(schedule => `
         <div class="release-schedule-card">
             <h4 class="release-schedule-title">${schedule.title}</h4>
             <ul class="release-schedule-list">
