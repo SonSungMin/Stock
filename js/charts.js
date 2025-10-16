@@ -46,9 +46,6 @@ export function renderStockFinanceChart(financialData) {
     });
 }
 
-/**
- * 💡 변경된 부분: resultsObject를 매개변수로 받습니다.
- */
 export async function renderGdpGapChart(resultsObject) {
     const canvas = document.getElementById('gdp-gap-chart');
     if (!canvas) return;
@@ -66,9 +63,7 @@ export async function renderGdpGapChart(resultsObject) {
 
         const gdpData = gdpObs.map(d => parseFloat(d.value));
         const labels = gdpObs.map(d => d.date);
-
         const trendData = hpfilter(gdpData, 1600);
-        
         const gdpGapData = gdpData.map((actual, i) => {
             const trend = trendData[i];
             return trend !== 0 ? ((actual / trend) - 1) * 100 : 0;
@@ -78,7 +73,6 @@ export async function renderGdpGapChart(resultsObject) {
             date: date,
             value: gdpGapData[index]
         }));
-        // 💡 변경된 부분: resultsObject를 분석 함수에 전달합니다.
         analyzeGdpGap(analysisData, resultsObject);
 
         gdpGapChart = new Chart(ctx, {
@@ -89,15 +83,13 @@ export async function renderGdpGapChart(resultsObject) {
                     label: 'GDP 갭 (%)',
                     data: gdpGapData,
                     backgroundColor: gdpGapData.map(v => v >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(0, 86, 179, 0.7)'),
-                    borderColor: gdpGapData.map(v => v >= 0 ? 'rgba(220, 53, 69, 1)' : 'rgba(0, 86, 179, 1)'),
-                    borderWidth: 1
                 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: {
                     x: { ticks: { callback: function(value, index) { const year = labels[index].substring(0, 4); if (parseInt(year) % 5 === 0 && labels[index].substring(5,7) === '01') return year; return ''; }, autoSkip: false, maxRotation: 0, } },
-                    y: { title: { display: true, text: 'GDP 갭 (%)' }, grid: { color: c => (c.tick.value === 0) ? '#666' : 'rgba(0, 0, 0, 0.1)', lineWidth: c => (c.tick.value === 0) ? 1.5 : 1 } }
+                    y: { title: { display: true, text: 'GDP 갭 (%)' }, grid: { color: c => (c.tick.value === 0) ? '#666' : 'rgba(0, 0, 0, 0.1)'} }
                 },
                 plugins: { legend: { display: false } }
             }
@@ -111,9 +103,6 @@ export async function renderGdpGapChart(resultsObject) {
     }
 }
 
-/**
- * 💡 변경된 부분: resultsObject를 매개변수로 받습니다.
- */
 export async function renderGdpConsumptionChart(resultsObject) {
     const canvas = document.getElementById('gdp-consumption-chart');
     if (!canvas) return;
@@ -136,7 +125,6 @@ export async function renderGdpConsumptionChart(resultsObject) {
             throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
         }
         
-        // 💡 변경된 부분: resultsObject를 분석 함수에 전달합니다.
         await analyzeGdpConsumption(gdpObs, pceObs, resultsObject);
         
         const gdpMap = new Map(gdpObs.map(d => [d.date, parseFloat(d.value)]));
@@ -173,8 +161,8 @@ export async function renderGdpConsumptionChart(resultsObject) {
             options: {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { ticks: { callback: function(value, index) { const year = labels[index].substring(0, 4); if (parseInt(year) % 5 === 0 && labels[index].substring(5,7) === '01') return year; return ''; }, autoSkip: false, maxRotation: 0, }, grid: { color: function(context) { const tickLabel = context.chart.scales.x.ticks[context.tick.value].label; return tickLabel ? 'rgba(0, 0, 0, 0.1)' : 'transparent'; } } },
-                    y: { title: { display: true, text: '성장률 (%)' }, grid: { color: c => (c.tick.value === 0) ? '#666' : 'rgba(0, 0, 0, 0.1)', lineWidth: c => (c.tick.value === 0) ? 1.5 : 1 } }
+                    x: { ticks: { callback: function(value, index) { const year = labels[index].substring(0, 4); if (parseInt(year) % 5 === 0 && labels[index].substring(5,7) === '01') return year; return ''; }, autoSkip: false, maxRotation: 0, } },
+                    y: { title: { display: true, text: '성장률 (%)' }, grid: { color: c => (c.tick.value === 0) ? '#666' : 'rgba(0, 0, 0, 0.1)'} }
                 },
                 plugins: { legend: { display: true, position: 'top' }, annotation: { annotations: recessionAnnotations } }
             }
@@ -188,9 +176,6 @@ export async function renderGdpConsumptionChart(resultsObject) {
     }
 }
 
-/**
- * 💡 변경된 부분: resultsObject를 매개변수로 받습니다.
- */
 export async function renderMarshallKChart(resultsObject) {
     const canvas = document.getElementById('marshall-k-chart');
     if (!canvas) return;
@@ -231,7 +216,6 @@ export async function renderMarshallKChart(resultsObject) {
         if (chartData.length === 0) throw new Error("데이터 매칭 실패");
         chartData.sort((a, b) => a.date - b.date);
         
-        // 💡 변경된 부분: resultsObject를 분석 함수에 전달합니다.
         analyzeMarshallKTrend(chartData, resultsObject);
         
         if (marshallKChart) marshallKChart.destroy();
@@ -247,7 +231,7 @@ export async function renderMarshallKChart(resultsObject) {
             options: {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { ticks: { callback: function(value, index) { const year = chartData[index].year; if (year % 4 === 0 && chartData[index].label.endsWith('Q1')) return year; return ''; }, autoSkip: false, maxRotation: 0, }, grid: { color: function(context) { const tickLabel = context.chart.scales.x.ticks[context.tick.value].label; return tickLabel ? 'rgba(0, 0, 0, 0.1)' : 'transparent'; } } },
+                    x: { ticks: { callback: function(value, index) { const year = chartData[index].year; if (year % 4 === 0 && chartData[index].label.endsWith('Q1')) return year; return ''; }, autoSkip: false, maxRotation: 0, } },
                     y: { position: 'left', title: { display: true, text: '금리 (%)' }, ticks: { color: '#0056b3' } },
                     y1: { position: 'right', title: { display: true, text: '마샬케이' }, grid: { drawOnChartArea: false }, ticks: { color: '#212529' } }
                 },
