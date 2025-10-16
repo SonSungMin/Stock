@@ -126,11 +126,11 @@ export async function renderGdpConsumptionChart() {
                 datasets: [
                     {
                         label: '실질 GDP 성장률 (%)', data: chartData.map(d => d.gdpGrowth),
-                        borderColor: '#28a745', borderWidth: 2, pointRadius: 1, tension: 0.1, pointStyle: 'line' 
+                        borderColor: '#28a745', borderWidth: 2, pointRadius: 0, tension: 0.1, pointStyle: 'line' 
                     },
                     {
                         label: '실질 PCE(소비) 성장률 (%)', data: chartData.map(d => d.pceGrowth),
-                        borderColor: '#dc3545', borderWidth: 2, pointRadius: 1, tension: 0.1, pointStyle: 'line'
+                        borderColor: '#dc3545', borderWidth: 2, pointRadius: 0, tension: 0.1, pointStyle: 'line'
                     }
                 ]
             },
@@ -139,7 +139,6 @@ export async function renderGdpConsumptionChart() {
                 scales: {
                     x: {
                         ticks: {
-                            // 💡 변경된 부분: 5년마다 첫 분기에만 연도를 표시하도록 수정
                             callback: function(value, index) {
                                 const year = labels[index].substring(0, 4);
                                 const quarter = labels[index].substring(5, 7);
@@ -148,9 +147,18 @@ export async function renderGdpConsumptionChart() {
                                 }
                                 return '';
                             },
-                            autoSkip: false,
-                            maxRotation: 0,
-                            minRotation: 0
+                            autoSkip: false, maxRotation: 0, minRotation: 0
+                        },
+                        // 💡 추가된 부분: 연도 레이블이 있을 때만 격자선 표시
+                        grid: {
+                            color: function(context) {
+                                const year = labels[context.tick.value].substring(0, 4);
+                                const quarter = labels[context.tick.value].substring(5, 7);
+                                if (quarter === '01' && parseInt(year) % 5 === 0) {
+                                    return 'rgba(0, 0, 0, 0.1)'; // 격자선 보이기
+                                }
+                                return 'transparent'; // 격자선 숨기기
+                            }
                         }
                     },
                     y: { 
@@ -250,8 +258,8 @@ export async function renderMarshallKChart() {
         ].map(c => ({
             type: 'line', mode: 'vertical', scaleID: 'x',
             value: chartData.findIndex(d => d.label === c.year),
-            borderColor: 'rgba(255, 99, 132, 0.5)', borderWidth: 1,
-            label: { content: c.label, enabled: true, position: 'top', font: {size: 10} }
+            borderColor: 'rgba(0, 123, 255, 0.5)', borderWidth: 1,
+            label: { content: c.label, enabled: true, position: 'top', font: {size: 10}, backgroundColor: 'rgba(0, 123, 255, 0.2)' }
         })).filter(a => a.value !== -1);
 
         marshallKChart = new Chart(ctx, {
@@ -274,7 +282,6 @@ export async function renderMarshallKChart() {
                 scales: {
                     x: {
                         ticks: {
-                             // 💡 변경된 부분: 4년마다 첫 분기에만 연도를 표시하도록 수정
                             callback: function(value, index) {
                                 const year = chartData[index].year;
                                 const quarter = chartData[index].label.substring(5);
@@ -283,9 +290,18 @@ export async function renderMarshallKChart() {
                                 }
                                 return '';
                             },
-                            autoSkip: false,
-                            maxRotation: 0,
-                            minRotation: 0
+                            autoSkip: false, maxRotation: 0, minRotation: 0
+                        },
+                        // 💡 추가된 부분: 연도 레이블이 있을 때만 격자선 표시
+                        grid: {
+                            color: function(context) {
+                                const year = chartData[context.tick.value].year;
+                                const quarter = chartData[context.tick.value].label.substring(5);
+                                if (quarter === 'Q1' && year % 4 === 0) {
+                                    return 'rgba(0, 0, 0, 0.1)'; // 격자선 보이기
+                                }
+                                return 'transparent'; // 격자선 숨기기
+                            }
                         }
                     },
                     y: { position: 'left', title: { display: true, text: '금리 (%)' }, ticks: { color: '#0056b3' } },
