@@ -585,6 +585,10 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
         indicatorGrid.innerHTML = '<p class="loading-text" style="padding: 20px;">표시할 지표 데이터가 없습니다. API 키나 네트워크 연결을 확인해주세요.</p>';
         return;
     }
+    
+    // 영향력 비율 계산을 위해 가중치가 있는 지표만 필터링
+    const weightedIndicators = analyzedIndicators.filter(ind => ind.weight > 0);
+    const totalWeight = weightedIndicators.reduce((sum, ind) => sum + ind.weight, 0);
 
     analyzedIndicators.sort((a, b) => (b.weight || 0) - (a.weight || 0));
     
@@ -594,21 +598,50 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
         if (indicator.status === 'negative') card.classList.add('card-negative-bg');
 
         const valueText = `${indicator.value.toLocaleString()}${indicator.unit || ''}`;
+        
+        // 다음 발표일 찾기
+        const schedule = releaseSchedules[indicator.id];
+        let nextDateStr = '';
+        if (schedule) {
+            const today = new Date();
+            // YYYY-MM-DD 형식의 오늘 날짜 문자열
+            const todayStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+            
+            // 2025년 날짜와 비교하기 위해 올해 날짜를 2025년으로 변경
+            const todayInScheduleYear = new Date(todayStr.replace(/^\d{4}/, '2025'));
+
+            const nextDate = schedule.dates.find(d => new Date(`2025-${d}`) > todayInScheduleYear);
+            if(nextDate) {
+                nextDateStr = ` <span class="next-date">[다음:${nextDate}]</span>`;
+            }
+        }
+
+        // 영향력 비율 계산
+        const impactRatio = totalWeight > 0 && indicator.weight > 0 ? ((indicator.weight / totalWeight) * 100).toFixed(1) : 0;
 
         card.innerHTML = `
             <div>
-                <div class="indicator-card-header"><h4>${indicator.name}<br><span class="date">(${indicator.date})</span></h4></div>
+                <div class="indicator-card-header">
+                    <h4>${indicator.name}</h4>
+                    <div class="date-info">
+                        <span class="current-date">[현재:${indicator.date}]</span>
+                        ${nextDateStr}
+                    </div>
+                </div>
                 <p class="indicator-value">${valueText}</p>
-                <div class="indicator-status"><span class="status-icon">${indicator.icon}</span><span class="status-text ${indicator.status}-icon">${indicator.text}</span></div>
+                <div class="indicator-status">
+                    <span class="status-icon">${indicator.icon}</span>
+                    <span class="status-text ${indicator.status}-icon">${indicator.text}</span>
+                </div>
             </div>
             <div class="card-footer">
+                ${impactRatio > 0 ? `<span class="impact-ratio">영향력 ${impactRatio}%</span>` : ''}
                 <button class="details-btn">자세히 보기</button>
             </div>`;
         card.querySelector('.details-btn').addEventListener('click', () => showModal(indicator.id));
         indicatorGrid.appendChild(card);
     });
 }
-
 
 function renderSectorOutlook(analyzedIndicators) {
     const grid = document.getElementById('sector-outlook-grid');
