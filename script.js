@@ -1,5 +1,4 @@
 // script.js
-import { getDetailedMarketOutlook } from './js/enhanced_analysis.js';
 import { API_KEYS } from './js/config.js';
 import { fetchFredIndicators, fetchEcosIndicators } from './js/api.js';
 import { analyzeIndicators, getMarketOutlook, analyzeMarshallKTrend, analyzeGdpConsumption, analyzeGdpGap } from './js/analysis.js';
