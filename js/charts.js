@@ -139,12 +139,18 @@ export async function renderGdpConsumptionChart() {
                 scales: {
                     x: {
                         ticks: {
+                            // 💡 변경된 부분: 5년마다 첫 분기에만 연도를 표시하도록 수정
                             callback: function(value, index) {
                                 const year = labels[index].substring(0, 4);
                                 const quarter = labels[index].substring(5, 7);
-                                return (quarter === '01' || index === 0) ? year : '';
+                                if (quarter === '01' && parseInt(year) % 5 === 0) {
+                                    return year;
+                                }
+                                return '';
                             },
-                            autoSkip: false, maxRotation: 0
+                            autoSkip: false,
+                            maxRotation: 0,
+                            minRotation: 0
                         }
                     },
                     y: { 
@@ -222,6 +228,7 @@ export async function renderMarshallKChart() {
                 const avgRate = rateValues.reduce((a, b) => a + b, 0) / rateValues.length;
                 chartData.push({
                     label: `${year} Q${quarter}`,
+                    year: year,
                     marshallK: (avgM2 / gdpValue),
                     interestRate: avgRate,
                     date: date
@@ -265,7 +272,22 @@ export async function renderMarshallKChart() {
             options: {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { ticks: { callback: (v, i, ticks) => chartData[i].label.endsWith('Q1') ? chartData[i].label.substring(0,4) : '', autoSkip: false, maxRotation: 0 }},
+                    x: {
+                        ticks: {
+                             // 💡 변경된 부분: 4년마다 첫 분기에만 연도를 표시하도록 수정
+                            callback: function(value, index) {
+                                const year = chartData[index].year;
+                                const quarter = chartData[index].label.substring(5);
+                                if (quarter === 'Q1' && year % 4 === 0) {
+                                    return year;
+                                }
+                                return '';
+                            },
+                            autoSkip: false,
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    },
                     y: { position: 'left', title: { display: true, text: '금리 (%)' }, ticks: { color: '#0056b3' } },
                     y1: { position: 'right', title: { display: true, text: '마샬케이' }, grid: { drawOnChartArea: false }, ticks: { color: '#dc3545' } }
                 },
