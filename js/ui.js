@@ -215,6 +215,7 @@ export function renderReleaseSchedule() {
 }
 
 export function setupEventListeners() {
+    // 아코디언 메뉴 이벤트
     document.querySelectorAll(".accordion-header").forEach(header => {
         header.addEventListener("click", () => {
             const panel = header.nextElementSibling;
@@ -222,12 +223,13 @@ export function setupEventListeners() {
         });
     });
 
+    // 모달창 이벤트
     const modal = document.getElementById('modal');
-    // 💡 변경된 부분: 닫기 버튼을 찾아서 이벤트 리스너를 추가하기 전에, 버튼이 존재하는지 먼저 확인합니다.
     const closeBtn = document.querySelector('.close-btn');
-    if (closeBtn) {
+    
+    if (closeBtn && modal) {
         closeBtn.onclick = () => {
-            if (modal) modal.style.display = 'none';
+            modal.style.display = 'none';
         };
     }
     
@@ -237,60 +239,71 @@ export function setupEventListeners() {
         }
     };
 
+    // 💡 변경된 부분: 검색 관련 요소들이 모두 존재하는지 확인 후 이벤트를 연결합니다.
     const searchInput = document.getElementById('stock-code-input');
     const searchBtn = document.getElementById('stock-search-btn');
     const autocompleteList = document.getElementById('autocomplete-list');
 
-    const performSearch = () => {
-        const stockCode = searchInput.dataset.stockCode || '';
-        if (stockCode) fetchAndRenderStockData(stockCode);
-        else alert('종목을 선택해주세요.');
-        autocompleteList.style.display = 'none';
-    };
-
-    searchBtn.addEventListener('click', performSearch);
-    searchInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') performSearch(); });
-    
-    searchInput.addEventListener('input', async () => {
-        const query = searchInput.value.trim();
-        searchInput.dataset.stockCode = ''; 
-        if (query.length < 1) {
-            autocompleteList.style.display = 'none';
-            return;
-        }
-        try {
-            const response = await fetch(`${STOCK_SEARCH_URL}${encodeURIComponent(query)}`);
-            const stocks = await response.json();
-            
-            autocompleteList.innerHTML = '';
-            if (stocks && stocks.length > 0) {
-                stocks.forEach(stock => {
-                    const item = document.createElement('div');
-                    item.className = 'autocomplete-item';
-                    item.innerHTML = `<span class="stock-name">${stock.name}</span><span class="stock-code-small">${stock.code}</span>`;
-                    item.addEventListener('click', () => {
-                        searchInput.value = stock.name;
-                        searchInput.dataset.stockCode = stock.code; 
-                        autocompleteList.style.display = 'none';
-                    });
-                    autocompleteList.appendChild(item);
-                });
+    if (searchInput && searchBtn && autocompleteList) {
+        const performSearch = () => {
+            const stockCode = searchInput.dataset.stockCode || '';
+            if (stockCode) {
+                fetchAndRenderStockData(stockCode);
             } else {
-                autocompleteList.innerHTML = `<div class="autocomplete-message">검색 결과 없음</div>`;
+                alert('자동완성 목록에서 종목을 선택해주세요.');
             }
-            autocompleteList.style.display = 'block';
-        } catch (error) {
-            console.error('자동완성 오류:', error);
-            autocompleteList.innerHTML = `<div class="autocomplete-message error">오류 발생</div>`;
-            autocompleteList.style.display = 'block';
-        }
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.autocomplete-container')) {
             autocompleteList.style.display = 'none';
-        }
-    });
+        };
+
+        searchBtn.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', (event) => { 
+            if (event.key === 'Enter') {
+                performSearch(); 
+            }
+        });
+        
+        searchInput.addEventListener('input', async () => {
+            const query = searchInput.value.trim();
+            searchInput.dataset.stockCode = ''; 
+            if (query.length < 1) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+            try {
+                const response = await fetch(`${STOCK_SEARCH_URL}${encodeURIComponent(query)}`);
+                const stocks = await response.json();
+                
+                autocompleteList.innerHTML = '';
+                if (stocks && stocks.length > 0) {
+                    stocks.forEach(stock => {
+                        const item = document.createElement('div');
+                        item.className = 'autocomplete-item';
+                        item.innerHTML = `<span class="stock-name">${stock.name}</span><span class="stock-code-small">${stock.code}</span>`;
+                        item.addEventListener('click', () => {
+                            searchInput.value = stock.name;
+                            searchInput.dataset.stockCode = stock.code; 
+                            autocompleteList.style.display = 'none';
+                        });
+                        autocompleteList.appendChild(item);
+                    });
+                } else {
+                    autocompleteList.innerHTML = `<div class="autocomplete-message">검색 결과 없음</div>`;
+                }
+                autocompleteList.style.display = 'block';
+            } catch (error) {
+                console.error('자동완성 오류:', error);
+                autocompleteList.innerHTML = `<div class="autocomplete-message error">오류 발생</div>`;
+                autocompleteList.style.display = 'block';
+            }
+        });
+
+        // 자동완성 목록 외부 클릭 시 숨기기
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.autocomplete-container')) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+    }
 }
 
 export function showModal(indicatorId) {
