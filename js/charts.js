@@ -1,6 +1,6 @@
 // js/charts.js
 import { fetchFredData } from './api.js';
-import { analyzeMarshallKTrend } from './analysis.js';
+import { analyzeMarshallKTrend, analyzeGdpGap } from './analysis.js';
 import { indicatorDetails } from './indicators.js';
 import { hpfilter } from './analysis_tools.js';
 
@@ -70,6 +70,13 @@ export async function renderGdpGapChart() {
             const trend = trendData[i];
             return trend !== 0 ? ((actual / trend) - 1) * 100 : 0;
         });
+
+        // 분석에 필요한 형태로 데이터를 가공하여 분석 함수 호출
+        const analysisData = labels.map((date, index) => ({
+            date: date,
+            value: gdpGapData[index]
+        }));
+        analyzeGdpGap(analysisData);
 
         gdpGapChart = new Chart(ctx, {
             type: 'bar',
