@@ -4,40 +4,41 @@
 // 데이터 분석 및 가공 함수
 // ==================================================================
 export function analyzeIndicators(indicators) {
+    // 각 지표의 중요도에 따라 '가중치(weight)'를 부여합니다.
     return indicators.map(indicator => {
         const { id, value } = indicator;
-        let status = 'neutral', icon = '😐', text = '보통', weight = 2; // 기본 가중치 2
+        let status = 'neutral', icon = '😐', text = '보통', weight = 2; // 기본 가중치
         switch (id) {
             case 'yield_spread':
-                if (value >= 0.1) { status = 'positive'; icon = '✅'; text = '정상 범위'; }
-                else if (value > -0.2) { status = 'neutral'; icon = '⚠️'; text = '역전 우려'; }
+                if (value >= 0.1) { status = 'positive'; icon = '✅'; text = '정상 범위'; } 
+                else if (value > -0.2) { status = 'neutral'; icon = '⚠️'; text = '역전 우려'; } 
                 else { status = 'negative'; icon = '🚨'; text = '침체 신호'; }
-                weight = 5; break;
+                weight = 5; break; // 💡 핵심 선행 지표, 가장 높은 가중치
             case 'us_cpi':
-                if (value <= 2.5) { status = 'positive'; icon = '😌'; text = '물가 안정'; }
-                else if (value <= 3.5) { status = 'neutral'; icon = '😐'; text = '인플레 둔화'; }
+                if (value <= 2.5) { status = 'positive'; icon = '😌'; text = '물가 안정'; } 
+                else if (value <= 3.5) { status = 'neutral'; icon = '😐'; text = '인플레 둔화'; } 
                 else { status = 'negative'; icon = '🔥'; text = '물가 압력'; }
-                weight = 5; break;
+                weight = 5; break; // 💡 연준 정책의 핵심 변수, 가장 높은 가중치
             case 'nfp':
-                if (value >= 250) { status = 'positive'; icon = '👍'; text = '고용 서프라이즈'; }
-                else if (value >= 150) { status = 'neutral'; icon = '😐'; text = '예상 부합'; }
+                if (value >= 250) { status = 'positive'; icon = '👍'; text = '고용 서프라이즈'; } 
+                else if (value >= 150) { status = 'neutral'; icon = '😐'; text = '예상 부합'; } 
                 else { status = 'negative'; icon = '👎'; text = '고용 쇼크'; }
-                weight = 5; break;
+                weight = 5; break; // 💡 미국 경제의 펀더멘털, 가장 높은 가중치
             case 'vix':
-                if (value <= 20) { status = 'positive'; icon = '😌'; text = '시장 안정'; }
-                else if (value <= 30) { status = 'neutral'; icon = '😟'; text = '불안 심리'; }
+                if (value <= 20) { status = 'positive'; icon = '😌'; text = '시장 안정'; } 
+                else if (value <= 30) { status = 'neutral'; icon = '😟'; text = '불안 심리'; } 
                 else { status = 'negative'; icon = '😱'; text = '공포 심리'; }
-                weight = 4; break;
+                weight = 4; break; // 💡 시장 심리 반영, 높은 가중치
             case 'export_growth':
-                if (value >= 2.0) { status = 'positive'; icon = '📈'; text = '수출 호조'; }
-                else if (value >= 0) { status = 'neutral'; icon = '📊'; text = '소폭 개선'; }
+                if (value >= 2.0) { status = 'positive'; icon = '📈'; text = '수출 호조'; } 
+                else if (value >= 0) { status = 'neutral'; icon = '📊'; text = '소폭 개선'; } 
                 else { status = 'negative'; icon = '📉'; text = '수출 부진'; }
-                weight = 4; break;
+                weight = 4; break; // 💡 한국 경제 핵심 동력, 높은 가중치
             case 'gdp_growth':
-                 if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복'; }
-                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; }
+                 if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복'; } 
+                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; } 
                 else { status = 'negative'; icon = '👎'; text = '성장 둔화'; }
-                weight = 5; break;
+                weight = 5; break; // 💡 경제 성장의 바로미터, 가장 높은 가중치
             // ... 기타 지표들 ...
         }
         return { ...indicator, status, icon, text, weight };
@@ -65,7 +66,7 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     });
     const finalScore = totalWeight > 0 ? (score / totalWeight) * 100 : 0;
 
-    // 2. 긍정적 / 부정적 요인 분리
+    // 2. 긍정적 / 부정적 요인 동적 분리
     const positiveDrivers = [];
     const negativeDrivers = [];
 
@@ -83,38 +84,41 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
         else if (macroResults.gdpConsumption.status === 'negative') negativeDrivers.push('소비 둔화 우려');
     }
 
-    // 주요 단기 지표 요약 추가
-    analyzedIndicators.forEach(ind => {
-        if (ind && ind.weight >= 4) { // 가중치가 높은 주요 지표만 요약
-            if (ind.status === 'positive') positiveDrivers.push(`${ind.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}(${ind.text})`);
-            else if (ind.status === 'negative') negativeDrivers.push(`${ind.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}(${ind.text})`);
-        }
-    });
+    // 주요 단기 지표 요약 추가 (가중치가 높은 순으로 정렬)
+    analyzedIndicators
+        .filter(ind => ind && ind.weight >= 4)
+        .sort((a, b) => b.weight - a.weight)
+        .forEach(ind => {
+            if (ind.status === 'positive') {
+                positiveDrivers.push(`${ind.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}(${ind.text})`);
+            } else if (ind.status === 'negative') {
+                negativeDrivers.push(`${ind.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}(${ind.text})`);
+            }
+        });
 
-    // 3. 최종 전망 생성
+    // 3. 최종 전망 동적 생성
     let finalStatus = 'neutral', finalSignal = '📊', finalTitle = '혼조세 국면', finalAnalysis = '';
 
-    if (finalScore > 20) {
+    if (finalScore > 30) { // 긍정 점수가 높을 때
         finalStatus = 'positive';
         finalSignal = '📈';
         finalTitle = '완만한 회복 기대';
-    } else if (finalScore < -20) {
+        finalAnalysis = `<b>[종합 분석]</b> 주요 경제 지표들이 긍정적인 신호를 보내고 있어, 점진적인 경기 회복이 기대됩니다.<br><br><b>[핵심 동력]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span> 등이 시장의 상승을 이끌고 있습니다.<br><br>${negativeDrivers.length > 0 ? `<b>[잠재 위험]</b> 다만, <span class="negative-text">${negativeDrivers.join(', ')}</span> 등은 여전히 변동성 요인으로 작용할 수 있어 주의가 필요합니다.` : '특별한 위험 요인은 관찰되지 않고 있습니다.'}`;
+    } else if (finalScore < -30) { // 부정 점수가 높을 때
         finalStatus = 'negative';
         finalSignal = '📉';
         finalTitle = '경기 둔화 우려';
-    }
-
-    // 분석 텍스트 생성
-    if (positiveDrivers.length > 0 && negativeDrivers.length === 0) {
-        finalAnalysis = `<b>[종합 분석]</b> 긍정적 지표들이 우세하여 점진적인 경기 회복이 기대됩니다.<br><br><b>[주요 동력]</b> ${positiveDrivers.join(', ')} 등이 시장에 긍정적인 영향을 미치고 있습니다.`;
-    } else if (positiveDrivers.length === 0 && negativeDrivers.length > 0) {
-        finalAnalysis = `<b>[종합 분석]</b> 부정적 지표들이 우세하여 경기 둔화에 대한 경계가 필요한 시점입니다.<br><br><b>[주요 위험]</b> ${negativeDrivers.join(', ')} 등이 시장에 부담으로 작용하고 있습니다.`;
-    } else {
-        finalAnalysis = `<b>[종합 분석]</b> 현재 시장은 긍정적 요인과 부정적 요인이 혼재되어 있어 뚜렷한 방향성을 보이지 않고 있습니다.<br><br><b>[긍정적 요인]</b> ${positiveDrivers.join(', ')}.<br><b>[부정적 요인]</b> ${negativeDrivers.join(', ')}.<br><br><b>[전략]</b> 향후 발표되는 주요 지표에 따라 시장의 방향성이 결정될 것으로 보이므로, 변동성에 유의하며 신중한 접근이 필요합니다.`;
+        finalAnalysis = `<b>[종합 분석]</b> 여러 지표에서 경고 신호가 감지되어, 경기 둔화에 대한 경계심을 높여야 할 시점입니다.<br><br><b>[핵심 위험]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등이 시장에 상당한 부담으로 작용하고 있습니다.<br><br>${positiveDrivers.length > 0 ? `<b>[긍정적 측면]</b> 그럼에도 불구하고 <span class="positive-text">${positiveDrivers.join(', ')}</span> 등은 추가적인 하락을 방어하는 요인이 될 수 있습니다.` : '반등을 이끌만한 뚜렷한 동력이 보이지 않습니다.'}`;
+    } else { // 긍정/부정 요인이 팽팽할 때 (혼조세)
+        finalStatus = 'neutral';
+        finalSignal = '📊';
+        finalTitle = '방향성 탐색 구간';
+        finalAnalysis = `<b>[종합 분석]</b> 현재 시장은 긍정적 요인과 부정적 요인이 팽팽하게 맞서며 뚜렷한 방향성을 보이지 않고 있습니다. 작은 충격에도 변동성이 커질 수 있는 구간입니다.<br><br><b>[긍정적 요인]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span>.<br><b>[부정적 요인]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span>.<br><br><b>[전략 제안]</b> 향후 발표될 주요 지표(특히 CPI, NFP)의 결과에 따라 시장의 균형이 한쪽으로 기울 가능성이 높습니다. 그때까지는 보수적인 관점에서 위험 관리에 집중하는 전략이 유효해 보입니다.`;
     }
 
     return { status: finalStatus, signal: finalSignal, title: finalTitle, analysis: finalAnalysis };
 }
+
 // ==================================================================
 // 자산군별 투자 의견 및 섹터 전망 (더 정교하게 수정)
 // ==================================================================
