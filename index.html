@@ -12,22 +12,6 @@
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1>📊 Live API 경제 지표 대시보드</h1>
-            <p id="update-time">데이터 로딩 중...</p>
-        </header>
-
-        <div class="search-section">
-            <div class="autocomplete-container">
-                <input type="text" id="stock-code-input" placeholder="종목명 또는 코드를 입력하세요 (예: 삼성전자)">
-                <div class="autocomplete-items" id="autocomplete-list"></div>
-            </div>
-            <button id="stock-search-btn">종목 조회</button>
-        </div>
-
-        <div id="stock-details-section" class="stock-details-section" style="display: none;">
-        </div>
-
         <div class="accordion">
             <button class="accordion-header">시장 종합 전망</button>
             <div class="accordion-panel" style="display: block;">
@@ -51,6 +35,18 @@
         </div>
         
         <div class="accordion">
+            <button class="accordion-header">🇺🇸 GDP 갭(HP필터) 분석</button>
+            <div class="accordion-panel" style="display: block;">
+                <div class="stock-chart-container" style="height: 450px;">
+                    <canvas id="gdp-gap-chart"></canvas>
+                </div>
+                <p style="font-size: 0.8em; color: #6c757d; text-align: right; margin-top: 5px;">
+                    주: HP필터를 이용해 추출한 장기 추세선 대비 현재 실질 GDP가 얼마나 벗어났는지를 보여줍니다.
+                </p>
+            </div>
+        </div>
+
+        <div class="accordion">
             <button class="accordion-header">🇺🇸 소비와 GDP 사이클 분석</button>
             <div class="accordion-panel" style="display: block;">
                  <div id="gdp-consumption-analysis" class="analysis-content" style="padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px;">
@@ -60,63 +56,12 @@
                     <canvas id="gdp-consumption-chart"></canvas>
                 </div>
                 <p style="font-size: 0.8em; color: #6c757d; text-align: right; margin-top: 5px;">
-                    주: 녹색 선은 실질 GDP 성장률, 빨간색 선은 실질 개인소비지출(PCE) 성장률, 회색 영역은 경기 침체 기간입니다.
+                    주: 녹색 선은 실질 GDP 성장률, 빨간색 선은 실질 개인소비지출(PCE) 성장률, 붉은 영역은 경기 침체 기간입니다.
                 </p>
             </div>
         </div>
         
-        <div class="accordion">
-            <button class="accordion-header">섹터별 전망</button>
-            <div class="accordion-panel">
-                <div id="sector-outlook-grid" class="sector-outlook-grid"><p class="loading-text">섹터 정보 분석 중...</p></div>
-            </div>
         </div>
-        
-        <div class="accordion">
-            <button class="accordion-header">자산별 투자 제안</button>
-            <div class="accordion-panel">
-                <div id="investment-suggestions-grid" class="sector-outlook-grid"><p class="loading-text">투자 정보 분석 중...</p></div>
-                <p class="disclaimer">※ 본 내용은 투자 참고 자료이며, 모든 투자의 최종 결정과 책임은 투자자 본인에게 있습니다.</p>
-            </div>
-        </div>
-
-        <div class="accordion">
-            <button class="accordion-header">주요 경제 일정</button>
-            <div class="accordion-panel" style="display: block;">
-                <div id="economic-calendar-grid" class="calendar-grid"><p class="loading-text">경제 일정 로딩 중...</p></div>
-            </div>
-        </div>
-
-        <div class="accordion">
-            <button class="accordion-header">핵심 지표 발표일 (2025년)</button>
-            <div class="accordion-panel">
-                <div id="release-schedule-grid" class="release-schedule-grid"></div>
-            </div>
-        </div>
-
-        <h2 class="section-title">핵심 지표 대시보드</h2>
-        <div id="indicator-grid" class="indicator-grid">
-        </div>
-
-        <footer class="footer">
-            <p>본 페이지의 데이터는 FRED, 한국은행 ECOS API를 통해 실시간으로 제공됩니다.</p>
-            <p>모든 투자의 책임은 투자자 본인에게 있습니다.</p>
-        </footer>
-    </div>
-
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h3 id="modal-title"></h3>
-            <div class="chart-container">
-                <canvas id="indicator-chart"></canvas>
-            </div>
-            <p id="modal-description"></p>
-            <h4>대시보드 판단 기준:</h4>
-            <ul id="modal-criteria"></ul>
-            <div id="modal-related-stocks"></div>
-        </div>
-    </div>
     
     <script type="module" src="script.js"></script>
 </body>
