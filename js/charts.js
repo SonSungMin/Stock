@@ -2,13 +2,14 @@
 import { fetchFredData } from './api.js';
 import { analyzeMarshallKTrend } from './analysis.js';
 import { indicatorDetails } from './indicators.js';
+import { hpfilter } from './analysis_tools.js';
 
 let stockPriceChart = null;
 let stockFinanceChart = null;
 let marshallKChart = null;
 let gdpConsumptionChart = null;
 let indicatorChart = null;
-
+let gdpGapChart = null;
 
 export function renderStockPriceChart(chartData) {
     const ctx = document.getElementById('stock-price-chart').getContext('2d');
@@ -43,6 +44,78 @@ export function renderStockFinanceChart(financialData) {
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
     });
+}
+
+export async function renderGdpGapChart() {
+    const canvas = document.getElementById('gdp-gap-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (gdpGapChart) gdpGapChart.destroy();
+
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#6c757d";
+    ctx.textAlign = "center";
+    ctx.fillText("HP 필터 분석 중...", canvas.width / 2, canvas.height / 2);
+
+    try {
+        const gdpObs = await fetchFredData('GDPC1', 300, 'asc');
+        if (!gdpObs) throw new Error("실질 GDP 데이터를 가져오지 못했습니다.");
+
+        const gdpData = gdpObs.map(d => parseFloat(d.value));
+        const labels = gdpObs.map(d => d.date);
+
+        const trendData = hpfilter(gdpData, 1600);
+        
+        const gdpGapData = gdpData.map((actual, i) => {
+            const trend = trendData[i];
+            return trend !== 0 ? ((actual / trend) - 1) * 100 : 0;
+        });
+
+        gdpGapChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'GDP 갭 (%)',
+                    data: gdpGapData,
+                    backgroundColor: gdpGapData.map(v => v >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(0, 86, 179, 0.7)'),
+                    borderColor: gdpGapData.map(v => v >= 0 ? 'rgba(220, 53, 69, 1)' : 'rgba(0, 86, 179, 1)'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        ticks: {
+                            callback: function(value, index) {
+                                const year = labels[index].substring(0, 4);
+                                if (parseInt(year) % 5 === 0 && labels[index].substring(5,7) === '01') return year;
+                                return '';
+                            },
+                             autoSkip: false, maxRotation: 0,
+                        }
+                    },
+                    y: {
+                        title: { display: true, text: 'GDP 갭 (%)' },
+                        grid: {
+                            color: c => (c.tick.value === 0) ? '#666' : 'rgba(0, 0, 0, 0.1)',
+                            lineWidth: c => (c.tick.value === 0) ? 1.5 : 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+    } catch(error) {
+        console.error("GDP 갭 차트 렌더링 실패:", error);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#dc3545";
+        ctx.fillText("데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
+    }
 }
 
 export async function renderGdpConsumptionChart() {
@@ -272,7 +345,6 @@ export async function renderMarshallKChart() {
                 label: { 
                     content: c.label, 
                     display: true, 
-                    // 💡 변경된 부분: 레이블 위치를 위쪽으로 조정
                     position: 'start',
                     yAdjust: -5,
                     font: { size: 12, weight: 'bold' },
@@ -319,7 +391,6 @@ export async function renderMarshallKChart() {
                     legend: { position: 'top' }, 
                     annotation: { 
                         annotations: crisisAnnotations,
-                        // 💡 추가된 부분: 레이블이 차트 영역을 벗어나도 보이게 함
                         clip: false
                     } 
                 }
