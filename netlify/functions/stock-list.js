@@ -1,6 +1,6 @@
 // /netlify/functions/stock-list.js
 
-const KRX_API_URL = 'http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd';
+const KRX_API_URL = 'https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd';
 let stockListCache = null;
 let cacheTimestamp = null;
 const CACHE_DURATION = 1000 * 60 * 60; // 1시간
