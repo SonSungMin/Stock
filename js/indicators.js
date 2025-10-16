@@ -38,10 +38,5 @@ export const releaseCycles = {
 // ==================================================================
 export const indicatorDetails = {
     // === FRED (미국/글로벌) 지표 ===
-    yield_spread: { title: '🇺🇸 장단기 금리차', seriesId: ['DGS10', 'DGS2'], description: '미래 경기를 예측하는 핵심 선행 지표입니다...', criteria: [ '✅ <b>정상 범위 (0 이상)</b>', '⚠️ <b>역전폭 축소 (-0.1 ~ 0)</b>', '🚨 <b>경기 침체 우려 (-0.1 미만)</b>' ] },
-    exchange_rate: { title: '🇰🇷 원/달러 환율', seriesId: 'DEXKOUS', description: '1달러를 사는 데 필요한 원화의 양입니다...', criteria: [ '💵 <b>환율 안정 (1300원 이하)</b>', ' fluctuating <b>변동성 확대 (1300원 ~ 1350원)</b>', '💸 <b>원화 약세 심화 (1350원 초과)</b>' ] },
-    vix: { title: '😱 VIX 지수 (공포 지수)', seriesId: 'VIXCLS', description: '시장의 불안감을 나타내는 지표입니다...', criteria: [ '😌 <b>시장 안정 (20 이하)</b>', '😟 <b>불안 심리 (20 ~ 30)</b>', '😱 <b>공포 심리 (30 초과)</b>' ] },
-    dollar_index: { title: '💲 달러 인덱스', seriesId: 'DTWEXBGS', description: '주요 6개국 통화 대비 달러의 가치입니다...', criteria: [ '💲 <b>달러 약세 (100 이하)</b>', '💰 <b>달러 강세 (100 초과)</b>' ] },
-    wti_price: { title: '🛢️ WTI 유가', seriesId: 'MCOILWTICO', description: '서부 텍사스산 원유(WTI) 가격입니다...', criteria: [ '⛽ <b>유가 안정 (80달러 이하)</b>', '🔺 <b>상승 압력 (80달러 ~ 100달러)</b>', '🔥 <b>고유가 부담 (100달러 초과)</b>' ] },
-    sox_index: { title: '⚡️ 美 반도체 지수 (SOX)', seriesId: 'SOX', description: '필라델피아 반도체 지수입니다...', criteria: [ '📈 <b>상승:</b> 업황 긍정', '📉 <b>하락:</b> 업황 악화' ] },
-    auto_sales: { title: '🚗 美 자동차 판매량', seriesId: 'TOTALSA', description: '미국 내 자동차 판매량입니다...', criteria: [ '📈 <b>증가:</b> 소비 심리 개선', '📉 <b>감소:</b> 소비 심리
+    yield_spread: { title: '🇺🇸 장단기 금리차', seriesId: ['DGS10', 'DGS2'], description: '미래 경기를 예측하는 핵심 선행 지표입니다. 10년물 국채 금리에서 2년물 국채 금리를 뺀 값으로, 양수(+)이면 정상적인 수익률 곡선, 음수(-)이면 역전된 수익률 곡선을 의미합니다. 수익률 곡선 역전은 일반적으로 12~24개월 후 경기 침체의 전조로 해석됩니다.', criteria: [ '✅ <b>정상 범위 (0 이상):</b> 향후 경기 확장에 대한 기대감 반영', '⚠️ <b>역전폭 축소 (-0.1 ~ 0):</b> 경기 둔화 우려와 침체 가능성이 혼재', '🚨 <b>경기 침체 우려 (-0.1 미만):</b> 단기 금리가 장기 금리보다 높아 향후 경기 침체 가능성 높음' ] },
+    exchange_rate: { title: '🇰🇷 원/달러 환율', seriesId: 'DEXKOUS', description: '1달러를 사는 데 필요한 원화의 양입니다. 환율 상승은 원화 가치 하락을, 하락은 원화 가치 상승을 의미합니다. 일반적으로 환율 상승은 수출 기업에 유리하고 수입 물가를 높이는 요인이 됩니다.', criteria: [ '💵 <b>환율 안정 (1300원 이하):</b> 외국인 자
