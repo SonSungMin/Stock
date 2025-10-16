@@ -1,7 +1,8 @@
-// script.js
+// script.js (should be in the same root folder as index.html)
+
 import { API_KEYS } from './js/config.js';
-import { fetchFredIndicators, fetchEcosIndicators, fetchFredData } from './js/api.js';
-import { analyzeIndicators, getMarketOutlook, analyzeGdpConsumption } from './js/analysis.js';
+import { fetchFredIndicators, fetchEcosIndicators } from './js/api.js';
+import { analyzeIndicators, getMarketOutlook } from './js/analysis.js';
 import { renderMarshallKChart, renderGdpConsumptionChart, renderGdpGapChart } from './js/charts.js';
 import {
     renderInitialPlaceholders,
@@ -34,8 +35,7 @@ async function main() {
     renderEconomicCalendar();
     renderReleaseSchedule();
     
-    // 💡 변경된 부분: 거시 경제 차트 렌더링과 분석을 병렬로 실행합니다.
-    // 각 render 함수는 내부적으로 분석 함수를 호출하고 결과를 macroAnalysisResults 객체에 저장합니다.
+    // 거시 경제 차트 렌더링과 분석을 병렬로 실행합니다.
     const macroAnalysisPromise = Promise.all([
         renderMarshallKChart(macroAnalysisResults),
         renderGdpConsumptionChart(macroAnalysisResults),
