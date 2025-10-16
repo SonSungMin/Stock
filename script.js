@@ -38,30 +38,18 @@ const releaseSchedules = {
 // ==================================================================
 const indicatorDetails = {
     // === FRED (미국/글로벌) 지표 ===
-    yield_spread: { title: '🇺🇸 장단기 금리차', seriesId: ['DGS10', 'DGS2'], description: '미래 경기를 예측하는 핵심 선행 지표입니다...', criteria: [ '✅ <b>정상 범위 (0 이상)</b>', '⚠️ <b>역전폭 축소 (-0.1 ~ 0)</b>', '🚨 <b>경기 침체 우려 (-0.1 미만)</b>' ] },
-    exchange_rate: { title: '🇰🇷 원/달러 환율', seriesId: 'DEXKOUS', description: '1달러를 사는 데 필요한 원화의 양입니다...', criteria: [ '💵 <b>환율 안정 (1300원 이하)</b>', ' fluctuating <b>변동성 확대 (1300원 ~ 1350원)</b>', '💸 <b>원화 약세 심화 (1350원 초과)</b>' ] },
-    vix: { title: '😱 VIX 지수 (공포 지수)', seriesId: 'VIXCLS', description: '시장의 불안감을 나타내는 지표입니다...', criteria: [ '😌 <b>시장 안정 (20 이하)</b>', '😟 <b>불안 심리 (20 ~ 30)</b>', '😱 <b>공포 심리 (30 초과)</b>' ] },
-    dollar_index: { title: '💲 달러 인덱스', seriesId: 'DTWEXBGS', description: '주요 6개국 통화 대비 달러의 가치입니다...', criteria: [ '💲 <b>달러 약세 (100 이하)</b>', '💰 <b>달러 강세 (100 초과)</b>' ] },
-    wti_price: { title: '🛢️ WTI 유가', seriesId: 'MCOILWTICO', description: '서부 텍사스산 원유(WTI) 가격입니다...', criteria: [ '⛽ <b>유가 안정 (80달러 이하)</b>', '🔺 <b>상승 압력 (80달러 ~ 100달러)</b>', '🔥 <b>고유가 부담 (100달러 초과)</b>' ] },
-    sox_index: { title: '⚡️ 美 반도체 지수 (SOX)', seriesId: 'SOX', description: '필라델피아 반도체 지수입니다...', criteria: [ '📈 <b>상승:</b> 업황 긍정', '📉 <b>하락:</b> 업황 악화' ] },
-    auto_sales: { title: '🚗 美 자동차 판매량', seriesId: 'TOTALSA', description: '미국 내 자동차 판매량입니다...', criteria: [ '📈 <b>증가:</b> 소비 심리 개선', '📉 <b>감소:</b> 소비 심리 위축' ] },
-    retail_sales: { title: '🛒 美 소매 판매', seriesId: 'MRTSSM44000USS', description: '미국의 전반적인 소비 활동 지표입니다...', criteria: [ '📈 <b>판매 호조:</b> 경기 확장 신호', '📉 <b>판매 부진:</b> 경기 둔화 신호' ] },
-    home_price_index: { title: '🏠 美 주택 가격 지수', seriesId: 'CSUSHPINSA', description: 'S&P/Case-Shiller 주택 가격 지수입니다...', criteria: [ '📈 <b>가격 상승:</b> 시장 활성화', '📉 <b>가격 하락:</b> 시장 둔화' ] },
-    nfp: { title: '🇺🇸 비농업 고용지수 (NFP)', seriesId: 'PAYEMS', description: '미국의 고용 인구 변동 지표입니다...', criteria: [ '👍 <b>고용 서프라이즈 (25만 이상)</b>', '😐 <b>예상 부합 (15만 ~ 25만)</b>', '👎 <b>고용 쇼크 (15만 미만)</b>' ] },
-    us_cpi: { title: '🇺🇸 소비자물가지수 (CPI)', seriesId: 'CPIAUCSL', description: '미국 소비자 물가 변동 지표입니다...', criteria: [ '😌 <b>물가 안정 (2.5% 이하)</b>', '😐 <b>인플레이션 둔화 (2.5% ~ 3.5%)</b>', '🔥 <b>물가 압력 지속 (3.5% 초과)</b>' ] },
-    philly_fed: { title: '🇺🇸 필라델피아 연은 제조업 지수', seriesId: 'PHLMAN', description: '미국 제조업 경기의 선행 지표입니다...', criteria: [ '📈 <b>확장 국면 (10 이상)</b>', '😐 <b>보합세 (-5 ~ 10)</b>', '📉 <b>위축 국면 (-5 미만)</b>' ] },
+    yield_spread: { title: '🇺🇸 장단기 금리차', seriesId: ['DGS10', 'DGS2'], description: '미래 경기를 예측하는 핵심 선행 지표입니다. 10년물 국채금리에서 2년물 국채금리를 뺀 값으로, 보통 양수를 유지합니다. 이 값이 0 미만으로 떨어지는 \'장단기 금리 역전\'은 향후 1~2년 내 경기 침체의 강력한 전조로 해석됩니다.', criteria: [ '✅ <b>정상 범위 (0 이상)</b>: 경기 확장 기대', '⚠️ <b>역전폭 축소 (-0.1 ~ 0)</b>: 경기 둔화 우려', '🚨 <b>경기 침체 우려 (-0.1 미만)</b>: 강력한 침체 신호' ] },
+    exchange_rate: { title: '🇰🇷 원/달러 환율', seriesId: 'DEXKOUS', description: '1달러를 사는 데 필요한 원화의 양입니다. 환율이 오르면 원화 가치가 하락했다는 의미이며, 일반적으로 외국인 자금 유출과 수입 물가 상승 압력으로 작용해 국내 증시에 부담을 줍니다.', criteria: [ '💵 <b>환율 안정 (1300원 이하)</b>: 외국인 자금 유입 기대', ' fluctuating <b>변동성 확대 (1300원 ~ 1350원)</b>: 시장 불안 심리 반영', '💸 <b>원화 약세 심화 (1350원 초과)</b>: 증시 하방 압력 증가' ] },
+    vix: { title: '😱 VIX 지수 (공포 지수)', seriesId: 'VIXCLS', description: '시장의 불안감을 나타내는 지표입니다. S&P 500 지수 옵션의 향후 30일간의 변동성에 대한 시장의 기대를 나타내며, 지수가 높을수록 시장의 불확실성과 공포심이 크다는 것을 의미합니다.', criteria: [ '😌 <b>시장 안정 (20 이하)</b>: 투자 심리 양호', '😟 <b>불안 심리 (20 ~ 30)</b>: 변동성 확대 주의', '😱 <b>공포 심리 (30 초과)</b>: 위험자산 회피 심리 극대화' ] },
+    dollar_index: { title: '💲 달러 인덱스', seriesId: 'DTWEXBGS', description: '주요 6개국 통화 대비 달러의 가치입니다. 달러 인덱스가 높으면 달러가 강세라는 의미이며, 이는 글로벌 자금이 신흥국에서 안전자산인 달러로 이동하는 경향을 보여 신흥국 증시에 부담으로 작용합니다.', criteria: [ '💲 <b>달러 약세 (100 이하)</b>: 신흥국 증시 긍정적', '💰 <b>달러 강세 (100 초과)</b>: 신흥국 증시 부정적' ] },
+    wti_price: { title: '🛢️ WTI 유가', seriesId: 'MCOILWTICO', description: '서부 텍사스산 원유(WTI) 가격입니다. 유가는 세계 경제의 바로미터로, 완만한 상승은 경기 회복 신호로 해석될 수 있으나, 급등은 인플레이션 압력을 높여 기업 비용 부담과 소비 위축을 유발할 수 있습니다.', criteria: [ '⛽ <b>유가 안정 (80달러 이하)</b>: 인플레이션 부담 완화', '🔺 <b>상승 압력 (80달러 ~ 100달러)</b>: 경기와 인플레이션 간 줄다리기', '🔥 <b>고유가 부담 (100달러 초과)</b>: 스태그플레이션 우려' ] },
     
     // === ECOS (한국) 지표 ===
-    gdp_growth: { title: '🇰🇷 GDP 성장률', description: '한국의 경제 규모 성장률입니다...', criteria: [ '👍 <b>견조한 회복세 (0.7% 이상)</b>', '😐 <b>완만한 성장 (0.3% ~ 0.7%)</b>', '👎 <b>성장 둔화 우려 (0.3% 미만)</b>' ] },
-    export_growth: { title: '🇰🇷 수출 증가율', description: '수출 실적의 증감률입니다...', criteria: [ '📈 <b>플러스 전환 (2.0% 이상)</b>', '📊 <b>소폭 개선 (0% ~ 2.0%)</b>', '📉 <b>수출 부진 (0% 미만)</b>' ] },
-    cpi: { title: '🇰🇷 소비자물가지수 (CPI)', description: '한국 소비자 물가 변동 지표입니다...', criteria: [ '😌 <b>물가 안정세 (3.0% 이하)</b>', '😐 <b>인플레이션 둔화 (3.0% ~ 4.0%)</b>', '🔥 <b>물가 압력 지속 (4.0% 초과)</b>' ] },
-    unemployment: { title: '🇰🇷 실업률', description: '경제활동인구 중 실업자 비율입니다...', criteria: [ '💪 <b>완전고용 수준 (3.0% 이하)</b>', '😥 <b>고용 시장 악화 (3.0% 초과)</b>' ] },
-    base_rate: { title: '🇰🇷 기준금리', description: '한국은행의 정책 금리입니다...', criteria: [ '💰 <b>완화적 통화정책 (2.5% 이하)</b>', '⚖️ <b>중립적 금리 수준 (2.5% ~ 3.5%)</b>', '🔒 <b>긴축적 통화정책 (3.5% 초과)</b>' ] },
-    industrial_production: { title: '🇰🇷 산업생산지수', description: '주요 산업의 생산 활동 지수입니다...', criteria: [ '🏭 <b>생산 활발 (1.0% 이상)</b>', '😐 <b>생산 보합 (0% ~ 1.0%)</b>', '📉 <b>생산 위축 (0% 미만)</b>' ] },
-    consumer_sentiment: { title: '🇰🇷 소비자심리지수 (CSI)', description: '소비자들의 경제 상황 인식 지표입니다...', criteria: [ '😊 <b>소비 심리 낙관 (100 이상)</b>', '😐 <b>소비 심리 중립 (90 ~ 100)</b>', '😟 <b>소비 심리 비관 (90 미만)</b>' ] },
-    corp_bond_spread: { title: '🇰🇷 회사채 스프레드', description: '회사채와 국고채 간의 금리 차이입니다...', criteria: [ '✅ <b>신용 위험 완화 (0.8%p 이하)</b>', '⚠️ <b>신용 위험 보통 (0.8%p ~ 1.2%)</b>', '🚨 <b>신용 위험 증가 (1.2%p 초과)</b>' ] },
-    kospi: { title: '🇰🇷 코스피 지수', description: '한국을 대표하는 주가 지수입니다...', criteria: ['📊 <b>주요 시장 지수</b>'] },
-    producer_price_index: { title: '🇰🇷 생산자물가지수 (PPI)', description: '생산자 공급 가격 변동 지표입니다...', criteria: [ '😌 <b>생산자 물가 안정 (3.0% 이하)</b>', '🔺 <b>생산자 물가 부담 (3.0% 초과)</b>' ] }
+    gdp_growth: { title: '🇰🇷 GDP 성장률', description: '한국의 경제 규모 성장률(전기 대비)입니다. GDP가 성장한다는 것은 국가 경제의 생산, 소비, 투자가 활발하다는 의미로, 기업 이익 증가와 증시 상승의 기반이 됩니다.', criteria: [ '👍 <b>견조한 회복세 (0.7% 이상)</b>', '😐 <b>완만한 성장 (0.3% ~ 0.7%)</b>', '👎 <b>성장 둔화 우려 (0.3% 미만)</b>' ] },
+    export_growth: { title: '🇰🇷 수출 증가율', description: '수출 실적의 증감률(전년 동기 대비)입니다. 수출은 한국 경제의 핵심 동력으로, 수출 증가는 관련 기업들의 실적 개선으로 이어져 증시에 직접적인 호재로 작용합니다.', criteria: [ '📈 <b>플러스 전환 (2.0% 이상)</b>: 경기 회복 기대감', '📊 <b>소폭 개선 (0% ~ 2.0%)</b>: 반등 모색', '📉 <b>수출 부진 (0% 미만)</b>: 관련주 실적 악화 우려' ] },
+    cpi: { title: '🇰🇷 소비자물가지수 (CPI)', description: '한국 소비자 물가 변동 지표(전년 동기 대비)입니다. 과도한 물가 상승은 중앙은행의 금리 인상 가능성을 높여 시중 유동성을 축소시키고 증시에 부담을 줍니다.', criteria: [ '😌 <b>물가 안정세 (3.0% 이하)</b>: 통화정책 완화 기대', '😐 <b>인플레이션 둔화 (3.0% ~ 4.0%)</b>: 금리 동결 기대', '🔥 <b>물가 압력 지속 (4.0% 초과)</b>: 긴축 정책 우려' ] },
+    consumer_sentiment: { title: '🇰🇷 소비자심리지수 (CSI)', description: '소비자들의 경제 상황 인식을 나타내는 지표입니다. 100을 기준으로 이보다 높으면 경기를 낙관적으로, 낮으면 비관적으로 보는 소비자가 많다는 의미이며, 내수 경기의 선행지표로 활용됩니다.', criteria: [ '😊 <b>소비 심리 낙관 (100 이상)</b>: 내수 회복 기대', '😐 <b>소비 심리 중립 (90 ~ 100)</b>: 관망세', '😟 <b>소비 심리 비관 (90 미만)</b>: 내수 침체 우려' ] },
+    corp_bond_spread: { title: '🇰🇷 회사채 스프레드', description: '신용도가 낮은 회사채(AA-)와 안전자산인 국고채(3년) 간의 금리 차이입니다. 이 스프레드가 확대되면 기업들의 자금 조달 환경이 악화되고 신용 위험이 높아졌음을 의미하여 증시에 부정적입니다.', criteria: [ '✅ <b>신용 위험 완화 (0.8%p 이하)</b>: 시장 안정', '⚠️ <b>신용 위험 보통 (0.8%p ~ 1.2%p)</b>: 주의 필요', '🚨 <b>신용 위험 증가 (1.2%p 초과)</b>: 기업 부실 위험' ] }
 };
 
 // ==================================================================
@@ -83,7 +71,7 @@ async function main() {
     try {
         const [fredData, ecosData] = await Promise.all([fetchFredIndicators(), fetchEcosIndicators()]);
         
-        const allIndicators = [...fredData, ...ecosData].filter(i => i);
+        const allIndicators = [...fredData, ...ecosData].filter(i => i && typeof i.value === 'number' && !isNaN(i.value));
         const analyzedIndicators = analyzeIndicators(allIndicators);
         
         const marketOutlook = getMarketOutlook(analyzedIndicators);
@@ -241,12 +229,13 @@ function renderStockDetails(data) {
 
     document.getElementById('stock-price').innerText = `${currentPrice.toLocaleString()}원`;
     const changeEl = document.getElementById('stock-change');
-    changeEl.innerText = `${change > 0 ? '▲' : '▼'} ${Math.abs(change).toLocaleString()}원 (${changeRate}%)`;
-    changeEl.style.color = change > 0 ? '#dc3545' : '#0056b3';
+    changeEl.innerText = `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toLocaleString()}원 (${change >= 0 ? '+' : ''}${changeRate}%)`;
+    changeEl.style.color = change >= 0 ? '#dc3545' : '#0056b3';
 
-    document.getElementById('stock-market-cap').innerText = `${(parseInt(priceInfo.hts_avls) / 100000000).toFixed(1)}조 원`;
+    document.getElementById('stock-market-cap').innerText = `${(parseInt(priceInfo.hts_avls) / 1000000000000).toFixed(1)}조 원`;
     document.getElementById('stock-per-pbr').innerText = `${priceInfo.per || 'N/A'} / ${priceInfo.pbr || 'N/A'}`;
-    document.getElementById('stock-dividend-yield').innerText = `${(parseInt(priceInfo.dps.replace(/,/g, '')) / currentPrice * 100).toFixed(2)}%`;
+    const dividendYield = (parseInt(priceInfo.dps.replace(/,/g, '')) / currentPrice * 100);
+    document.getElementById('stock-dividend-yield').innerText = isNaN(dividendYield) ? 'N/A' : `${dividendYield.toFixed(2)}%`;
 
     if(dailyChart) renderStockPriceChart(dailyChart);
     if(financialInfo) renderStockFinanceChart(financialInfo);
@@ -255,20 +244,41 @@ function renderStockDetails(data) {
 function renderStockPriceChart(chartData) {
     const ctx = document.getElementById('stock-price-chart').getContext('2d');
     if (stockPriceChart) stockPriceChart.destroy();
-    stockPriceChart = new Chart(ctx, { /* ... 차트 설정 ... */ });
+    
+    const labels = chartData.map(d => `${d.stck_bsop_date.substring(4,6)}/${d.stck_bsop_date.substring(6,8)}`);
+    const prices = chartData.map(d => parseInt(d.stck_clpr));
+
+    stockPriceChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ label: '종가', data: prices, borderColor: '#0056b3', borderWidth: 2, pointRadius: 1 }] },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
 }
 
 function renderStockFinanceChart(financialData) {
     const ctx = document.getElementById('stock-finance-chart').getContext('2d');
     if (stockFinanceChart) stockFinanceChart.destroy();
-    stockFinanceChart = new Chart(ctx, { /* ... 차트 설정 ... */ });
+
+    const labels = financialData.annual.map(d => d.year);
+    const revenues = financialData.annual.map(d => parseFloat(d.revenue.replace('조', '')));
+    const profits = financialData.annual.map(d => parseFloat(d.profit.replace('조', '')));
+    
+    stockFinanceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label: '매출액 (조원)', data: revenues, backgroundColor: '#a0c4ff' },
+                { label: '영업이익 (조원)', data: profits, backgroundColor: '#0056b3' }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
 }
 
 // ==================================================================
 // 데이터 Fetch 함수들
 // ==================================================================
-
-// FRED API 호출 헬퍼
 async function fetchFredData(seriesId, limit = 1) {
     const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=desc&limit=${limit}`;
     try {
@@ -282,42 +292,29 @@ async function fetchFredData(seriesId, limit = 1) {
     }
 }
 
-// FRED에서 미국/글로벌 지표 가져오기
 async function fetchFredIndicators() {
     const fredIndicators = Object.entries(indicatorDetails).filter(([, details]) => details.seriesId);
-    
     const promises = fredIndicators.map(async ([key, details]) => {
         if (key === 'yield_spread') {
             const [obs10Y, obs2Y] = await Promise.all([fetchFredData(details.seriesId[0]), fetchFredData(details.seriesId[1])]);
-            if (!obs10Y || !obs2Y) return null;
+            if (!obs10Y || !obs2Y || obs10Y[0].value === '.' || obs2Y[0].value === '.') return null;
             const spread = parseFloat(obs10Y[0].value) - parseFloat(obs2Y[0].value);
             return { id: key, name: details.title, value: parseFloat(spread.toFixed(2)), unit: "%p", date: obs10Y[0].date.substring(5) };
         }
 
         const obs = await fetchFredData(details.seriesId);
-        if (!obs) return null;
+        if (!obs || !obs[0] || obs[0].value === '.') return null;
 
         let value = parseFloat(obs[0].value);
         let unit = '';
-
-        if (key === 'nfp') { value = parseFloat((value / 1000).toFixed(1)); unit = '만명'; }
-        else if (key === 'wti_price') { unit = '$/bbl'; }
-        else if (key === 'auto_sales') { unit = 'M'; }
-        else if (key === 'retail_sales') { unit = '$'; }
-        else if (key === 'us_cpi') {
-            const obs_1y = await fetchFredData(details.seriesId, 13);
-            if (obs_1y && obs_1y.length > 12) {
-                value = parseFloat(((parseFloat(obs_1y[0].value) - parseFloat(obs_1y[12].value)) / parseFloat(obs_1y[12].value) * 100).toFixed(1));
-            }
-            unit = '%';
-        }
+        
+        if (key === 'wti_price') { unit = '$/bbl'; }
         
         return { id: key, name: details.title, value, unit, date: obs[0].date.substring(5) };
     });
     return Promise.all(promises);
 }
 
-// ECOS에서 한국 지표 가져오기
 async function fetchEcosIndicators() {
     const ecosApiUrl = `https://ecos.bok.or.kr/api/KeyStatisticList/${API_KEYS.ECOS}/json/kr/1/100`;
     try {
@@ -330,13 +327,8 @@ async function fetchEcosIndicators() {
         const mapping = {
             gdp_growth: { keywords: ['분기', 'GDP', '성장률'] },
             export_growth: { keywords: ['수출', '총액', '증감률'] },
-            unemployment: { keywords: ['실업률'] },
-            industrial_production: { keywords: ['산업생산지수'] },
-            consumer_sentiment: { keywords: ['소비자동향조사', '소비자심리지수'] },
-            base_rate: { keywords: ['기준금리'] },
             cpi: { keywords: ['소비자물가지수', '총지수', '증감률'] },
-            kospi: { keywords: ['KOSPI'] },
-            producer_price_index: { keywords: ['생산자물가지수', '총지수', '등락률'] },
+            consumer_sentiment: { keywords: ['소비자동향조사', '소비자심리지수'] },
             corp_bond_spread: { keywords: ['회사채', '수익률', '스프레드'] },
         };
         
@@ -344,8 +336,7 @@ async function fetchEcosIndicators() {
         allStats.forEach(stat => {
             for (const [key, value] of Object.entries(mapping)) {
                 if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
-                    // FIX: Check if stat.TIME exists before calling substring on it
-                    if (stat.TIME) {
+                    if (stat.TIME && stat.DATA_VALUE) {
                         found[key] = {
                             id: key, name: indicatorDetails[key].title, value: parseFloat(stat.DATA_VALUE),
                             unit: stat.UNIT_NAME, date: stat.TIME.substring(4, 6) + '-' + stat.TIME.substring(6, 8)
@@ -357,69 +348,124 @@ async function fetchEcosIndicators() {
         return Object.values(found);
     } catch (error) {
         console.error("한국은행 데이터 로딩 실패:", error);
-        return []; // Return empty array on failure
+        return [];
     }
 }
 
-
-async function fetchHistoricalData(indicatorId) {
-    // This function should be implemented to fetch historical data for charts
-}
 
 // ==================================================================
 // 데이터 분석 및 가공 함수
 // ==================================================================
 function analyzeIndicators(indicators) {
-    // This is a placeholder. You'd implement your analysis logic here.
-    return indicators.map(ind => ({
-        ...ind,
-        status: 'neutral',
-        icon: '😐',
-        text: '분석중',
-        weight: 1 
-    }));
+    return indicators.map(indicator => {
+        const { id, value } = indicator;
+        let status = 'neutral', icon = '😐', text = '보통', weight = 2;
+
+        switch (id) {
+            case 'yield_spread':
+                if (value >= 0) { status = 'positive'; icon = '✅'; text = '정상 범위'; } 
+                else if (value > -0.1) { status = 'neutral'; icon = '⚠️'; text = '역전폭 축소'; } 
+                else { status = 'negative'; icon = '🚨'; text = '침체 우려'; }
+                weight = 5;
+                break;
+            case 'exchange_rate':
+                if (value <= 1300) { status = 'positive'; icon = '💵'; text = '환율 안정'; }
+                else if (value <= 1350) { status = 'neutral'; icon = ' fluctuating'; text = '변동성 확대'; }
+                else { status = 'negative'; icon = '💸'; text = '원화 약세'; }
+                weight = 4;
+                break;
+            case 'vix':
+                if (value <= 20) { status = 'positive'; icon = '😌'; text = '시장 안정'; }
+                else if (value <= 30) { status = 'neutral'; icon = '😟'; text = '불안 심리'; }
+                else { status = 'negative'; icon = '😱'; text = '공포 심리'; }
+                weight = 4;
+                break;
+            case 'dollar_index':
+                if (value <= 100) { status = 'positive'; icon = '💲'; text = '달러 약세'; }
+                else { status = 'negative'; icon = '💰'; text = '달러 강세'; }
+                weight = 3;
+                break;
+            case 'wti_price':
+                if (value <= 80) { status = 'positive'; icon = '⛽'; text = '유가 안정'; }
+                else if (value <= 100) { status = 'neutral'; icon = '🔺'; text = '상승 압력'; }
+                else { status = 'negative'; icon = '🔥'; text = '고유가 부담'; }
+                weight = 3;
+                break;
+            case 'gdp_growth':
+                if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복세'; }
+                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; }
+                else { status = 'negative'; icon = '👎'; text = '성장 둔화 우려'; }
+                weight = 5;
+                break;
+            case 'export_growth':
+                if (value >= 2.0) { status = 'positive'; icon = '📈'; text = '플러스 전환'; }
+                else if (value >= 0) { status = 'neutral'; icon = '📊'; text = '소폭 개선'; }
+                else { status = 'negative'; icon = '📉'; text = '수출 부진'; }
+                weight = 5;
+                break;
+            case 'cpi':
+                if (value <= 3.0) { status = 'positive'; icon = '😌'; text = '물가 안정세'; }
+                else if (value <= 4.0) { status = 'neutral'; icon = '😐'; text = '인플레이션 둔화'; }
+                else { status = 'negative'; icon = '🔥'; text = '물가 압력 지속'; }
+                weight = 4;
+                break;
+            case 'consumer_sentiment':
+                if (value >= 100) { status = 'positive'; icon = '😊'; text = '소비 심리 낙관'; }
+                else if (value >= 90) { status = 'neutral'; icon = '😐'; text = '소비 심리 중립'; }
+                else { status = 'negative'; icon = '😟'; text = '소비 심리 비관'; }
+                weight = 3;
+                break;
+            case 'corp_bond_spread':
+                if (value <= 0.8) { status = 'positive'; icon = '✅'; text = '신용 위험 완화'; }
+                else if (value <= 1.2) { status = 'neutral'; icon = '⚠️'; text = '신용 위험 보통'; }
+                else { status = 'negative'; icon = '🚨'; text = '신용 위험 증가'; }
+                weight = 4;
+                break;
+        }
+        return { ...indicator, status, icon, text, weight };
+    });
 }
 
 function getMarketOutlook(analyzedIndicators) {
-    // This is a placeholder. You'd implement your outlook logic here.
-     if (!analyzedIndicators || analyzedIndicators.length === 0) {
-        return {
-            status: 'neutral',
-            signal: '🤔',
-            title: '데이터 부족',
-            analysis: '지표 데이터가 부족하여 시장 전망을 분석할 수 없습니다.'
-        };
+    if (analyzedIndicators.length === 0) {
+        return { status: 'neutral', signal: '🤔', title: '데이터 부족', analysis: '주요 지표 데이터가 부족하여 시장 전망을 분석할 수 없습니다.' };
     }
-    return {
-        status: 'neutral',
-        signal: '📊',
-        title: '혼조세 예상',
-        analysis: '긍정적 지표와 부정적 지표가 혼재되어 있어, 당분간 시장은 횡보할 가능성이 있습니다.'
-    };
+
+    const totalWeight = analyzedIndicators.reduce((sum, ind) => sum + (ind.weight || 0), 0);
+    let score = 0;
+
+    analyzedIndicators.forEach(ind => {
+        if (ind.status === 'positive') score += ind.weight;
+        else if (ind.status === 'negative') score -= ind.weight;
+    });
+    
+    const outlookScore = totalWeight > 0 ? (score / totalWeight) * 100 : 0;
+
+    if (outlookScore > 30) {
+        return { status: 'positive', signal: '📈', title: '긍정적 전망', analysis: '주요 경제 지표들이 견조한 모습을 보이며, 경기 회복과 증시 상승에 대한 기대감이 높습니다. 위험자산 선호 심리가 강화될 수 있습니다.' };
+    } else if (outlookScore < -30) {
+        return { status: 'negative', signal: '📉', title: '부정적 전망', analysis: '여러 경제 지표에서 경고 신호가 나타나고 있습니다. 경기 둔화 및 침체 우려가 커지고 있어, 안전자산 선호 심리가 강해질 수 있습니다.' };
+    } else {
+        return { status: 'neutral', signal: '📊', title: '혼조세 전망', analysis: '긍정적 지표와 부정적 지표가 혼재되어 명확한 방향성을 보이지 않고 있습니다. 당분간 시장은 변동성을 보이며 횡보할 가능성이 있습니다.' };
+    }
 }
 
 // ==================================================================
 // 동적 렌더링 함수들
 // ==================================================================
-
 function renderInitialPlaceholders() {
-    const allIndicatorKeys = Object.keys(indicatorDetails);
     const grid = document.getElementById('indicator-grid');
-    grid.innerHTML = allIndicatorKeys.map(key => 
-        `<div class="indicator-card"><p class="loading-text">${indicatorDetails[key].title}<br>Loading...</p></div>`
+    grid.innerHTML = Object.values(indicatorDetails).map(details => 
+        `<div class="indicator-card"><p class="loading-text">${details.title}<br>Loading...</p></div>`
     ).join('');
-    
-    document.getElementById('sector-outlook-grid').innerHTML = '<div class="sector-card"><p class="loading-text">섹터 정보 분석 중...</p></div>';
-    document.getElementById('investment-suggestions-grid').innerHTML = '<div class="sector-card"><p class="loading-text">투자 정보 분석 중...</p></div>';
 }
 
 function renderDashboard(analyzedIndicators, marketOutlook) {
     document.getElementById('update-time').innerText = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
     
     const outlookSection = document.getElementById('outlook-section');
-    // FIX: Check if marketOutlook and its status property exist before using them
     if (marketOutlook && marketOutlook.status) {
-        outlookSection.className = `${marketOutlook.status}-bg`;
+        outlookSection.className = `outlook-section ${marketOutlook.status}-bg`;
         outlookSection.innerHTML = `
             <div class="outlook-signal">${marketOutlook.signal}</div>
             <h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>
@@ -430,37 +476,31 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
     }
 
     renderSectorOutlook(analyzedIndicators);
-    renderInvestmentSuggestions(analyzedIndicators);
+    renderInvestmentSuggestions(marketOutlook);
 
     const indicatorGrid = document.getElementById('indicator-grid');
     indicatorGrid.innerHTML = '';
     
+    if (analyzedIndicators.length === 0) {
+        indicatorGrid.innerHTML = '<p class="loading-text">표시할 지표 데이터가 없습니다.</p>';
+        return;
+    }
+
     const totalWeight = analyzedIndicators.reduce((sum, ind) => sum + (ind.weight > 0 ? ind.weight : 0), 0);
     analyzedIndicators.sort((a, b) => (b.weight || 0) - (a.weight || 0));
     
     analyzedIndicators.forEach(indicator => {
-        if (!indicator || !indicator.id) return;
-
         const impactRatio = totalWeight > 0 && indicator.weight > 0 ? ((indicator.weight / totalWeight) * 100).toFixed(1) : 0;
         
         const card = document.createElement('div');
         card.className = 'indicator-card';
         if (indicator.status === 'negative') card.classList.add('card-negative-bg');
 
-        const valueText = (typeof indicator.value === 'number') ? `${indicator.value.toLocaleString()}${indicator.unit || ''}` : `<span class="loading-text">N/A</span>`;
+        const valueText = `${indicator.value.toLocaleString()}${indicator.unit || ''}`;
 
-        const schedule = releaseSchedules[indicator.id];
-        let nextDateStr = '';
-        if (schedule) {
-            const today = new Date();
-            const todayStr = `${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-            const nextDate = schedule.dates.find(d => d > todayStr);
-            if(nextDate) nextDateStr = ` (다음 ${nextDate})`;
-        }
-            
         card.innerHTML = `
             <div>
-                <div class="indicator-card-header"><h4>${indicator.name}<br><span class="date">(${indicator.date})${nextDateStr}</span></h4></div>
+                <div class="indicator-card-header"><h4>${indicator.name}<br><span class="date">(${indicator.date})</span></h4></div>
                 <p class="indicator-value">${valueText}</p>
                 <div class="indicator-status"><span class="status-icon">${indicator.icon}</span><span class="status-text ${indicator.status}-icon">${indicator.text}</span></div>
             </div>
@@ -473,12 +513,89 @@ function renderDashboard(analyzedIndicators, marketOutlook) {
     });
 }
 
+
 function renderSectorOutlook(analyzedIndicators) {
-    // Placeholder for sector outlook rendering
+    const grid = document.getElementById('sector-outlook-grid');
+    const getIndicator = id => analyzedIndicators.find(i => i.id === id);
+
+    const sectors = {
+        '반도체': { icon: '⚡️', indicators: [getIndicator('export_growth'), getIndicator('dollar_index')] },
+        '자동차': { icon: '🚗', indicators: [getIndicator('exchange_rate'), getIndicator('wti_price')] },
+        '금융': { icon: '🏦', indicators: [getIndicator('yield_spread'), getIndicator('corp_bond_spread')] },
+        '내수/소비': { icon: '🛒', indicators: [getIndicator('consumer_sentiment'), getIndicator('cpi')] }
+    };
+    
+    let html = '';
+    for (const [name, data] of Object.entries(sectors)) {
+        const validIndicators = data.indicators.filter(i => i);
+        if (validIndicators.length === 0) continue;
+        
+        let score = 0;
+        validIndicators.forEach(ind => {
+            if(ind.status === 'positive') score++;
+            else if(ind.status === 'negative') score--;
+        });
+        
+        let outlook, reason;
+        if (score > 0) {
+            outlook = '<span class="positive-text">긍정적</span>';
+            reason = validIndicators.map(i => `'${i.name.split(' ')[1]}'(${i.text})`).join(', ') + ' 등이 긍정적 신호를 보냅니다.';
+        } else if (score < 0) {
+            outlook = '<span class="negative-text">부정적</span>';
+            reason = validIndicators.map(i => `'${i.name.split(' ')[1]}'(${i.text})`).join(', ') + ' 등이 부담으로 작용합니다.';
+        } else {
+            outlook = '<span>중립적</span>';
+            reason = '관련 지표들이 혼조세를 보이며 명확한 방향성을 나타내지 않고 있습니다.';
+        }
+
+        html += `
+            <div class="sector-card">
+                <h3 class="sector-title"><span class="sector-icon">${data.icon}</span>${name}</h3>
+                <p class="sector-outlook">${outlook}</p>
+                <p class="sector-reason">${reason}</p>
+            </div>`;
+    }
+    grid.innerHTML = html || '<p class="loading-text">섹터 전망을 분석할 데이터가 부족합니다.</p>';
 }
 
-function renderInvestmentSuggestions(analyzedIndicators) {
-    // Placeholder for investment suggestion rendering
+function renderInvestmentSuggestions(marketOutlook) {
+    const grid = document.getElementById('investment-suggestions-grid');
+    let suggestions = {};
+
+    switch (marketOutlook.status) {
+        case 'positive':
+            suggestions = {
+                '주식': { icon: '📈', outlook: '비중 확대', reason: '경기 회복 기대감으로 위험자산 선호 심리가 강화될 수 있습니다. 성장주 중심의 포트폴리오를 고려할 수 있습니다.' },
+                '채권': { icon: '⚖️', outlook: '비중 유지', reason: '금리 인상 가능성이 있지만, 경기 회복에 따른 안정적 이자 수익을 기대할 수 있습니다.' },
+                '달러': { icon: '💵', outlook: '비중 축소', reason: '위험자산 선호 심리가 강해지면 안전자산인 달러의 매력도가 감소할 수 있습니다.' },
+                '원자재': { icon: '🛢️', outlook: '비중 확대', reason: '경기 회복은 원자재 수요 증가로 이어져 가격 상승을 견인할 수 있습니다.' }
+            };
+            break;
+        case 'negative':
+            suggestions = {
+                '주식': { icon: '📉', outlook: '비중 축소', reason: '경기 둔화 우려로 기업 실적이 악화될 수 있습니다. 가치주, 배당주 중심의 보수적인 접근이 필요합니다.' },
+                '채권': { icon: '🛡️', outlook: '비중 확대', reason: '대표적인 안전자산으로, 경기 불확실성 시기에 자금이 몰릴 수 있습니다.' },
+                '달러': { icon: '💰', outlook: '비중 확대', reason: '글로벌 불안 심리가 커지면 안전자산인 달러 수요가 증가할 수 있습니다.' },
+                '금': { icon: '✨', outlook: '비중 확대', reason: '인플레이션 헤지 및 안전자산으로서의 가치가 부각될 수 있습니다.' }
+            };
+            break;
+        default: // neutral
+            suggestions = {
+                '주식': { icon: '📊', outlook: '중립 (섹터별 차별화)', reason: '시장 방향성이 불확실하므로, 실적이 뒷받침되는 특정 섹터나 종목 위주로 선별적인 투자가 필요합니다.' },
+                '채권': { icon: '⚖️', outlook: '비중 유지', reason: '금리 변동성을 주시하며 만기가 짧은 단기채 위주의 안정적인 포트폴리오 구성이 유효합니다.' },
+                '달러': { icon: '🔄', outlook: '중립 (분할 매수/매도)', reason: '변동성을 활용한 트레이딩 관점의 접근 또는 포트폴리오 헤지 수단으로 활용할 수 있습니다.' },
+                '대체투자': { icon: '🏘️', outlook: '관심 필요', reason: '전통 자산의 변동성이 클 때, 분산 투자 효과를 위해 부동산, 인프라 등 대체 자산에 대한 관심이 필요합니다.' }
+            };
+            break;
+    }
+
+    grid.innerHTML = Object.entries(suggestions).map(([name, data]) => `
+        <div class="sector-card">
+            <h3 class="sector-title"><span class="sector-icon">${data.icon}</span>${name}</h3>
+            <p class="sector-outlook">${data.outlook}</p>
+            <p class="sector-reason">${data.reason}</p>
+        </div>`
+    ).join('');
 }
 
 function renderEconomicCalendar() {
@@ -489,8 +606,6 @@ function renderEconomicCalendar() {
     ];
 
     const calendarGrid = document.getElementById('economic-calendar-grid');
-    calendarGrid.innerHTML = ''; 
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -531,14 +646,19 @@ function renderReleaseSchedule() {
 // ==================================================================
 // 모달 및 차트 관련 함수
 // ==================================================================
-function getNormalRange(indicatorId) {
-    // Placeholder for getting normal range for charts
-}
-
-const rangeAnnotationPlugin = {
-    // Placeholder for chart annotation plugin
-};
-
 async function showModal(indicatorId) {
-    // Placeholder for showing modal with detailed info and chart
+    const details = indicatorDetails[indicatorId];
+    if (!details) return;
+
+    const modal = document.getElementById('modal');
+    document.getElementById('modal-title').innerText = details.title;
+    document.getElementById('modal-description').innerText = details.description;
+    document.getElementById('modal-criteria').innerHTML = details.criteria.map(c => `<li>${c}</li>`).join('');
+
+    modal.style.display = 'block';
+
+    // 차트 렌더링 (여기에 과거 데이터 fetch 로직 추가 필요)
+    const ctx = document.getElementById('indicator-chart').getContext('2d');
+    if (indicatorChart) indicatorChart.destroy();
+    // 예시: indicatorChart = new Chart(ctx, { ... });
 }
