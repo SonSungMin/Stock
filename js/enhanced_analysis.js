@@ -351,10 +351,13 @@ function buildDetailedAnalysis(indicators, macroResults, signalStrength, economi
         ).join(', ');
         
         let bgColor = signal.score > 30 ? '#d4edda' : (signal.score < -30 ? '#f8d7da' : '#fff3cd');
+        const positiveCount = signal.positive;
+        const negativeCount = signal.negative;
+        const neutralCount = signal.neutral;
         analysis += `
             <div style="background-color: ${bgColor}; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
                 <strong>${category}:</strong> ${signal.signal} 
-                (긍정 ${signal.positive}/${부정 ${signal.negative}/${중립 ${signal.neutral}) - ${indicator_text}
+                (긍정 ${positiveCount}/부정 ${negativeCount}/중립 ${neutralCount}) - ${indicator_text}
             </div>
         `;
     }
