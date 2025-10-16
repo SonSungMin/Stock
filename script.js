@@ -869,7 +869,7 @@ async function showModal(indicatorId) {
 
 
 // ==================================================================
-// ===== 신규 추가 및 수정: 마샬케이 차트 렌더링 함수 (오류 수정 버전) =====
+// ===== 신규 추가 및 수정: 마샬케이 차트 렌더링 함수 (최근 20년 데이터) =====
 // ==================================================================
 async function renderMarshallKChart() {
     const canvas = document.getElementById('marshall-k-chart');
@@ -884,10 +884,11 @@ async function renderMarshallKChart() {
 
     try {
         // 1. 데이터 병렬로 가져오기 (과거부터 현재 순으로 정렬)
+        // 20년치 데이터 = 80분기 / 240개월
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-            fetchFredData('GDP', 200, 'asc'),       // 분기별, 1990년부터 약 40년치 이상
-            fetchFredData('M2SL', 500, 'asc'),      // 월별
-            fetchFredData('DGS10', 10000, 'asc')    // 일별
+            fetchFredData('GDP', 100, 'asc'),       // 분기별 데이터 (25년치)
+            fetchFredData('M2SL', 300, 'asc'),      // 월별 데이터 (25년치)
+            fetchFredData('DGS10', 8000, 'asc')     // 일별 데이터
         ]);
 
         if (!gdpSeries || !m2Series || !rateSeries) {
@@ -918,12 +919,15 @@ async function renderMarshallKChart() {
 
         // 3. 분기별 GDP 데이터와 결합하여 최종 차트 데이터 생성
         const chartData = [];
+        const twentyYearsAgo = new Date();
+        twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
+
         for (const gdpPoint of gdpSeries) {
             if (gdpPoint.value === '.') continue;
             
             const gdpDate = new Date(gdpPoint.date);
-            // 1990년 1월 1일 이후 데이터만 사용
-            if (gdpDate < new Date('1990-01-01')) continue;
+            // ===== 최근 20년 데이터 필터링 =====
+            if (gdpDate < twentyYearsAgo) continue;
 
             const year = gdpDate.getUTCFullYear();
             const quarter = Math.floor(gdpDate.getUTCMonth() / 3) + 1;
@@ -932,17 +936,15 @@ async function renderMarshallKChart() {
             const averages = quarterlyAverages.get(key);
             if (!averages || averages.m2.length === 0 || averages.rate.length === 0) continue;
             
-            // 각 분기별 평균값 계산
             const avgM2 = averages.m2.reduce((a, b) => a + b, 0) / averages.m2.length;
             const avgRate = averages.rate.reduce((a, b) => a + b, 0) / averages.rate.length;
             const gdpValue = parseFloat(gdpPoint.value);
 
-            // 마샬케이 계산: M2 (십억 달러) / GDP (십억 달러)
             const marshallK = gdpValue > 0 ? (avgM2 / gdpValue) : 0;
             
             chartData.push({
-                label: `${year}`, // X축 레이블은 연도만 표시
-                fullLabel: `${year} Q${quarter}`, // 툴팁용 전체 레이블
+                label: `${year}`,
+                fullLabel: `${year} Q${quarter}`,
                 marshallK: marshallK,
                 interestRate: avgRate
             });
@@ -992,7 +994,9 @@ async function renderMarshallKChart() {
                         ticks: {
                             callback: function(value, index) {
                                 // 4분기(1년)마다 연도 레이블 표시
-                                return (index % 4 === 0) ? chartData[index].label : '';
+                                const currentYear = chartData[index].label;
+                                const prevYear = index > 0 ? chartData[index - 1].label : null;
+                                return currentYear !== prevYear ? currentYear : '';
                             },
                             autoSkip: false,
                             maxRotation: 0,
@@ -1016,7 +1020,6 @@ async function renderMarshallKChart() {
                     tooltip: {
                         callbacks: {
                             title: function(tooltipItems) {
-                                // 툴팁 제목을 'YYYY QX' 형식으로
                                 return tooltipItems[0].label;
                             },
                             label: function(context) {
