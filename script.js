@@ -95,7 +95,13 @@ async function main() {
     renderInitialPlaceholders();
     renderEconomicCalendar();
     renderReleaseSchedule();
-    renderMarshallKChart(); // 페이지 로드 시 마샬케이 차트 렌더링 함수 호출
+    
+    // 마샬케이와 새로운 GDP/소비 분석을 병렬로 호출
+    await Promise.all([
+        renderMarshallKChart(), // 페이지 로드 시 마샬케이 차트 렌더링 함수 호출
+        analyzeGdpConsumption() // 소비/GDP 사이클 분석 함수 호출 추가
+    ]);
+
 
     try {
         const [fredData, ecosData] = await Promise.all([
@@ -1010,6 +1016,99 @@ function analyzeMarshallKTrend(chartData) {
     `;
 }
 
+// ==================================================================
+// 소비와 GDP 사이클 분석 함수
+// ==================================================================
+async function analyzeGdpConsumption() {
+    const analysisDiv = document.getElementById('gdp-consumption-analysis');
+    analysisDiv.innerHTML = '<p class="loading-text">데이터 로딩 및 분석 중...</p>';
+    
+    // FRED Series ID for US Real GDP Growth (GDPC1) and Real PCE Growth (PCEC)
+    try {
+        // GDPC1: Real Gross Domestic Product, PCEC: Real Personal Consumption Expenditures
+        const [gdpObs, pceObs] = await Promise.all([
+            fetchFredData('GDPC1', 5, 'desc'), // 최근 5분기
+            fetchFredData('PCEC', 5, 'desc')   // 최근 5분기
+        ]);
+
+        if (!gdpObs || gdpObs.length < 5 || !pceObs || pceObs.length < 5) {
+            throw new Error("GDP 또는 PCE 데이터를 충분히 가져오지 못했습니다. (최소 5분기 필요)");
+        }
+        
+        // 4분기(1년) 대비 성장률 계산 (YoY Growth Rate)
+        // GDP: (현재 분기 / 4분기 전 분기 - 1) * 100
+        const currentGdp = parseFloat(gdpObs[0].value);
+        const prevYearGdp = parseFloat(gdpObs[4].value);
+        const gdpGrowth = ((currentGdp / prevYearGdp) - 1) * 100;
+        
+        // PCE: (현재 분기 / 4분기 전 분기 - 1) * 100
+        const currentPce = parseFloat(pceObs[0].value);
+        const prevYearPce = parseFloat(pceObs[4].value);
+        const pceGrowth = ((currentPce / prevYearPce) - 1) * 100;
+        
+        const latestDate = gdpObs[0].date;
+
+        let outlook = '😐 중립적 국면';
+        let outlookClass = 'neutral';
+        let analysis = `
+            <p><strong>최신 데이터 (${latestDate.substring(5, 7)}월 ${latestDate.substring(8)}) - 전년 동기 대비:</strong></p>
+            <ul>
+                <li>실질 GDP 성장률: <strong>${gdpGrowth.toFixed(2)}%</strong> (녹색 선)</li>
+                <li>실질 PCE(소비) 성장률: <strong>${pceGrowth.toFixed(2)}%</strong> (빨간색 선)</li>
+            </ul>
+        `;
+
+        if (gdpGrowth > 1.5 && pceGrowth > 1.5) {
+            outlook = '✅ 확장 국면';
+            outlookClass = 'positive';
+            analysis += `
+                <p><strong>분석:</strong></p>
+                <p>GDP와 소비 모두 견조하게 상승하고 있습니다. 이는 <strong>경기 확장 국면</strong>에 있음을 시사하며, 기업 실적 개선과 고용 증가가 지속될 가능성이 높습니다.</p>
+                <p><strong>투자 시사점:</strong> 경기 민감주와 성장주에 대한 긍정적인 전망을 강화합니다.</p>
+            `;
+        } else if (gdpGrowth < 0 && pceGrowth < 0) {
+            outlook = '🚨 경기 침체 국면';
+            outlookClass = 'negative';
+            analysis += `
+                <p><strong>분석:</strong></p>
+                <p>GDP와 소비 모두 마이너스 성장을 기록하며 <strong>경기 침체</strong>에 진입했음을 시사합니다. 특히 소비가 크게 위축된 것은 향후 경기 반등에 큰 부담입니다.</p>
+                <p><strong>투자 시사점:</strong> 방어주 비중을 높이고, 현금 및 안전자산 비중을 확대하는 보수적인 전략이 필요합니다.</p>
+            `;
+        } else if (gdpGrowth > pceGrowth && gdpGrowth > 0.5) {
+            outlook = '⚠️ 소비 둔화 우려';
+            outlookClass = 'warning';
+            analysis += `
+                <p><strong>분석:</strong></p>
+                <p>GDP는 성장세를 유지하고 있으나, 소비 성장률이 GDP보다 낮아지며 <strong>소비 둔화 우려</strong>가 커지고 있습니다. 이는 향후 GDP 성장률 하락의 선행 지표가 될 수 있습니다.</p>
+                <p><strong>투자 시사점:</strong> 현재는 괜찮지만, 경기 둔화에 대비하여 포트폴리오의 리스크를 줄일 필요가 있습니다.</p>
+            `;
+        } else if (pceGrowth > gdpGrowth && pceGrowth > 0.5) {
+            outlook = '📈 소비 주도 회복 기대';
+            outlookClass = 'positive';
+            analysis += `
+                <p><strong>분석:</strong></p>
+                <p>소비 성장률이 GDP 성장률을 상회하며 <strong>소비 주도의 경기 회복 기대감</strong>이 높습니다. 이는 기업의 재고 소진과 생산 증가로 이어져 GDP를 견인할 가능성이 있습니다.</p>
+                <p><strong>투자 시사점:</strong> 내수 관련 소비재 및 서비스 섹터에 대한 관심을 높일 수 있습니다.</p>
+            `;
+        } else {
+             analysis += `
+                <p><strong>분석:</strong></p>
+                <p>GDP와 소비 성장률이 0에 가깝거나 혼조세를 보이며, 시장이 방향성을 탐색하는 <strong>중립적 국면</strong>에 있습니다. 명확한 추세가 나타날 때까지 신중한 관찰이 필요합니다.</p>
+                <p><strong>투자 시사점:</strong> 개별 종목의 펀더멘털과 모멘텀에 집중하는 선별적 투자 전략이 유효합니다.</p>
+            `;
+        }
+        
+        analysisDiv.innerHTML = `
+            <div class="market-outlook-badge ${outlookClass}">${outlook}</div>
+            <div class="analysis-text">${analysis}</div>
+        `;
+
+    } catch (error) {
+        console.error("GDP/소비 분석 실패:", error);
+        analysisDiv.innerHTML = '<p style="color:#dc3545;">GDP/소비 데이터 분석에 실패했습니다.</p>';
+    }
+}
+
 
 // ==================================================================
 // ===== 마샬케이 차트 렌더링 함수 (로직 수정) =====
@@ -1025,11 +1124,12 @@ async function renderMarshallKChart() {
     ctx.fillText("차트 데이터 로딩 중...", canvas.width / 2, canvas.height / 2);
 
     try {
-        // 1. 데이터 병렬로 가져오기 (충분한 데이터 확보)
+        // 1. 데이터 병렬로 가져오기 (충분한 데이터 확보를 위해 limit 대폭 증가)
+        // FRED API가 지원하는 최대치로 설정.
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-            fetchFredData('GDP', 120, 'desc'),       // 분기별 (30년치) - 최신순
-            fetchFredData('M2SL', 360, 'desc'),      // 월별 (30년치) - 최신순
-            fetchFredData('DGS10', 7500, 'desc')     // 일별 (30년치) - 최신순
+            fetchFredData('GDP', 2000, 'desc'),       // 분기별 데이터
+            fetchFredData('M2SL', 5000, 'desc'),      // 월별 데이터
+            fetchFredData('DGS10', 15000, 'desc')     // 일별 데이터
         ]);
 
         if (!gdpSeries || !m2Series || !rateSeries) {
@@ -1079,12 +1179,13 @@ async function renderMarshallKChart() {
 
         // 3. GDP 기준으로 데이터 매칭
         const chartData = [];
-        const twentyYearsAgo = new Date();
-        twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
+        // 20년 제한 제거
+        // const twentyYearsAgo = new Date();
+        // twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
 
         gdpMap.forEach((gdpValue, gdpDate) => {
             const date = new Date(gdpDate);
-            if (date < twentyYearsAgo) return;
+            // if (date < twentyYearsAgo) return; // 20년 제한 제거
 
             const year = date.getFullYear();
             const quarter = Math.floor(date.getMonth() / 3) + 1;
@@ -1117,47 +1218,6 @@ async function renderMarshallKChart() {
         });
 
         if (chartData.length === 0) {
-            console.group("===== 마샬케이 차트 데이터 매칭 실패 상세 디버그 =====");
-            console.log("GDP 샘플 데이터 (최근 5개):");
-            console.table(Array.from(gdpMap.entries()).slice(-5).map(([date, value]) => ({
-                날짜: date,
-                값: value
-            })));
-            
-            console.log("\nM2 샘플 데이터 (최근 5개):");
-            console.table(Array.from(m2Map.entries()).slice(-5).map(([date, value]) => ({
-                날짜: date,
-                값: value
-            })));
-            
-            console.log("\n금리 월별평균 샘플 데이터 (최근 5개):");
-            console.table(Array.from(rateMap.entries()).slice(-5).map(([date, value]) => ({
-                날짜: date,
-                값: value
-            })));
-            
-            console.log("\n매칭 시도 예시 (최근 GDP 기준):");
-            const recentGdpEntries = Array.from(gdpMap.entries()).slice(-3);
-            recentGdpEntries.forEach(([gdpDate, gdpValue]) => {
-                const date = new Date(gdpDate);
-                const year = date.getFullYear();
-                const quarter = Math.floor(date.getMonth() / 3) + 1;
-                const quarterMonths = [];
-                for (let m = (quarter - 1) * 3; m < quarter * 3; m++) {
-                    quarterMonths.push(`${year}-${String(m + 1).padStart(2, '0')}`);
-                }
-                
-                const m2Values = quarterMonths.map(m => m2Map.get(m)).filter(v => v !== undefined);
-                const rateValues = quarterMonths.map(m => rateMap.get(m)).filter(v => v !== undefined);
-                
-                console.log(`GDP 날짜: ${gdpDate}, 분기: ${year} Q${quarter}`);
-                console.log(`  찾아야 할 월: ${quarterMonths.join(', ')}`);
-                console.log(`  M2 찾은 개수: ${m2Values.length}, 금리 찾은 개수: ${rateValues.length}`);
-                console.log(`  M2 값: ${m2Values.join(', ') || '없음'}`);
-                console.log(`  금리 값: ${rateValues.map(v => v.toFixed(2)).join(', ') || '없음'}`);
-            });
-            
-            console.groupEnd();
             throw new Error("데이터 매칭 실패: GDP, M2, 금리를 결합할 수 없습니다.");
         }
 
@@ -1171,6 +1231,39 @@ async function renderMarshallKChart() {
         
         // 4. Chart.js로 그래프 생성
         if (marshallKChart) marshallKChart.destroy();
+        
+        // 주요 경제 위기 연도 및 라벨 설정 (미국 기준)
+        const crisisAnnotations = [
+            { year: '2000 Q1', label: 'IT 버블', color: 'rgba(255, 99, 132, 0.3)' },
+            { year: '2008 Q3', label: '글로벌 금융위기', color: 'rgba(255, 99, 132, 0.3)' },
+            { year: '2020 Q2', label: '코로나 팬데믹', color: 'rgba(255, 99, 132, 0.3)' },
+            { year: '1973 Q4', label: '오일 쇼크', color: 'rgba(255, 99, 132, 0.3)' },
+            { year: '1980 Q1', label: '더블 딥 침체', color: 'rgba(255, 99, 132, 0.3)' },
+            { year: '1990 Q3', label: '걸프전 침체', color: 'rgba(255, 99, 132, 0.3)' },
+        ];
+        
+        const lineAnnotations = crisisAnnotations.map(c => {
+            const index = chartData.findIndex(d => d.fullLabel.startsWith(c.year.substring(0, 4)) && d.fullLabel.endsWith(c.year.substring(5)));
+            if (index !== -1) {
+                 return {
+                    type: 'line',
+                    mode: 'vertical',
+                    scaleID: 'x',
+                    value: index,
+                    borderColor: c.color,
+                    borderWidth: 2,
+                    label: {
+                        content: c.label,
+                        enabled: true,
+                        position: 'top',
+                        backgroundColor: c.color.replace('0.3', '0.7'),
+                        font: { size: 10, weight: 'bold' }
+                    }
+                };
+            }
+            return null;
+        }).filter(a => a !== null);
+
 
         marshallKChart = new Chart(ctx, {
             type: 'line',
@@ -1208,8 +1301,11 @@ async function renderMarshallKChart() {
                         ticks: {
                             callback: function(value, index) {
                                 const currentYear = chartData[index].label;
-                                const prevYear = index > 0 ? chartData[index - 1].label : null;
-                                return currentYear !== prevYear ? currentYear : '';
+                                const currentQuarter = chartData[index].fullLabel.substring(5);
+                                if (currentQuarter === 'Q1' || index === 0) {
+                                    return currentYear;
+                                }
+                                return '';
                             },
                             autoSkip: false,
                             maxRotation: 0,
@@ -1245,6 +1341,9 @@ async function renderMarshallKChart() {
                                 return label;
                             }
                         }
+                    },
+                    annotation: {
+                        annotations: lineAnnotations
                     }
                 }
             }
