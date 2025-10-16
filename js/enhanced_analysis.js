@@ -1,6 +1,3 @@
-// enhanced_analysis.js
-// 기존 analysis.js의 분석 기능을 확장한 버전
-
 export function getDetailedMarketOutlook(analyzedIndicators, macroResults) {
     if (!analyzedIndicators) analyzedIndicators = [];
     
@@ -374,7 +371,8 @@ function buildDetailedAnalysis(indicators, macroResults, signalStrength, economi
     }
     
     analysis += `<h4 style="color: #0056b3; margin-bottom: 15px;">💡 투자 전략</h4>`;
-    analysis += `<p>추천 포지셔닝: <strong>${economicCycle.cycle}</strong>에 맞춘 <strong>${signalStrength}</strong></p>`;
+    const strategyText = economicCycle.cycle;
+    analysis += `<p>추천 포지셔닝: <strong>${strategyText}</strong>에 맞춘 전략 추천</p>`;
     
     return analysis;
 }
