@@ -13,6 +13,7 @@ let indicatorChart = null;
 let stockPriceChart = null;
 let stockFinanceChart = null;
 let marshallKChart = null; // 마샬케이 차트 인스턴스 변수 추가
+let gdpConsumptionChart = null; // 소비/GDP 차트 인스턴스 변수 추가
 
 
 // ==================================================================
@@ -96,10 +97,11 @@ async function main() {
     renderEconomicCalendar();
     renderReleaseSchedule();
     
-    // 마샬케이와 새로운 GDP/소비 분석을 병렬로 호출
+    // 마샬케이, GDP/소비 차트 및 분석을 병렬로 호출
     await Promise.all([
-        renderMarshallKChart(), // 페이지 로드 시 마샬케이 차트 렌더링 함수 호출
-        analyzeGdpConsumption() // 소비/GDP 사이클 분석 함수 호출 추가
+        renderMarshallKChart(), // 마샬케이 차트 렌더링 함수 호출
+        renderGdpConsumptionChart(), // 소비/GDP 사이클 차트 렌더링 함수 호출
+        analyzeGdpConsumption() // 소비/GDP 사이클 분석 함수 호출
     ]);
 
 
@@ -1021,14 +1023,13 @@ function analyzeMarshallKTrend(chartData) {
 // ==================================================================
 async function analyzeGdpConsumption() {
     const analysisDiv = document.getElementById('gdp-consumption-analysis');
-    analysisDiv.innerHTML = '<p class="loading-text">데이터 로딩 및 분석 중...</p>';
-    
     // FRED Series ID for US Real GDP Growth (GDPC1) and Real PCE Growth (PCEC)
     try {
         // GDPC1: Real Gross Domestic Product, PCEC: Real Personal Consumption Expenditures
+        // 분석을 위해 최근 5분기 데이터만 가져옵니다.
         const [gdpObs, pceObs] = await Promise.all([
-            fetchFredData('GDPC1', 5, 'desc'), // 최근 5분기
-            fetchFredData('PCEC', 5, 'desc')   // 최근 5분기
+            fetchFredData('GDPC1', 5, 'desc'), 
+            fetchFredData('PCEC', 5, 'desc')   
         ]);
 
         if (!gdpObs || gdpObs.length < 5 || !pceObs || pceObs.length < 5) {
@@ -1036,12 +1037,10 @@ async function analyzeGdpConsumption() {
         }
         
         // 4분기(1년) 대비 성장률 계산 (YoY Growth Rate)
-        // GDP: (현재 분기 / 4분기 전 분기 - 1) * 100
         const currentGdp = parseFloat(gdpObs[0].value);
         const prevYearGdp = parseFloat(gdpObs[4].value);
         const gdpGrowth = ((currentGdp / prevYearGdp) - 1) * 100;
         
-        // PCE: (현재 분기 / 4분기 전 분기 - 1) * 100
         const currentPce = parseFloat(pceObs[0].value);
         const prevYearPce = parseFloat(pceObs[4].value);
         const pceGrowth = ((currentPce / prevYearPce) - 1) * 100;
@@ -1106,6 +1105,165 @@ async function analyzeGdpConsumption() {
     } catch (error) {
         console.error("GDP/소비 분석 실패:", error);
         analysisDiv.innerHTML = '<p style="color:#dc3545;">GDP/소비 데이터 분석에 실패했습니다.</p>';
+    }
+}
+
+
+// ==================================================================
+// 소비와 GDP 사이클 차트 렌더링 함수 (동적 차트)
+// ==================================================================
+async function renderGdpConsumptionChart() {
+    const canvas = document.getElementById('gdp-consumption-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (gdpConsumptionChart) gdpConsumptionChart.destroy();
+
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#6c757d";
+    ctx.textAlign = "center";
+    ctx.fillText("차트 데이터 로딩 중...", canvas.width / 2, canvas.height / 2);
+    
+    try {
+        // GDPC1: Real GDP, PCEC: Real PCE (Consumption), USREC: US Recession Indicators
+        const [gdpObs, pceObs, usrecObs] = await Promise.all([
+            fetchFredData('GDPC1', 200, 'desc'), // 약 50년치 분기 데이터
+            fetchFredData('PCEC', 200, 'desc'),   // 약 50년치 분기 데이터
+            fetchFredData('USREC', 200, 'desc') // 경기 침체 데이터
+        ]);
+
+        if (!gdpObs || !pceObs || !usrecObs) {
+            throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
+        }
+        
+        const gdpMap = new Map(gdpObs.map(d => [d.date, parseFloat(d.value)]));
+        const pceMap = new Map(pceObs.map(d => [d.date, parseFloat(d.value)]));
+        const usrecMap = new Map(usrecObs.map(d => [d.date, d.value === '1']));
+        
+        const chartData = [];
+        const uniqueDates = Array.from(gdpMap.keys()).sort((a, b) => new Date(a) - new Date(b));
+        
+        // 4분기(1년) 전 데이터와 비교하여 YoY 성장률 계산
+        for (let i = 4; i < uniqueDates.length; i++) {
+            const currentDate = uniqueDates[i];
+            const previousDate = uniqueDates[i - 4]; // 4분기 전
+            
+            const currentGdp = gdpMap.get(currentDate);
+            const prevGdp = gdpMap.get(previousDate);
+            const currentPce = pceMap.get(currentDate);
+            const prevPce = pceMap.get(previousDate);
+
+            if (!isNaN(currentGdp) && !isNaN(prevGdp) && !isNaN(currentPce) && !isNaN(prevPce)) {
+                chartData.push({
+                    date: currentDate,
+                    gdpGrowth: ((currentGdp / prevGdp) - 1) * 100,
+                    pceGrowth: ((currentPce / prevPce) - 1) * 100,
+                    isRecession: usrecMap.get(currentDate) || false
+                });
+            }
+        }
+        
+        if (chartData.length === 0) {
+            throw new Error("GDP/소비 데이터 가공에 실패했습니다. 유효한 데이터가 부족합니다.");
+        }
+
+        const labels = chartData.map(d => d.date);
+        const recessionAnnotations = [];
+        let startRecession = null;
+
+        // 경기 침체 기간을 배경 막대로 표시하는 Annotation 생성
+        chartData.forEach((d, index) => {
+            if (d.isRecession && startRecession === null) {
+                startRecession = index;
+            } else if (!d.isRecession && startRecession !== null) {
+                recessionAnnotations.push({
+                    type: 'box',
+                    xMin: startRecession,
+                    xMax: index,
+                    backgroundColor: 'rgba(108, 117, 125, 0.3)', // 회색 음영
+                    borderColor: 'transparent',
+                    borderWidth: 0
+                });
+                startRecession = null;
+            }
+            // 데이터 끝에서 침체가 끝나지 않았을 경우 처리
+            if (index === chartData.length - 1 && startRecession !== null) {
+                 recessionAnnotations.push({
+                    type: 'box',
+                    xMin: startRecession,
+                    xMax: index + 1, // 끝까지
+                    backgroundColor: 'rgba(108, 117, 125, 0.3)', 
+                    borderColor: 'transparent',
+                    borderWidth: 0
+                });
+            }
+        });
+
+
+        gdpConsumptionChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '실질 GDP 성장률 (%)',
+                        data: chartData.map(d => d.gdpGrowth),
+                        borderColor: '#28a745', // 녹색
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        tension: 0.1
+                    },
+                    {
+                        label: '실질 PCE(소비) 성장률 (%)',
+                        data: chartData.map(d => d.pceGrowth),
+                        borderColor: '#dc3545', // 빨간색
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        ticks: {
+                            // 연도별로만 표시
+                            callback: function(value, index) {
+                                const year = labels[index].substring(0, 4);
+                                const quarter = labels[index].substring(5, 7);
+                                return (quarter === '01' || index === 0) ? year : '';
+                            },
+                            autoSkip: false,
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    },
+                    y: { 
+                        beginAtZero: false,
+                        title: { display: true, text: '성장률 (%)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    annotation: {
+                        annotations: recessionAnnotations
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("소비/GDP 차트 렌더링 실패:", error);
+        if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#dc3545";
+            ctx.textAlign = "center";
+            ctx.fillText("차트 데이터 로딩 실패", canvas.width / 2, canvas.height / 2 - 10);
+            ctx.font = "12px Arial";
+            ctx.fillText(error.message, canvas.width / 2, canvas.height / 2 + 15);
+        }
     }
 }
 
@@ -1179,14 +1337,10 @@ async function renderMarshallKChart() {
 
         // 3. GDP 기준으로 데이터 매칭
         const chartData = [];
-        // 20년 제한 제거
-        // const twentyYearsAgo = new Date();
-        // twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20);
-
+        
         gdpMap.forEach((gdpValue, gdpDate) => {
             const date = new Date(gdpDate);
-            // if (date < twentyYearsAgo) return; // 20년 제한 제거
-
+            
             const year = date.getFullYear();
             const quarter = Math.floor(date.getMonth() / 3) + 1;
             const quarterKey = `${year} Q${quarter}`;
@@ -1302,10 +1456,7 @@ async function renderMarshallKChart() {
                             callback: function(value, index) {
                                 const currentYear = chartData[index].label;
                                 const currentQuarter = chartData[index].fullLabel.substring(5);
-                                if (currentQuarter === 'Q1' || index === 0) {
-                                    return currentYear;
-                                }
-                                return '';
+                                return (currentQuarter === 'Q1' || index === 0) ? currentYear : '';
                             },
                             autoSkip: false,
                             maxRotation: 0,
