@@ -5,235 +5,93 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 .header p { margin: 5px 0 0; color: #6c757d; }
 .section-title { font-size: 1.8em; color: #17a2b8; margin-top: 40px; margin-bottom: 20px; border-left: 5px solid #17a2b8; padding-left: 10px; }
 
-/* Search Section - 개선됨 */
+/* Search Section */
 .search-section { display: flex; gap: 10px; margin-bottom: 30px; align-items: flex-start; }
 .autocomplete-container { position: relative; flex-grow: 1; }
-#stock-code-input { width: 100%; padding: 12px; font-size: 1em; border: 1px solid #dee2e6; border-radius: 8px; box-sizing: border-box; transition: border-color 0.3s; }
-#stock-code-input:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
-
-/* Autocomplete Items - 개선됨 */
-.autocomplete-items { 
-    position: absolute; 
-    border: 1px solid #dee2e6; 
-    border-top: none; 
-    border-radius: 0 0 8px 8px; 
-    z-index: 99; 
-    top: 100%; 
-    left: 0; 
-    right: 0; 
-    background-color: white; 
-    max-height: 350px; 
-    overflow-y: auto; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
-    display: none; 
-}
-
-.autocomplete-item {
-    padding: 12px 15px;
-    cursor: pointer;
-    border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: background-color 0.2s;
-}
-
-.autocomplete-item:hover {
-    background-color: #f8f9fa;
-}
-
-.autocomplete-item:last-child {
-    border-bottom: none;
-    border-radius: 0 0 8px 8px;
-}
-
-.autocomplete-item .stock-name {
-    font-weight: 500;
-    color: #343a40;
-    margin-right: 8px;
-}
-
-.autocomplete-item .stock-code-small {
-    font-size: 0.85em;
-    color: #6c757d;
-    margin-right: auto;
-}
-
-.autocomplete-item .market-badge {
-    font-size: 0.75em;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background-color: #e7f0ff;
-    color: #0056b3;
-    font-weight: 600;
-}
-
-.autocomplete-message { 
-    padding: 12px 15px; 
-    color: #6c757d; 
-    font-style: italic; 
-    text-align: center;
-}
-
-.autocomplete-message.error {
-    color: #dc3545;
-}
-
-#stock-search-btn { 
-    padding: 12px 24px; 
-    font-size: 1em; 
-    background-color: #0056b3; 
-    color: white; 
-    border: none; 
-    border-radius: 8px; 
-    cursor: pointer; 
-    white-space: nowrap; 
-    transition: background-color 0.3s, transform 0.1s;
-    font-weight: 600;
-}
-
-#stock-search-btn:hover { 
-    background-color: #004494; 
-}
-
-#stock-search-btn:active {
-    transform: scale(0.98);
-}
+#stock-code-input { width: 100%; padding: 12px; font-size: 1em; border: 1px solid #dee2e6; border-radius: 8px; box-sizing: border-box; }
+.autocomplete-items { position: absolute; border: 1px solid #dee2e6; border-top: none; z-index: 99; top: 100%; left: 0; right: 0; background-color: white; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: none; }
+.autocomplete-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+.autocomplete-item:hover { background-color: #f8f9fa; }
+.stock-name { font-weight: 500; }
+.stock-code-small { font-size: 0.85em; color: #6c757d; }
+.market-badge { font-size: 0.75em; padding: 2px 8px; border-radius: 12px; background-color: #e7f0ff; color: #0056b3; }
+#stock-search-btn { padding: 12px 24px; font-size: 1em; background-color: #0056b3; color: white; border: none; border-radius: 8px; cursor: pointer; }
 
 /* Stock Details Section */
 .stock-details-section { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 25px; margin-bottom: 30px; }
-.stock-header { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; }
-.stock-header h2 { margin: 0; color: #343a40; font-size: 2.2em; }
-.stock-code { margin: 0; font-size: 1.2em; color: #6c757d; }
+.stock-header { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 20px; }
+.stock-header h2 { margin: 0; font-size: 2.2em; }
+.stock-code { font-size: 1.2em; color: #6c757d; }
 .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
-.stock-info-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
-.stock-info-card.main-price { background-color: #e7f0ff; }
+.stock-info-card { background: white; padding: 15px; border-radius: 8px; }
 .stock-info-card .card-title { font-size: 0.9em; color: #6c757d; margin: 0 0 8px 0; }
-.stock-info-card .card-value { font-size: 1.8em; font-weight: bold; margin: 0; color: #343a40; }
+.stock-info-card .card-value { font-size: 1.8em; font-weight: bold; margin: 0; }
 .stock-info-card .card-value.small { font-size: 1.4em; }
 .stock-info-card .card-change { font-size: 1.1em; font-weight: bold; margin-top: 5px; }
-.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.stock-chart-container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); height: 400px; display: flex; flex-direction: column; }
-.stock-chart-container h4 { margin: 0 0 15px 0; flex-shrink: 0; }
-.stock-chart-container canvas { flex-grow: 1; max-height: calc(100% - 35px); }
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.stock-chart-container { height: 350px; }
 
 /* Accordion Styles */
 .accordion { margin-bottom: 15px; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; }
-.accordion-header { background-color: #f8f9fa; color: #0056b3; cursor: pointer; padding: 18px 25px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.5em; font-weight: bold; transition: background-color 0.3s ease; }
-.accordion-header:hover { background-color: #e9ecef; }
-.accordion-panel { padding: 25px; display: none; background-color: white; overflow: hidden; }
-.accordion-panel.show { display: block; }
+.accordion-header { background-color: #f8f9fa; color: #0056b3; cursor: pointer; padding: 18px 25px; width: 100%; border: none; text-align: left; font-size: 1.5em; font-weight: bold; }
+.accordion-panel { padding: 25px; display: none; background-color: white; }
 
-#outlook-section { text-align: center; padding: 30px; border-radius: 10px; border: 1px solid; }
+/* Outlook Section */
+.outlook-section { text-align: center; padding: 30px; border-radius: 10px; border: 1px solid; }
 .outlook-signal { font-size: 3em; margin-bottom: 10px; }
 .outlook-title { font-size: 1.8em; font-weight: bold; margin: 0; }
-.outlook-analysis { font-size: 1.1em; margin-top: 15px; padding: 0 20px; }
+.outlook-analysis { font-size: 1.1em; margin-top: 15px; }
 
+/* Sector/Investment Section */
 .sector-outlook-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-.sector-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-.sector-title { font-size: 1.4em; color: #343a40; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; }
+.sector-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; }
+.sector-title { font-size: 1.4em; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; }
 .sector-icon { font-size: 1.5em; margin-right: 10px; }
 .sector-outlook { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; }
-.sector-reason { font-size: 0.95em; color: #6c757d; flex-grow: 1; }
+.sector-reason { font-size: 0.95em; color: #6c757d; }
 .disclaimer { font-size: 0.8em; color: #6c757d; margin-top: 15px; text-align: right; }
 
-/* Related Stocks Styles */
-.related-stocks-container { margin-top: 15px; padding-top: 10px; border-top: 1px solid #dee2e6; }
-.related-stocks-title { font-weight: bold; color: #343a40; margin: 0 0 5px 0; font-size: 0.9em; }
-.related-stocks-list { color: #0056b3; font-size: 0.9em; margin: 0; }
-.related-stocks-item { margin-bottom: 8px; }
-
+/* Calendar Section */
 .calendar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
 .calendar-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; }
 .calendar-date { font-size: 1.3em; font-weight: bold; color: #0056b3; margin-bottom: 10px; }
-.calendar-event { border-left: 3px solid #17a2b8; padding-left: 15px; margin-bottom: 15px; }
-.calendar-event-title { font-weight: bold; font-size: 1.1em; color: #343a40; }
+.calendar-event-title { font-weight: bold; font-size: 1.1em; }
 .calendar-event-importance { font-size: 0.85em; color: #dc3545; font-weight: bold; }
 .calendar-event-description { font-size: 0.9em; color: #6c757d; margin-top: 5px; }
 
+/* Indicator Grid */
 .indicator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; }
-.indicator-card { background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: background-color 0.3s ease; }
+.indicator-card { background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; }
 .indicator-card.card-negative-bg { background-color: #f8d7da; border-color: #f5c6cb; }
-.indicator-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-.indicator-card h4 { margin: 0; color: #343a40; font-size: 1.05em; line-height: 1.3; }
+.indicator-card h4 { margin: 0; font-size: 1.05em; line-height: 1.3; }
 .indicator-card .date { font-size: 0.75em; color: #6c757d; font-weight: normal; }
 .indicator-value { font-size: 1.8em; font-weight: bold; margin: 8px 0; color: #007bff; }
 .indicator-status { display: flex; align-items: center; font-weight: bold; font-size: 0.95em; }
 .status-icon { font-size: 1.3em; margin-right: 6px; }
-.card-footer { display: flex; justify-content: flex-end; align-items: center; margin-top: 10px; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
 .details-btn { background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.75em; }
-.impact-ratio { font-size: 0.75em; font-weight: bold; color: #fff; background-color: #17a2b8; padding: 2px 7px; border-radius: 10px; margin-right: 10px; }
+.impact-ratio { font-size: 0.75em; font-weight: bold; color: #fff; background-color: #17a2b8; padding: 2px 7px; border-radius: 10px; }
 
+/* Helper classes */
 .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 0.9em; color: #6c757d; }
 .positive-bg { background-color: #d4edda; border-color: #c3e6cb; } .positive-text { color: #155724; } .positive-icon { color: #28a745; }
 .negative-bg { background-color: #f8d7da; border-color: #f5c6cb; } .negative-text { color: #721c24; } .negative-icon { color: #dc3545; }
 .neutral-bg { background-color: #fff3cd; border-color: #ffeeba; } .neutral-text { color: #856404; } .neutral-icon { color: #ffc107; }
-.loading-text { color: #6c757d; font-style: italic; font-size: 1.2em; }
+.loading-text { color: #6c757d; font-style: italic; }
 
 /* Modal Styles */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
-.modal-content { background-color: #fefefe; margin: 5% auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; position: relative; animation-name: animatetop; animation-duration: 0.4s }
-@keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
+.modal-content { background-color: #fefefe; margin: 5% auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; position: relative; }
 .close-btn { color: #aaa; position: absolute; top: 15px; right: 25px; font-size: 28px; font-weight: bold; cursor: pointer; }
 #modal-title { color: #0056b3; margin-top: 0; }
 #modal-description { margin-top: 20px; }
 #modal-criteria { list-style-type: none; padding-left: 0; }
 #modal-criteria li { background-color: #f1f1f1; margin-bottom: 8px; padding: 10px; border-radius: 5px; }
-
-#modal-related-stocks { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6; }
-#modal-related-stocks h4 { margin-bottom: 10px; }
-
 .chart-container { position: relative; height: 300px; width: 100%; margin-bottom: 20px; }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .container { padding: 15px; }
-    .search-section { flex-direction: column; }
-    #stock-search-btn { width: 100%; }
-    .chart-grid { grid-template-columns: 1fr; }
-    .stock-grid { grid-template-columns: 1fr; }
-    .sector-outlook-grid { grid-template-columns: 1fr; }
-    .calendar-grid { grid-template-columns: 1fr; }
-    .indicator-grid { grid-template-columns: 1fr; }
-    .stock-header { flex-direction: column; align-items: flex-start; }
-    .stock-header h2 { font-size: 1.8em; }
-}
-
 /* Release Schedule Section */
-.release-schedule-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-}
-.release-schedule-card {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-}
-.release-schedule-title {
-    font-size: 1.3em;
-    font-weight: bold;
-    color: #0056b3;
-    margin-bottom: 15px;
-}
-.release-schedule-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-    font-size: 0.95em;
-    color: #343a40;
-    column-count: 2; /* 2열로 표시 */
-    column-gap: 20px;
-}
-.release-schedule-list li {
-    padding: 6px 0;
-}
-.release-schedule-message {
-    font-size: 0.95em;
-    color: #495057;
-    margin: 0;
-    padding-top: 5px;
-}
+.release-schedule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.release-schedule-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; }
+.release-schedule-title { font-size: 1.3em; font-weight: bold; color: #0056b3; margin-bottom: 15px; }
+.release-schedule-list { list-style-type: none; padding: 0; margin: 0; column-count: 2; column-gap: 20px; }
+.release-schedule-list li { padding: 6px 0; }
