@@ -10,54 +10,51 @@ import { getInvestmentSuggestions } from './analysis.js';
 // ==================================================================
 export function renderInitialPlaceholders() {
     const grid = document.getElementById('indicator-grid');
+    if (!grid) return;
     grid.innerHTML = Object.values(indicatorDetails).map(details => 
         `<div class="indicator-card"><p class="loading-text">${details.title}<br>Loading...</p></div>`
     ).join('');
 }
 
 export function renderDashboard(analyzedIndicators, marketOutlook) {
-    document.getElementById('update-time').innerText = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
+    const updateTimeEl = document.getElementById('update-time');
+    if (updateTimeEl) updateTimeEl.innerText = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
     
     const outlookSection = document.getElementById('outlook-section');
-    
-    if (marketOutlook && marketOutlook.status) {
-        outlookSection.className = `outlook-section ${marketOutlook.status}-bg`;
-        outlookSection.innerHTML = `
-            <div class="outlook-signal">${marketOutlook.signal}</div>
-            <h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>
-            <p class="outlook-analysis">${marketOutlook.analysis}</p>
-        `;
-    } else {
-        outlookSection.className = 'outlook-section neutral-bg';
-        outlookSection.innerHTML = `
-            <div class="outlook-signal">🤔</div>
-            <h3 class="outlook-title neutral-text">분석 데이터 부족</h3>
-            <p class="outlook-analysis">시장 종합 전망을 분석하기 위한 데이터가 부족합니다. 일부 지표를 불러오지 못했을 수 있습니다.</p>
-        `;
+    if (outlookSection) {
+        if (marketOutlook && marketOutlook.status) {
+            outlookSection.className = `outlook-section ${marketOutlook.status}-bg`;
+            outlookSection.innerHTML = `
+                <div class="outlook-signal">${marketOutlook.signal}</div>
+                <h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>
+                <p class="outlook-analysis">${marketOutlook.analysis}</p>
+            `;
+        } else {
+            outlookSection.className = 'outlook-section neutral-bg';
+            outlookSection.innerHTML = `
+                <div class="outlook-signal">🤔</div>
+                <h3 class="outlook-title neutral-text">분석 데이터 부족</h3>
+                <p class="outlook-analysis">시장 종합 전망을 분석하기 위한 데이터가 부족합니다. 일부 지표를 불러오지 못했을 수 있습니다.</p>
+            `;
+        }
     }
 
+    const indicatorGrid = document.getElementById('indicator-grid');
+    if (!indicatorGrid) return;
+    
     if (!analyzedIndicators || analyzedIndicators.length === 0) {
-        document.getElementById('sector-outlook-grid').innerHTML = '<p class="loading-text" style="padding: 20px;">섹터 전망을 분석할 데이터가 부족합니다.</p>';
-        document.getElementById('investment-suggestions-grid').innerHTML = '';
-        document.getElementById('indicator-grid').innerHTML = '<p class="loading-text" style="padding: 20px;">표시할 지표 데이터가 없습니다.</p>';
+        if (document.getElementById('sector-outlook-grid')) document.getElementById('sector-outlook-grid').innerHTML = '<p class="loading-text" style="padding: 20px;">섹터 전망을 분석할 데이터가 부족합니다.</p>';
+        if (document.getElementById('investment-suggestions-grid')) document.getElementById('investment-suggestions-grid').innerHTML = '';
+        indicatorGrid.innerHTML = '<p class="loading-text" style="padding: 20px;">표시할 지표 데이터가 없습니다.</p>';
         return;
     }
 
     renderSectorOutlook(analyzedIndicators);
+    renderInvestmentSuggestions(marketOutlook || { status: 'neutral' });
 
-    const suggestions = getInvestmentSuggestions(marketOutlook || { status: 'neutral' });
-    document.getElementById('investment-suggestions-grid').innerHTML = Object.entries(suggestions).map(([name, data]) => `
-        <div class="sector-card">
-            <h3 class="sector-title"><span class="sector-icon">${data.icon}</span>${name}</h3>
-            <p class="sector-outlook">${data.outlook}</p>
-            <p class="sector-reason">${data.reason}</p>
-        </div>`
-    ).join('');
-
-    const indicatorGrid = document.getElementById('indicator-grid');
     indicatorGrid.innerHTML = '';
     
-    const weightedIndicators = analyzedIndicators.filter(ind => ind.weight > 0);
+    const weightedIndicators = analyzedIndicators.filter(ind => ind && ind.weight > 0);
     const totalWeight = weightedIndicators.reduce((sum, ind) => sum + ind.weight, 0);
 
     analyzedIndicators.sort((a, b) => (b.weight || 0) - (a.weight || 0));
@@ -66,7 +63,13 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
         if (!indicator) return;
         const card = document.createElement('div');
         card.className = 'indicator-card';
-        if (indicator.status === 'negative') card.classList.add('card-negative-bg');
+        
+        // 💡 [수정] 상태에 따라 배경색 클래스 적용
+        if (indicator.status === 'negative') {
+            card.classList.add('card-negative-bg');
+        } else if (indicator.status === 'neutral') {
+            card.classList.add('card-neutral-bg');
+        }
 
         const valueText = `${indicator.value.toLocaleString()}${indicator.unit || ''}`;
         
@@ -79,11 +82,14 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
             const todayInScheduleYear = new Date(2025, today.getMonth(), today.getDate());
             const nextDate = specificSchedule.dates.find(d => new Date(`2025-${d}`) > todayInScheduleYear);
             if(nextDate) nextDateStr = ` <span class="next-date">[다음:${nextDate}]</span>`;
-        } else if (cycleSchedule && cycleSchedule.periodicity !== 'daily' && indicator.date) { 
-            const currentMonth = parseInt(indicator.date.split('-')[0], 10);
-            let nextMonth = currentMonth + (cycleSchedule.periodicity === 'monthly' ? cycleSchedule.offset : 3 + cycleSchedule.offset);
-            if (nextMonth > 12) nextMonth = (nextMonth - 1) % 12 + 1;
-            nextDateStr = ` <span class="next-date-approx">[다음:${nextMonth}월경]</span>`;
+        } else if (cycleSchedule && cycleSchedule.periodicity !== 'daily' && indicator.date) {
+            const dateParts = indicator.date.split('-');
+            if (dateParts.length === 2) {
+                const currentMonth = parseInt(dateParts[0], 10);
+                let nextMonth = currentMonth + (cycleSchedule.periodicity === 'monthly' ? cycleSchedule.offset : 3 + cycleSchedule.offset);
+                if (nextMonth > 12) nextMonth = (nextMonth - 1) % 12 + 1;
+                nextDateStr = ` <span class="next-date-approx">[다음:${nextMonth}월경]</span>`;
+            }
         }
         
         const impactRatio = totalWeight > 0 && indicator.weight > 0 ? ((indicator.weight / totalWeight) * 100).toFixed(1) : 0;
@@ -104,13 +110,15 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
                 ${impactRatio > 0 ? `<span class="impact-ratio">영향력 ${impactRatio}%</span>` : ''}
                 <button class="details-btn">자세히 보기</button>
             </div>`;
-        card.querySelector('.details-btn').addEventListener('click', () => showModal(indicator.id));
+        const detailsBtn = card.querySelector('.details-btn');
+        if (detailsBtn) detailsBtn.addEventListener('click', () => showModal(indicator.id));
         indicatorGrid.appendChild(card);
     });
 }
 
 export function renderSectorOutlook(analyzedIndicators) {
     const grid = document.getElementById('sector-outlook-grid');
+    if (!grid) return;
     const getIndicator = id => analyzedIndicators.find(i => i && i.id === id);
 
     const sectors = {
@@ -150,8 +158,23 @@ export function renderSectorOutlook(analyzedIndicators) {
     grid.innerHTML = html || '<p class="loading-text">섹터 전망을 분석할 데이터가 부족합니다.</p>';
 }
 
+export function renderInvestmentSuggestions(marketOutlook) {
+    const grid = document.getElementById('investment-suggestions-grid');
+    if (!grid) return;
+    const suggestions = getInvestmentSuggestions(marketOutlook);
+
+    grid.innerHTML = Object.entries(suggestions).map(([name, data]) => `
+        <div class="sector-card">
+            <h3 class="sector-title"><span class="sector-icon">${data.icon}</span>${name}</h3>
+            <p class="sector-outlook">${data.outlook}</p>
+            <p class="sector-reason">${data.reason}</p>
+        </div>`
+    ).join('');
+}
+
 export function renderEconomicCalendar() {
     const grid = document.getElementById('economic-calendar-grid');
+    if (!grid) return;
     grid.innerHTML = `
         <div class="calendar-card">
             <div class="calendar-date">2025년 11월 07일</div>
@@ -171,6 +194,7 @@ export function renderEconomicCalendar() {
 
 export function renderReleaseSchedule() {
     const grid = document.getElementById('release-schedule-grid');
+    if (!grid) return;
     const specificSchedules = Object.entries(releaseSchedules).map(([key, value]) => ({
         title: indicatorDetails[key].title,
         dates: value.dates
@@ -187,15 +211,13 @@ export function renderReleaseSchedule() {
 }
 
 export function setupEventListeners() {
-    // 아코디언 메뉴 이벤트
     document.querySelectorAll(".accordion-header").forEach(header => {
         header.addEventListener("click", () => {
             const panel = header.nextElementSibling;
-            panel.style.display = panel.style.display === "block" ? "none" : "block";
+            if (panel) panel.style.display = panel.style.display === "block" ? "none" : "block";
         });
     });
 
-    // 모달창 이벤트
     const modal = document.getElementById('modal');
     const closeBtn = document.querySelector('.close-btn');
     
@@ -280,10 +302,15 @@ export function showModal(indicatorId) {
     const details = indicatorDetails[indicatorId];
     if (!details) return;
 
-    document.getElementById('modal-title').innerText = details.title;
-    document.getElementById('modal-description').innerText = details.description;
-    document.getElementById('modal-criteria').innerHTML = details.criteria.map(c => `<li>${c}</li>`).join('');
-    document.getElementById('modal').style.display = 'block';
+    const modalTitle = document.getElementById('modal-title');
+    const modalDesc = document.getElementById('modal-description');
+    const modalCriteria = document.getElementById('modal-criteria');
+    const modal = document.getElementById('modal');
+
+    if (modalTitle) modalTitle.innerText = details.title;
+    if (modalDesc) modalDesc.innerText = details.description;
+    if (modalCriteria) modalCriteria.innerHTML = details.criteria.map(c => `<li>${c}</li>`).join('');
+    if (modal) modal.style.display = 'block';
 
     showModalChart(indicatorId);
 }
