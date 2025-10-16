@@ -871,9 +871,6 @@ async function showModal(indicatorId) {
 // ==================================================================
 // ===== 마샬케이 차트 렌더링 함수 (로직 수정) =====
 // ==================================================================
-// ==================================================================
-// ===== 마샬케이 차트 렌더링 함수 (로직 수정) =====
-// ==================================================================
 async function renderMarshallKChart() {
     const canvas = document.getElementById('marshall-k-chart');
     if (!canvas) return;
@@ -887,9 +884,9 @@ async function renderMarshallKChart() {
     try {
         // 1. 데이터 병렬로 가져오기 (충분한 데이터 확보)
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-            fetchFredData('GDP', 120, 'asc'),       // 분기별 (30년치)
-            fetchFredData('M2SL', 360, 'asc'),      // 월별 (30년치)
-            fetchFredData('DGS10', 7500, 'asc')     // 일별 (30년치)
+            fetchFredData('GDP', 120, 'desc'),       // 분기별 (30년치) - 최신순
+            fetchFredData('M2SL', 360, 'desc'),      // 월별 (30년치) - 최신순
+            fetchFredData('DGS10', 7500, 'desc')     // 일별 (30년치) - 최신순
         ]);
 
         if (!gdpSeries || !m2Series || !rateSeries) {
