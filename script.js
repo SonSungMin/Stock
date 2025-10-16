@@ -869,7 +869,7 @@ async function showModal(indicatorId) {
 
 
 // ==================================================================
-// ===== 최종 수정: 마샬케이 차트 렌더링 함수 (로직 개선 및 로그 강화) =====
+// ===== 마샬케이 차트 렌더링 함수 (로직 수정) =====
 // ==================================================================
 // ==================================================================
 // ===== 마샬케이 차트 렌더링 함수 (로직 수정) =====
@@ -977,6 +977,47 @@ async function renderMarshallKChart() {
         });
 
         if (chartData.length === 0) {
+            console.group("===== 마샬케이 차트 데이터 매칭 실패 상세 디버그 =====");
+            console.log("GDP 샘플 데이터 (최근 5개):");
+            console.table(Array.from(gdpMap.entries()).slice(-5).map(([date, value]) => ({
+                날짜: date,
+                값: value
+            })));
+            
+            console.log("\nM2 샘플 데이터 (최근 5개):");
+            console.table(Array.from(m2Map.entries()).slice(-5).map(([date, value]) => ({
+                날짜: date,
+                값: value
+            })));
+            
+            console.log("\n금리 월별평균 샘플 데이터 (최근 5개):");
+            console.table(Array.from(rateMap.entries()).slice(-5).map(([date, value]) => ({
+                날짜: date,
+                값: value
+            })));
+            
+            console.log("\n매칭 시도 예시 (최근 GDP 기준):");
+            const recentGdpEntries = Array.from(gdpMap.entries()).slice(-3);
+            recentGdpEntries.forEach(([gdpDate, gdpValue]) => {
+                const date = new Date(gdpDate);
+                const year = date.getFullYear();
+                const quarter = Math.floor(date.getMonth() / 3) + 1;
+                const quarterMonths = [];
+                for (let m = (quarter - 1) * 3; m < quarter * 3; m++) {
+                    quarterMonths.push(`${year}-${String(m + 1).padStart(2, '0')}`);
+                }
+                
+                const m2Values = quarterMonths.map(m => m2Map.get(m)).filter(v => v !== undefined);
+                const rateValues = quarterMonths.map(m => rateMap.get(m)).filter(v => v !== undefined);
+                
+                console.log(`GDP 날짜: ${gdpDate}, 분기: ${year} Q${quarter}`);
+                console.log(`  찾아야 할 월: ${quarterMonths.join(', ')}`);
+                console.log(`  M2 찾은 개수: ${m2Values.length}, 금리 찾은 개수: ${rateValues.length}`);
+                console.log(`  M2 값: ${m2Values.join(', ') || '없음'}`);
+                console.log(`  금리 값: ${rateValues.map(v => v.toFixed(2)).join(', ') || '없음'}`);
+            });
+            
+            console.groupEnd();
             throw new Error("데이터 매칭 실패: GDP, M2, 금리를 결합할 수 없습니다.");
         }
 
