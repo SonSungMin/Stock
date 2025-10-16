@@ -128,7 +128,6 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
 
     const totalWeight = weightedIndicators.reduce((sum, ind) => sum + ind.weight, 0);
     let score = 0;
-
     weightedIndicators.forEach(ind => {
         if (ind.status === 'positive') score += ind.weight;
         else if (ind.status === 'negative') score -= ind.weight;
@@ -153,18 +152,13 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     }
 
     if (outlookScore > 35) {
-        analysisText += `<b>[단기 분석]</b> 주요 경제 지표들이 견조한 모습을 보이고 있습니다. 특히 긍정적인 신호를 보내고 있는 <b>${formatSignalText(positiveSignals)}</b> 등이 경기 회복과 증시 상승에 대한 기대감을 높이고 있습니다. 위험자산 선호 심리가 강화될 수 있습니다.`;
+        analysisText += `<b>[단기 분석]</b> 주요 경제 지표들이 견조한 모습을 보이고 있습니다. 특히 <b>${formatSignalText(positiveSignals)}</b> 등이 경기 회복과 증시 상승 기대감을 높입니다.`;
         return { status: 'positive', signal: '📈', title: '긍정적 전망', analysis: analysisText };
     } else if (outlookScore < -35) {
-        analysisText += `<b>[단기 분석]</b> 여러 경제 지표에서 경고 신호가 나타나고 있습니다. 특히 <b>${formatSignalText(negativeSignals)}</b> 등에서 나타난 우려가 경기 둔화 및 침체 가능성을 높이고 있어, 안전자산 선호 심리가 강해질 수 있습니다.`;
+        analysisText += `<b>[단기 분석]</b> 여러 경제 지표에서 경고 신호가 나타나고 있습니다. 특히 <b>${formatSignalText(negativeSignals)}</b> 등이 경기 둔화 우려를 높이고 있습니다.`;
         return { status: 'negative', signal: '📉', title: '부정적 전망', analysis: analysisText };
     } else {
-        const positiveText = formatSignalText(positiveSignals);
-        const negativeText = formatSignalText(negativeSignals);
-        analysisText += `<b>[단기 분석]</b> 긍정적 지표와 부정적 지표가 혼재되어 명확한 방향성을 보이지 않고 있습니다.`;
-        if (positiveText) analysisText += ` <b>${positiveText}</b> 등은 긍정적 요인으로,`;
-        if (negativeText) analysisText += ` <b>${negativeText}</b> 등은 부정적 요인으로 작용하고 있습니다.`;
-        analysisText += ` 당분간 시장은 변동성을 보이며 횡보할 가능성이 있습니다.`;
+        analysisText += `<b>[단기 분석]</b> 긍정적 신호(<b>${formatSignalText(positiveSignals)}</b>)와 부정적 신호(<b>${formatSignalText(negativeSignals)}</b>)가 혼재되어 있어, 당분간 시장은 변동성을 보일 수 있습니다.`;
         return { status: 'neutral', signal: '📊', title: '혼조세 전망', analysis: analysisText };
     }
 }
@@ -200,7 +194,7 @@ export function analyzeMarshallKTrend(chartData, resultsObject) {
         result.analysis = `<p><strong>현재 상황:</strong> 마샬케이 ${currentMarshallK.toFixed(2)}, 10년물 금리 ${currentRate.toFixed(2)}%</p><p>${result.summary}</p>`;
     }
     
-    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status === 'positive' ? 'positive' : (result.status === 'negative' ? 'negative' : 'neutral')}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
+    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status === 'positive' ? 'positive' : (result.status === 'negative' ? 'negative-bg' : 'neutral')}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
     resultsObject.marshallK = result;
 }
 
@@ -238,7 +232,7 @@ export async function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
         result.analysis = '<p style="color:#dc3545;">GDP/소비 데이터 분석에 실패했습니다.</p>';
     }
 
-    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status === 'positive' ? 'positive' : (result.status === 'negative' ? 'negative' : 'neutral')}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
+    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status === 'positive' ? 'positive' : (result.status === 'negative' ? 'negative-bg' : 'neutral')}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
     resultsObject.gdpConsumption = result;
 }
 
@@ -253,11 +247,11 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
         if (latestGap.value > 0.5) {
             result.status = 'negative';
             result.outlook = '🔥 인플레이션 압력';
-            result.summary = `GDP 갭(${latestGap.value.toFixed(2)}%)이 플러스(+)를 기록하여 잠재 성장률을 상회하고 있어 인플레이션 압력이 높습니다.`;
+            result.summary = `GDP 갭(${latestGap.value.toFixed(2)}%)이 플러스(+)를 기록, 잠재 성장률을 상회하여 인플레이션 압력이 높습니다.`;
         } else if (latestGap.value < -0.5) {
             result.status = 'negative';
             result.outlook = '📉 경기 침체 우려';
-            result.summary = `GDP 갭(${latestGap.value.toFixed(2)}%)이 마이너스(-)를 기록하여 잠재 성장률을 하회하고 있어 경기 침체 우려가 있습니다.`;
+            result.summary = `GDP 갭(${latestGap.value.toFixed(2)}%)이 마이너스(-)를 기록, 잠재 성장률을 하회하여 경기 침체 우려가 있습니다.`;
         } else {
             result.status = 'positive';
             result.outlook = '✅ 안정적인 상태';
@@ -266,6 +260,6 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
         result.analysis = `<p><strong>최신 데이터 (${latestGap.date.substring(0,7)}):</strong></p><ul><li>현재 GDP 갭: <strong>${latestGap.value.toFixed(2)}%</strong></li></ul><p><strong>분석:</strong> ${result.summary}</p>`;
     }
     
-    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status === 'positive' ? 'positive' : 'negative'}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
+    analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status === 'positive' ? 'positive' : 'negative-bg'}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
     resultsObject.gdpGap = result;
 }
