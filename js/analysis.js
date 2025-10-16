@@ -109,8 +109,10 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     }
     // 시나리오 5: 일반적인 혼조세
     else {
-        const positiveSummary = macroSignals.isRecovery ? '소비 회복 등 긍정적 거시 신호' : findIndicator(id => id.status === 'positive')?.name;
-        const negativeSummary = macroSignals.isInflationary ? '인플레이션 압력' : (macroSignals.isConsumptionWeak ? '소비 둔화' : findIndicator(id => id.status === 'negative')?.name);
+        const positiveIndicator = analyzedIndicators.find(i => i && i.status === 'positive');
+        const negativeIndicator = analyzedIndicators.find(i => i && i.status === 'negative');
+        const positiveSummary = macroSignals.isRecovery ? '소비 회복 등 긍정적 거시 신호' : positiveIndicator?.name;
+        const negativeSummary = macroSignals.isInflationary ? '인플레이션 압력' : (macroSignals.isConsumptionWeak ? '소비 둔화' : negativeIndicator?.name);
         
         finalAnalysis = `<b>[혼재된 신호]</b> ${positiveSummary || '일부 긍정적 지표'}와 ${negativeSummary || '일부 부정적 지표'}가 혼재되어 뚜렷한 방향성을 예측하기 어렵습니다.<br><br><b>[전략]</b> 시장이 방향성을 탐색하는 구간으로, 성장이 확인되는 특정 섹터에 선별적으로 투자하거나 관망하는 자세가 필요합니다.`;
     }
