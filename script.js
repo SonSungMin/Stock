@@ -1023,10 +1023,9 @@ function analyzeMarshallKTrend(chartData) {
 // ==================================================================
 async function analyzeGdpConsumption() {
     const analysisDiv = document.getElementById('gdp-consumption-analysis');
-    // FRED Series ID for US Real GDP Growth (GDPC1) and Real PCE Growth (PCEC)
+    // 분석을 위해 차트 렌더링 함수에서 데이터를 가져오지 않고, 필요한 데이터만 별도로 가져옵니다.
     try {
         // GDPC1: Real Gross Domestic Product, PCEC: Real Personal Consumption Expenditures
-        // 분석을 위해 최근 5분기 데이터만 가져옵니다.
         const [gdpObs, pceObs] = await Promise.all([
             fetchFredData('GDPC1', 5, 'desc'), 
             fetchFredData('PCEC', 5, 'desc')   
@@ -1125,10 +1124,11 @@ async function renderGdpConsumptionChart() {
     
     try {
         // GDPC1: Real GDP, PCEC: Real PCE (Consumption), USREC: US Recession Indicators
+        // 200개 분기 데이터 (약 50년치) 요청
         const [gdpObs, pceObs, usrecObs] = await Promise.all([
-            fetchFredData('GDPC1', 200, 'desc'), // 약 50년치 분기 데이터
-            fetchFredData('PCEC', 200, 'desc'),   // 약 50년치 분기 데이터
-            fetchFredData('USREC', 200, 'desc') // 경기 침체 데이터
+            fetchFredData('GDPC1', 200, 'desc'), 
+            fetchFredData('PCEC', 200, 'desc'),   
+            fetchFredData('USREC', 200, 'desc') 
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) {
@@ -1152,6 +1152,7 @@ async function renderGdpConsumptionChart() {
             const currentPce = pceMap.get(currentDate);
             const prevPce = pceMap.get(previousDate);
 
+            // 데이터가 유효한지 확인하고 푸시
             if (!isNaN(currentGdp) && !isNaN(prevGdp) && !isNaN(currentPce) && !isNaN(prevPce)) {
                 chartData.push({
                     date: currentDate,
@@ -1210,7 +1211,9 @@ async function renderGdpConsumptionChart() {
                         borderColor: '#28a745', // 녹색
                         borderWidth: 2,
                         pointRadius: 1,
-                        tension: 0.1
+                        tension: 0.1,
+                        // 원본 그래프처럼 점이 없는 형태로 보이도록 pointStyle을 'line'으로 설정
+                        pointStyle: 'line' 
                     },
                     {
                         label: '실질 PCE(소비) 성장률 (%)',
@@ -1218,7 +1221,8 @@ async function renderGdpConsumptionChart() {
                         borderColor: '#dc3545', // 빨간색
                         borderWidth: 2,
                         pointRadius: 1,
-                        tension: 0.1
+                        tension: 0.1,
+                        pointStyle: 'line'
                     }
                 ]
             },
@@ -1242,7 +1246,25 @@ async function renderGdpConsumptionChart() {
                     },
                     y: { 
                         beginAtZero: false,
-                        title: { display: true, text: '성장률 (%)' }
+                        title: { display: true, text: '성장률 (%)' },
+                        // 원본 그래프와 유사한 Y축 범위 강제 설정 (시각적 유사성을 위해)
+                        min: -5.0,
+                        max: 5.0,
+                        // 0% 라인을 강조하기 위한 설정
+                        grid: {
+                            color: function(context) {
+                                if (context.tick.value === 0) {
+                                    return '#333'; // 0% 라인 진하게
+                                }
+                                return 'rgba(0, 0, 0, 0.1)';
+                            },
+                            lineWidth: function(context) {
+                                if (context.tick.value === 0) {
+                                    return 2; // 0% 라인 두껍게
+                                }
+                                return 1;
+                            }
+                        }
                     }
                 },
                 plugins: {
@@ -1397,6 +1419,7 @@ async function renderMarshallKChart() {
         ];
         
         const lineAnnotations = crisisAnnotations.map(c => {
+            // 해당 분기의 인덱스 찾기 (차트 상의 위치)
             const index = chartData.findIndex(d => d.fullLabel.startsWith(c.year.substring(0, 4)) && d.fullLabel.endsWith(c.year.substring(5)));
             if (index !== -1) {
                  return {
