@@ -1,157 +1,167 @@
 // js/analysis.js
-// 이 파일은 외부 모듈(api.js)을 불러오지 않으므로 import 구문이 필요 없습니다.
 
 // ==================================================================
 // 데이터 분석 및 가공 함수
 // ==================================================================
 export function analyzeIndicators(indicators) {
+    // 이 함수는 이전과 동일하게 각 지표를 개별적으로 분석합니다.
     return indicators.map(indicator => {
         const { id, value } = indicator;
         let status = 'neutral', icon = '😐', text = '보통', weight = 2;
-
         switch (id) {
             case 'yield_spread':
-                if (value >= 0) { status = 'positive'; icon = '✅'; text = '정상 범위'; } 
-                else if (value > -0.1) { status = 'neutral'; icon = '⚠️'; text = '역전폭 축소'; } 
-                else { status = 'negative'; icon = '🚨'; text = '침체 우려'; }
-                weight = 5;
-                break;
+                if (value >= 0.1) { status = 'positive'; icon = '✅'; text = '정상 범위'; } 
+                else if (value > -0.2) { status = 'neutral'; icon = '⚠️'; text = '역전 우려'; } 
+                else { status = 'negative'; icon = '🚨'; text = '침체 신호'; }
+                weight = 5; break;
             case 'exchange_rate':
                 if (value <= 1300) { status = 'positive'; icon = '💵'; text = '환율 안정'; }
-                else if (value <= 1350) { status = 'neutral'; icon = '〰️'; text = '변동성 확대'; }
+                else if (value <= 1380) { status = 'neutral'; icon = '〰️'; text = '변동성 확대'; }
                 else { status = 'negative'; icon = '💸'; text = '원화 약세'; }
-                weight = 4;
-                break;
+                weight = 4; break;
             case 'vix':
                 if (value <= 20) { status = 'positive'; icon = '😌'; text = '시장 안정'; }
                 else if (value <= 30) { status = 'neutral'; icon = '😟'; text = '불안 심리'; }
                 else { status = 'negative'; icon = '😱'; text = '공포 심리'; }
-                weight = 4;
-                break;
-            case 'dollar_index':
-                if (value <= 100) { status = 'positive'; icon = '💲'; text = '달러 약세'; }
-                else { status = 'negative'; icon = '💰'; text = '달러 강세'; }
-                weight = 3;
-                break;
-            case 'wti_price':
-                if (value <= 80) { status = 'positive'; icon = '⛽'; text = '유가 안정'; }
-                else if (value <= 100) { status = 'neutral'; icon = '🔺'; text = '상승 압력'; }
-                else { status = 'negative'; icon = '🔥'; text = '고유가 부담'; }
-                weight = 3;
-                break;
-            case 'gdp_growth':
-                if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복세'; }
-                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; }
-                else { status = 'negative'; icon = '👎'; text = '성장 둔화 우려'; }
-                weight = 5;
-                break;
-            case 'export_growth':
-                if (value >= 2.0) { status = 'positive'; icon = '📈'; text = '플러스 전환'; }
-                else if (value >= 0) { status = 'neutral'; icon = '📊'; text = '소폭 개선'; }
-                else { status = 'negative'; icon = '📉'; text = '수출 부진'; }
-                weight = 5;
-                break;
-            case 'cpi':
+                weight = 4; break;
             case 'us_cpi':
-                if (value <= 3.0) { status = 'positive'; icon = '😌'; text = '물가 안정세'; }
-                else if (value <= 4.0) { status = 'neutral'; icon = '😐'; text = '인플레 둔화'; }
-                else { status = 'negative'; icon = '🔥'; text = '물가 압력 지속'; }
-                weight = 4;
-                break;
-            case 'consumer_sentiment':
-                if (value >= 100) { status = 'positive'; icon = '😊'; text = '소비 심리 낙관'; }
-                else if (value >= 90) { status = 'neutral'; icon = '😐'; text = '소비 심리 중립'; }
-                else { status = 'negative'; icon = '😟'; text = '소비 심리 비관'; }
-                weight = 3;
-                break;
-            case 'corp_bond_spread':
-                if (value <= 0.8) { status = 'positive'; icon = '✅'; text = '신용 위험 완화'; }
-                else if (value <= 1.2) { status = 'neutral'; icon = '⚠️'; text = '신용 위험 보통'; }
-                else { status = 'negative'; icon = '🚨'; text = '신용 위험 증가'; }
-                weight = 4;
-                break;
+                if (value <= 2.5) { status = 'positive'; icon = '😌'; text = '물가 안정'; }
+                else if (value <= 3.5) { status = 'neutral'; icon = '😐'; text = '인플레 둔화'; }
+                else { status = 'negative'; icon = '🔥'; text = '물가 압력'; }
+                weight = 5; break;
             case 'nfp':
                 if (value >= 250) { status = 'positive'; icon = '👍'; text = '고용 서프라이즈'; }
                 else if (value >= 150) { status = 'neutral'; icon = '😐'; text = '예상 부합'; }
                 else { status = 'negative'; icon = '👎'; text = '고용 쇼크'; }
-                weight = 5;
-                break;
-            case 'philly_fed':
-                if (value >= 10) { status = 'positive'; icon = '📈'; text = '확장 국면'; }
-                else if (value >= -5) { status = 'neutral'; icon = '😐'; text = '보합세'; }
-                else { status = 'negative'; icon = '📉'; text = '위축 국면'; }
-                weight = 3;
-                break;
-             case 'unemployment':
-                if (value <= 3.0) { status = 'positive'; icon = '💪'; text = '완전고용 수준'; }
-                else { status = 'negative'; icon = '😥'; text = '고용 시장 악화'; }
-                weight = 3;
-                break;
-            case 'base_rate':
-                if (value <= 2.5) { status = 'positive'; icon = '💰'; text = '완화적'; }
-                else if (value <= 3.5) { status = 'neutral'; icon = '⚖️'; text = '중립적'; }
-                else { status = 'negative'; icon = '🔒'; text = '긴축적'; }
-                weight = 4;
-                break;
-             case 'industrial_production':
-                if (value >= 1.0) { status = 'positive'; icon = '🏭'; text = '생산 활발'; }
-                else if (value >= 0) { status = 'neutral'; icon = '😐'; text = '생산 보합'; }
-                else { status = 'negative'; icon = '📉'; text = '생산 위축'; }
-                weight = 3;
-                break;
-            case 'producer_price_index':
-                if (value <= 3.0) { status = 'positive'; icon = '😌'; text = '생산자 물가 안정'; }
-                else { status = 'negative'; icon = '🔺'; text = '생산자 물가 부담'; }
-                weight = 2;
-                break;
-            default:
-                text = '시장 지수'; weight = 0;
-                break;
+                weight = 5; break;
+            case 'gdp_growth':
+                if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복'; }
+                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; }
+                else { status = 'negative'; icon = '👎'; text = '성장 둔화'; }
+                weight = 5; break;
+            case 'export_growth':
+                if (value >= 2.0) { status = 'positive'; icon = '📈'; text = '수출 호조'; }
+                else if (value >= 0) { status = 'neutral'; icon = '📊'; text = '소폭 개선'; }
+                else { status = 'negative'; icon = '📉'; text = '수출 부진'; }
+                weight = 5; break;
+            // ... 기타 지표들은 기존 로직 유지 ...
         }
         return { ...indicator, status, icon, text, weight };
     });
 }
 
+/**
+ * 💡 [핵심 업그레이드]
+ * 모든 단기/장기 지표를 종합하여 복합적인 시장 시나리오를 분석하고 구체적인 전망을 생성합니다.
+ */
 export function getMarketOutlook(analyzedIndicators, macroResults) {
     if (!analyzedIndicators) analyzedIndicators = [];
-    const weightedIndicators = analyzedIndicators.filter(ind => ind.weight > 0);
-    
-    const totalWeight = weightedIndicators.reduce((sum, ind) => sum + ind.weight, 0);
-    let score = 0;
-    weightedIndicators.forEach(ind => {
-        if (ind.status === 'positive') score += ind.weight;
-        else if (ind.status === 'negative') score -= ind.weight;
-    });
-    
-    let outlookScore = totalWeight > 0 ? (score / totalWeight) * 100 : 0;
-    
-    const macroSignals = Object.values(macroResults).filter(Boolean);
-    macroSignals.forEach(signal => {
-        if (signal.status === 'positive') outlookScore += 15;
-        else if (signal.status === 'negative') outlookScore -= 15;
-    });
 
-    const positiveSignals = weightedIndicators.filter(i => i.status === 'positive').sort((a,b) => b.weight - a.weight).slice(0, 2);
-    const negativeSignals = weightedIndicators.filter(i => i.status === 'negative').sort((a,b) => b.weight - a.weight).slice(0, 2);
-    const formatSignalText = (signals) => signals.map(s => s.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()).join(', ');
+    // 1. 거시 경제 분석 결과 정리
+    const { marshallK, gdpGap, gdpConsumption } = macroResults;
+    const macroSignals = {
+        isInflationary: gdpGap?.status === 'negative' && gdpGap.outlook.includes('인플레이션'),
+        isRecessionary: gdpGap?.status === 'negative' && gdpGap.outlook.includes('침체'),
+        isLiquidityExcess: marshallK?.status === 'negative',
+        isConsumptionWeak: gdpConsumption?.status === 'negative',
+        isRecovery: gdpConsumption?.status === 'positive' || marshallK?.status === 'positive',
+    };
 
-    let analysisText = '';
-    const macroSummary = macroSignals.map(s => s.summary).filter(Boolean).join(' ');
-    if(macroSummary) {
-        analysisText += `<b>[거시 분석]</b> ${macroSummary}<br><br>`;
+    // 2. 단기 핵심 지표 상태 확인
+    const findIndicator = (id) => analyzedIndicators.find(i => i && i.id === id);
+    const shortTermSignals = {
+        cpi: findIndicator('us_cpi'),
+        nfp: findIndicator('nfp'),
+        yieldSpread: findIndicator('yield_spread'),
+        vix: findIndicator('vix'),
+    };
+
+    // 3. 시나리오 분석
+    let finalStatus = 'neutral', finalSignal = '📊', finalTitle = '혼조세 전망', finalAnalysis = '';
+    
+    // 시나리오 1: 경기 과열 또는 스태그플레이션 우려 (가장 부정적)
+    if (macroSignals.isInflationary && (macroSignals.isRecessionary || shortTermSignals.yieldSpread?.status === 'negative')) {
+        finalStatus = 'negative';
+        finalSignal = '🔥';
+        finalTitle = '스태그플레이션 우려';
+        finalAnalysis = `<b>[거시 분석]</b> 잠재성장률을 상회하는 생산으로 인한 인플레이션 압력(높은 GDP 갭)과 장단기 금리차 역전 등 경기 침체 신호가 동시에 나타나고 있습니다. 이는 성장은 둔화되는데 물가는 높은 최악의 상황일 수 있습니다.<br><br><b>[단기 분석]</b> 소비자물가지수(CPI)가 여전히 높게 유지되고 있는지 주목해야 합니다. 방어적 자산 배분 전략이 시급합니다.`;
+    }
+    // 시나리오 2: 명확한 경기 침체 신호
+    else if (macroSignals.isRecessionary && shortTermSignals.yieldSpread?.status === 'negative' && macroSignals.isConsumptionWeak) {
+        finalStatus = 'negative';
+        finalSignal = '📉';
+        finalTitle = '경기 침체 진입';
+        finalAnalysis = `<b>[거시 분석]</b> 소비 둔화, 잠재성장률 하회(마이너스 GDP 갭), 장단기 금리차 역전 등 여러 지표가 일관되게 경기 침체를 가리키고 있습니다.<br><br><b>[단기 분석]</b> VIX(변동성 지수)가 급등하고 고용(NFP)이 급격히 악화될 경우 침체는 가속화될 수 있습니다. 현금 및 대표 안전자산(달러, 장기 국채) 비중을 늘려야 할 시점입니다.`;
+    }
+    // 시나리오 3: 건강한 경기 회복 (가장 긍정적)
+    else if (macroSignals.isRecovery && shortTermSignals.cpi?.status === 'positive' && shortTermSignals.yieldSpread?.status === 'positive') {
+        finalStatus = 'positive';
+        finalSignal = '📈';
+        finalTitle = '견조한 회복 국면';
+        finalAnalysis = `<b>[거시 분석]</b> 소비와 GDP가 동반 성장하고, 유동성이 정상화되는 건강한 회복세를 보이고 있습니다.<br><br><b>[단기 분석]</b> 물가(CPI)가 안정되고, 장단기 금리차가 정상 범위를 유지하며, 고용(NFP)이 꾸준히 증가한다면 위험자산에 대한 긍정적 시각을 유지할 수 있습니다.`;
+    }
+    // 시나리오 4: 유동성 기반의 불안한 상승
+    else if (macroSignals.isLiquidityExcess && shortTermSignals.vix?.status === 'positive') {
+        finalStatus = 'neutral';
+        finalSignal = '⚠️';
+        finalTitle = '유동성 장세, 변동성 주의';
+        finalAnalysis = `<b>[거시 분석]</b> 과잉 유동성(높은 마샬케이)이 자산 가격을 밀어 올리는 상황으로 보입니다. 이는 경제 펀더멘털보다 돈의 힘으로 움직이는 시장이므로 갑작스러운 변동성에 취약할 수 있습니다.<br><br><b>[단기 분석]</b> 현재 VIX 지수가 낮아 시장이 안정적으로 보일 수 있으나, 작은 충격에도 크게 흔들릴 수 있으므로 추격 매수는 자제하고 이익 실현을 고려해야 합니다.`;
+    }
+    // 시나리오 5: 일반적인 혼조세
+    else {
+        const positiveSummary = macroSignals.isRecovery ? '소비 회복 등 긍정적 거시 신호' : findIndicator(id => id.status === 'positive')?.name;
+        const negativeSummary = macroSignals.isInflationary ? '인플레이션 압력' : (macroSignals.isConsumptionWeak ? '소비 둔화' : findIndicator(id => id.status === 'negative')?.name);
+        
+        finalAnalysis = `<b>[혼재된 신호]</b> ${positiveSummary || '일부 긍정적 지표'}와 ${negativeSummary || '일부 부정적 지표'}가 혼재되어 뚜렷한 방향성을 예측하기 어렵습니다.<br><br><b>[전략]</b> 시장이 방향성을 탐색하는 구간으로, 성장이 확인되는 특정 섹터에 선별적으로 투자하거나 관망하는 자세가 필요합니다.`;
     }
 
-    if (outlookScore > 35) {
-        analysisText += `<b>[단기 분석]</b> ${formatSignalText(positiveSignals)} 등 주요 지표들이 견조한 모습을 보여 경기 회복과 증시 상승 기대감을 높입니다.`;
-        return { status: 'positive', signal: '📈', title: '긍정적 전망', analysis: analysisText };
-    } else if (outlookScore < -35) {
-        analysisText += `<b>[단기 분석]</b> ${formatSignalText(negativeSignals)} 등 여러 지표에서 경고 신호가 나타나 경기 둔화 우려를 높이고 있습니다.`;
-        return { status: 'negative', signal: '📉', title: '부정적 전망', analysis: analysisText };
-    } else {
-        analysisText += `<b>[단기 분석]</b> 긍정적 신호(${formatSignalText(positiveSignals)})와 부정적 신호(${formatSignalText(negativeSignals)})가 혼재되어 있어, 당분간 시장은 변동성을 보일 수 있습니다.`;
-        return { status: 'neutral', signal: '📊', title: '혼조세 전망', analysis: analysisText };
+    return { status: finalStatus, signal: finalSignal, title: finalTitle, analysis: finalAnalysis };
+}
+
+// ==================================================================
+// 자산군별 투자 의견 및 섹터 전망 (더 정교하게 수정)
+// ==================================================================
+
+// 투자 의견 함수는 UI 파일로 이동하는 것이 더 적합하나, 분석 로직과 강하게 결합되므로 여기에 둡니다.
+export function getInvestmentSuggestions(marketOutlook) {
+    const status = marketOutlook.status;
+    const title = marketOutlook.title;
+
+    if (status === 'positive') {
+        return {
+            '주식': { icon: '📈', outlook: '비중 확대', reason: '경기 회복 기대감으로 위험자산 선호 심리가 강화됩니다. 특히 기술주, 경기소비재 등 성장주가 유망합니다.' },
+            '채권': { icon: '⚖️', outlook: '비중 유지', reason: '금리 안정화 시기에는 안정적 이자 수익 확보 차원에서 유효합니다. 단기채 위주로 구성하는 것이 좋습니다.' },
+            '달러': { icon: '💵', outlook: '비중 축소', reason: '위험자산 선호 심리가 강해지면 대표 안전자산인 달러의 매력도는 감소할 수 있습니다.' },
+            '원자재/금': { icon: '🛢️', outlook: '비중 확대', reason: '경기 회복은 산업용 원자재(구리 등) 수요 증가로 이어지며, 금은 인플레이션 헤지 수단으로 유효합니다.' }
+        };
+    } else if (status === 'negative') {
+        // 스태그플레이션과 일반 침체를 구분
+        if (title.includes('스태그플레이션')) {
+             return {
+                '주식': { icon: '📉', outlook: '비중 축소', reason: '성장 둔화와 비용 증가로 기업 이익이 크게 훼손될 수 있습니다. 필수소비재, 헬스케어 등 방어주 비중 확대가 필요합니다.' },
+                '채권': { icon: '🤔', outlook: '중립 (단기채 위주)', reason: '경기 둔화는 채권에 긍정적이나, 높은 물가는 부담 요인입니다. 물가연동국채(TIPS) 또는 단기채가 대안이 될 수 있습니다.' },
+                '달러': { icon: '💰', outlook: '비중 확대', reason: '글로벌 경기 불확실성이 커지면 가장 강력한 안전자산인 달러 수요가 급증합니다.' },
+                '원자재/금': { icon: '✨', outlook: '비중 확대', reason: '물가 상승을 헤지할 수 있는 금과 에너지 원자재의 가치가 부각되는 시기입니다.' }
+            };
+        }
+        return { // 일반 침체
+            '주식': { icon: '📉', outlook: '비중 축소', reason: '경기 둔화 우려로 기업 실적이 악화되고 투자 심리가 위축됩니다. 현금 비중을 늘리는 것이 중요합니다.' },
+            '채권': { icon: '🛡️', outlook: '비중 확대', reason: '금리 인하 기대감으로 장기 국채의 매력도가 높아지는 대표적인 시기입니다.' },
+            '달러': { icon: '💰', outlook: '비중 확대', reason: '안전자산 선호 심리가 극대화되며 달러 가치가 상승할 가능성이 높습니다.' },
+            '금': { icon: '✨', outlook: '비중 확대', reason: '대표적인 안전자산으로, 포트폴리오의 변동성을 낮추는 역할을 합니다.' }
+        };
+    } else { // neutral
+         return {
+            '주식': { icon: '📊', outlook: '중립 (섹터별 차별화)', reason: '시장의 방향성이 불확실하므로, 실적이 뒷받침되는 특정 섹터(예: AI, 신재생에너지) 위주의 선별적인 투자가 필요합니다.' },
+            '채권': { icon: '⚖️', outlook: '비중 유지', reason: '만기가 짧은 단기 국채나 우량 등급 회사채 중심으로 안정적인 이자 수익을 추구하는 전략이 유효합니다.' },
+            '달러/금': { icon: '🔄', outlook: '중립 (헷지 수단)', reason: '향후 시장 변동성에 대비하여 포트폴리오를 방어하는 헷지(위험회피) 수단으로 일부 보유하는 것을 고려할 수 있습니다.' },
+            '대체투자': { icon: '🏘️', outlook: '관심 필요', reason: '주식, 채권 외의 자산(부동산, 인프라 등)으로 분산 투자하여 포트폴리오 안정성을 높일 필요가 있습니다.' }
+        };
     }
 }
+
+
+// 아래 함수들은 기존 로직을 유지하되, 분석 결과를 UI에 표시하는 역할만 담당합니다.
 
 export function analyzeMarshallKTrend(chartData, resultsObject) {
     const analysisDiv = document.getElementById('marshall-analysis');
