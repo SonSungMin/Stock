@@ -1,7 +1,7 @@
 // script.js
 import { API_KEYS } from './js/config.js';
 import { fetchFredIndicators, fetchEcosIndicators } from './js/api.js';
-import { analyzeIndicators, getMarketOutlook } from './js/analysis.js';
+import { analyzeIndicators, getMarketOutlook, analyzeMarshallKTrend, analyzeGdpConsumption, analyzeGdpGap } from './js/analysis.js';
 import { renderMarshallKChart, renderGdpConsumptionChart, renderGdpGapChart } from './js/charts.js';
 import {
     renderInitialPlaceholders,
@@ -22,7 +22,6 @@ async function main() {
         return;
     }
 
-    // 거시 분석 결과를 저장할 객체 생성
     const macroAnalysisResults = {
         marshallK: null,
         gdpGap: null,
@@ -33,34 +32,40 @@ async function main() {
     renderInitialPlaceholders();
     renderEconomicCalendar();
     renderReleaseSchedule();
-    
-    // 거시 경제 차트 렌더링과 분석을 병렬로 실행
-    const macroAnalysisPromise = Promise.all([
-        renderMarshallKChart(macroAnalysisResults),
-        renderGdpConsumptionChart(macroAnalysisResults),
-        renderGdpGapChart(macroAnalysisResults),
-    ]);
 
     try {
-        // 단기 지표 데이터 로딩
-        const [fredData, ecosData] = await Promise.all([
-            fetchFredIndicators(), 
-            fetchEcosIndicators()
+        // 1. 단기 지표와 거시 경제 데이터를 병렬로 로딩
+        const [
+            fredData,
+            ecosData,
+            marshallKData,
+            gdpConsumptionData,
+            gdpGapData
+        ] = await Promise.all([
+            fetchFredIndicators(),
+            fetchEcosIndicators(),
+            renderMarshallKChart(),      // 차트 렌더링 + 데이터 반환
+            renderGdpConsumptionChart(), // 차트 렌더링 + 데이터 반환
+            renderGdpGapChart()          // 차트 렌더링 + 데이터 반환
         ]);
-        
+
+        // 2. 데이터 로딩이 완료된 후, 분석을 순차적으로 실행
+        if (marshallKData) analyzeMarshallKTrend(marshallKData, macroAnalysisResults);
+        if (gdpConsumptionData) analyzeGdpConsumption(gdpConsumptionData.gdp, gdpConsumptionData.pce, macroAnalysisResults);
+        if (gdpGapData) analyzeGdpGap(gdpGapData, macroAnalysisResults);
+
         const allIndicators = [...fredData, ...ecosData].filter(Boolean);
         const analyzedIndicators = analyzeIndicators(allIndicators);
-        
-        // 거시 경제 분석이 모두 완료될 때까지 기다림
-        await macroAnalysisPromise;
-        
-        // 단기 지표와 거시 분석 결과를 모두 전달하여 종합 전망 생성
+
+        // 3. 모든 분석이 끝난 후, 종합 전망 생성
         const marketOutlook = getMarketOutlook(analyzedIndicators, macroAnalysisResults);
-        
         renderDashboard(analyzedIndicators, marketOutlook);
 
     } catch (error) {
-        console.error("전체 데이터 로딩 실패:", error);
-        document.getElementById('update-time').innerText = "데이터 로딩에 실패했습니다.";
+        console.error("전체 데이터 로딩 또는 분석 실패:", error);
+        document.getElementById('update-time').innerText = "데이터 로딩/분석에 실패했습니다.";
+        // 일부 차트가 실패해도 UI는 기본값으로 렌더링 시도
+        const outlook = getMarketOutlook([], macroAnalysisResults);
+        renderDashboard([], outlook);
     }
 }
