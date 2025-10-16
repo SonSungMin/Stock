@@ -504,6 +504,10 @@ function getMarketOutlook(analyzedIndicators) {
     }
 
     const weightedIndicators = analyzedIndicators.filter(ind => ind.weight > 0);
+    if (weightedIndicators.length === 0) {
+        return { status: 'neutral', signal: '📊', title: '분석 불가', analysis: '전망을 분석하는 데 사용되는 주요 지표를 불러오지 못했습니다.' };
+    }
+
     const totalWeight = weightedIndicators.reduce((sum, ind) => sum + ind.weight, 0);
     let score = 0;
 
@@ -513,13 +517,36 @@ function getMarketOutlook(analyzedIndicators) {
     });
     
     const outlookScore = totalWeight > 0 ? (score / totalWeight) * 100 : 0;
+    
+    // 분석 근거 생성을 위한 로직
+    const positiveSignals = weightedIndicators.filter(i => i.status === 'positive').sort((a,b) => b.weight - a.weight).slice(0, 3);
+    const negativeSignals = weightedIndicators.filter(i => i.status === 'negative').sort((a,b) => b.weight - a.weight).slice(0, 3);
 
+    const formatSignalText = (signals) => {
+        if (signals.length === 0) return '';
+        // 지표 이름에서 국기 이모지를 제거하고 텍스트만 추출
+        return signals.map(s => s.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()).join(', ');
+    };
+
+    let analysisText;
     if (outlookScore > 30) {
-        return { status: 'positive', signal: '📈', title: '긍정적 전망', analysis: '주요 경제 지표들이 견조한 모습을 보이며, 경기 회복과 증시 상승에 대한 기대감이 높습니다. 위험자산 선호 심리가 강화될 수 있습니다.' };
+        analysisText = `주요 경제 지표들이 견조한 모습을 보이고 있습니다. 특히 긍정적인 신호를 보내고 있는 <b>${formatSignalText(positiveSignals)}</b> 등이 경기 회복과 증시 상승에 대한 기대감을 높이고 있습니다. 위험자산 선호 심리가 강화될 수 있습니다.`;
+        return { status: 'positive', signal: '📈', title: '긍정적 전망', analysis: analysisText };
     } else if (outlookScore < -30) {
-        return { status: 'negative', signal: '📉', title: '부정적 전망', analysis: '여러 경제 지표에서 경고 신호가 나타나고 있습니다. 경기 둔화 및 침체 우려가 커지고 있어, 안전자산 선호 심리가 강해질 수 있습니다.' };
+        analysisText = `여러 경제 지표에서 경고 신호가 나타나고 있습니다. 특히 <b>${formatSignalText(negativeSignals)}</b> 등에서 나타난 우려가 경기 둔화 및 침체 가능성을 높이고 있어, 안전자산 선호 심리가 강해질 수 있습니다.`;
+        return { status: 'negative', signal: '📉', title: '부정적 전망', analysis: analysisText };
     } else {
-        return { status: 'neutral', signal: '📊', title: '혼조세 전망', analysis: '긍정적 지표와 부정적 지표가 혼재되어 명확한 방향성을 보이지 않고 있습니다. 당분간 시장은 변동성을 보이며 횡보할 가능성이 있습니다.' };
+        const positiveText = formatSignalText(positiveSignals);
+        const negativeText = formatSignalText(negativeSignals);
+        analysisText = `긍정적 지표와 부정적 지표가 혼재되어 명확한 방향성을 보이지 않고 있습니다.`;
+        if (positiveText) {
+            analysisText += `<br><br><b>[긍정 요인]</b> ${positiveText} 등은 시장에 긍정적인 영향을 주고 있습니다.`
+        }
+        if (negativeText) {
+             analysisText += `<br><b>[부정 요인]</b> 반면, ${negativeText} 등은 부담으로 작용하고 있습니다.`
+        }
+        analysisText += `<br><br>당분간 시장은 변동성을 보이며 횡보할 가능성이 있습니다.`;
+        return { status: 'neutral', signal: '📊', title: '혼조세 전망', analysis: analysisText };
     }
 }
 
@@ -606,12 +633,14 @@ function renderSectorOutlook(analyzedIndicators) {
         });
         
         let outlook, reason;
+        const reasonText = validIndicators.map(i => `'${i.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}'(${i.text})`).join(', ');
+
         if (score > 0) {
             outlook = '<span class="positive-text">긍정적</span>';
-            reason = validIndicators.map(i => `'${i.name.split(' ')[1]}'(${i.text})`).join(', ') + ' 등이 긍정적 신호를 보냅니다.';
+            reason = `${reasonText} 등이 긍정적 신호를 보냅니다.`;
         } else if (score < 0) {
             outlook = '<span class="negative-text">부정적</span>';
-            reason = validIndicators.map(i => `'${i.name.split(' ')[1]}'(${i.text})`).join(', ') + ' 등이 부담으로 작용합니다.';
+            reason = `${reasonText} 등이 부담으로 작용합니다.`;
         } else {
             outlook = '<span>중립적</span>';
             reason = '관련 지표들이 혼조세를 보이며 명확한 방향성을 나타내지 않고 있습니다.';
@@ -747,7 +776,7 @@ async function showModal(indicatorId) {
                 data: {
                     labels: historicalData.map(d => d.date),
                     datasets: [{
-                        label: details.title,
+                        label: details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim(),
                         data: historicalData.map(d => d.value),
                         borderColor: '#0056b3',
                         borderWidth: 2,
