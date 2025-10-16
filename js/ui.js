@@ -18,6 +18,8 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
     document.getElementById('update-time').innerText = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
     
     const outlookSection = document.getElementById('outlook-section');
+    
+    // 💡 변경된 부분: marketOutlook이 유효하지 않을 경우를 대비하여 방어 코드를 추가합니다.
     if (marketOutlook && marketOutlook.status) {
         outlookSection.className = `outlook-section ${marketOutlook.status}-bg`;
         outlookSection.innerHTML = `
@@ -26,11 +28,17 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
             <p class="outlook-analysis">${marketOutlook.analysis}</p>
         `;
     } else {
-        outlookSection.innerHTML = '<p class="loading-text" style="color: #dc3545;">시장 전망을 불러오는 데 실패했습니다.</p>';
+        // marketOutlook 객체가 없거나 비정상일 경우 오류 메시지를 표시합니다.
+        outlookSection.className = 'outlook-section neutral-bg';
+        outlookSection.innerHTML = `
+            <div class="outlook-signal">🤔</div>
+            <h3 class="outlook-title neutral-text">분석 데이터 부족</h3>
+            <p class="outlook-analysis">시장 종합 전망을 분석하기 위한 데이터가 부족합니다. 일부 지표를 불러오지 못했을 수 있습니다.</p>
+        `;
     }
 
     renderSectorOutlook(analyzedIndicators);
-    renderInvestmentSuggestions(marketOutlook);
+    renderInvestmentSuggestions(marketOutlook || { status: 'neutral' }); // 💡 marketOutlook이 없을 경우 기본값을 전달합니다.
 
     const indicatorGrid = document.getElementById('indicator-grid');
     indicatorGrid.innerHTML = '';
@@ -62,7 +70,7 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
             const todayInScheduleYear = new Date(2025, today.getMonth(), today.getDate());
             const nextDate = specificSchedule.dates.find(d => new Date(`2025-${d}`) > todayInScheduleYear);
             if(nextDate) nextDateStr = ` <span class="next-date">[다음:${nextDate}]</span>`;
-        } else if (cycleSchedule && cycleSchedule.periodicity !== 'daily') {
+        } else if (cycleSchedule && cycleSchedule.periodicity !== 'daily' && indicator.date) { // 💡 indicator.date가 유효한지 확인
             const currentMonth = parseInt(indicator.date.split('-')[0], 10);
             let nextMonth = currentMonth + (cycleSchedule.periodicity === 'monthly' ? cycleSchedule.offset : 3 + cycleSchedule.offset);
             if (nextMonth > 12) nextMonth = (nextMonth - 1) % 12 + 1;
@@ -75,7 +83,7 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
             <div>
                 <div class="indicator-card-header"><h4>${indicator.name}</h4></div>
                 <div class="date-info">
-                    <span class="current-date">[현재:${indicator.date}]</span>${nextDateStr}
+                    <span class="current-date">[현재:${indicator.date || 'N/A'}]</span>${nextDateStr}
                 </div>
                 <p class="indicator-value">${valueText}</p>
                 <div class="indicator-status">
