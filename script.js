@@ -1123,12 +1123,12 @@ async function renderGdpConsumptionChart() {
     ctx.fillText("차트 데이터 로딩 중...", canvas.width / 2, canvas.height / 2);
     
     try {
-        // GDPC1: Real GDP, PCEC: Real PCE (Consumption), USREC: US Recession Indicators
+        // GDPC1: Real GDP, PCEC: Real PCE (Consumption), USRECQ: US Recession Indicators (Quarterly)
         // 200개 분기 데이터 (약 50년치) 요청
         const [gdpObs, pceObs, usrecObs] = await Promise.all([
             fetchFredData('GDPC1', 200, 'desc'), 
             fetchFredData('PCEC', 200, 'desc'),   
-            fetchFredData('USREC', 200, 'desc') 
+            fetchFredData('USRECQ', 200, 'desc') // 👈 USREC를 USRECQ로 수정
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) {
@@ -1245,24 +1245,22 @@ async function renderGdpConsumptionChart() {
                         }
                     },
                     y: { 
-                        beginAtZero: false,
-                        title: { display: true, text: '성장률 (%)' },
-                        // 원본 그래프와 유사한 Y축 범위 강제 설정 (시각적 유사성을 위해)
-                        min: -5.0,
-                        max: 5.0,
-                        // 0% 라인을 강조하기 위한 설정
-                        grid: {
-                            color: function(context) {
-                                if (context.tick.value === 0) {
-                                    return '#333'; // 0% 라인 진하게
+                            beginAtZero: false,
+                            title: { display: true, text: '성장률 (%)' },
+                            // min, max 속성 삭제하여 Y축 범위가 자동 조절되도록 함
+                            grid: {
+                                color: function(context) {
+                                    if (context.tick.value === 0) {
+                                        return '#333'; // 0% 라인 진하게
+                                    }
+                                    return 'rgba(0, 0, 0, 0.1)';
+                                },
+                                lineWidth: function(context) {
+                                    if (context.tick.value === 0) {
+                                        return 2; // 0% 라인 두껍게
+                                    }
+                                    return 1;
                                 }
-                                return 'rgba(0, 0, 0, 0.1)';
-                            },
-                            lineWidth: function(context) {
-                                if (context.tick.value === 0) {
-                                    return 2; // 0% 라인 두껍게
-                                }
-                                return 1;
                             }
                         }
                     }
