@@ -58,9 +58,9 @@ export async function renderGdpConsumptionChart() {
     
     try {
         const [gdpObs, pceObs, usrecObs] = await Promise.all([
-            fetchFredData('GDPC1', 200, 'desc'), 
-            fetchFredData('PCEC', 200, 'desc'),   
-            fetchFredData('USRECQ', 200, 'desc')
+            fetchFredData('GDPC1', 220, 'desc'), // 데이터 기간 확장
+            fetchFredData('PCEC', 220, 'desc'),   
+            fetchFredData('USRECQ', 220, 'desc')
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) {
@@ -98,40 +98,57 @@ export async function renderGdpConsumptionChart() {
         }
 
         const labels = chartData.map(d => d.date);
+        
+        // 💡 변경된 부분: 경기 침체 구간에 라벨 추가
+        const recessionPeriods = {
+            '1973-11-01': '오일 쇼크',
+            '1980-01-01': '더블 딥 침체',
+            '1990-07-01': '걸프전 침체',
+            '2001-03-01': 'IT 버블',
+            '2007-12-01': '금융위기',
+            '2020-02-01': '팬데믹'
+        };
+
         const recessionAnnotations = [];
         let startRecession = null;
+        let recessionStartDate = null;
 
         chartData.forEach((d, index) => {
             if (d.isRecession && startRecession === null) {
                 startRecession = index;
+                recessionStartDate = d.date;
             } else if (!d.isRecession && startRecession !== null) {
+                const labelKey = Object.keys(recessionPeriods).find(key => 
+                    new Date(key) >= new Date(recessionStartDate) && new Date(key) < new Date(d.date)
+                );
+                const labelContent = labelKey ? recessionPeriods[labelKey] : '';
+
                 recessionAnnotations.push({
                     type: 'box', xMin: startRecession, xMax: index,
-                    backgroundColor: 'rgba(108, 117, 125, 0.3)', borderColor: 'transparent'
+                    backgroundColor: 'rgba(0, 0, 0, 0.1)', 
+                    borderColor: 'transparent',
+                    label: {
+                        content: labelContent,
+                        display: true,
+                        position: 'start',
+                        yAdjust: -10,
+                        font: { size: 11, weight: 'bold' },
+                        color: 'rgba(0, 0, 0, 0.6)'
+                    }
                 });
                 startRecession = null;
-            }
-            if (index === chartData.length - 1 && startRecession !== null) {
-                 recessionAnnotations.push({
-                    type: 'box', xMin: startRecession, xMax: index + 1,
-                    backgroundColor: 'rgba(108, 117, 125, 0.3)', borderColor: 'transparent'
-                });
+                recessionStartDate = null;
             }
         });
+
 
         gdpConsumptionChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [
-                    {
-                        label: '실질 GDP 성장률 (%)', data: chartData.map(d => d.gdpGrowth),
-                        borderColor: '#28a745', borderWidth: 2, pointRadius: 0, tension: 0.1, pointStyle: 'line' 
-                    },
-                    {
-                        label: '실질 PCE(소비) 성장률 (%)', data: chartData.map(d => d.pceGrowth),
-                        borderColor: '#dc3545', borderWidth: 2, pointRadius: 0, tension: 0.1, pointStyle: 'line'
-                    }
+                    { label: '실질 GDP 성장률 (%)', data: chartData.map(d => d.gdpGrowth), borderColor: '#28a745', borderWidth: 2, pointRadius: 0, tension: 0.1 },
+                    { label: '실질 PCE(소비) 성장률 (%)', data: chartData.map(d => d.pceGrowth), borderColor: '#dc3545', borderWidth: 2, pointRadius: 0, tension: 0.1 }
                 ]
             },
             options: {
@@ -141,31 +158,23 @@ export async function renderGdpConsumptionChart() {
                         ticks: {
                             callback: function(value, index) {
                                 const year = labels[index].substring(0, 4);
-                                const quarter = labels[index].substring(5, 7);
-                                if (quarter === '01' && parseInt(year) % 5 === 0) {
-                                    return year;
-                                }
+                                if (parseInt(year) % 5 === 0 && labels[index].substring(5,7) === '01') return year;
                                 return '';
                             },
-                            autoSkip: false, maxRotation: 0, minRotation: 0
+                            autoSkip: false, maxRotation: 0,
                         },
-                        // 💡 추가된 부분: 연도 레이블이 있을 때만 격자선 표시
                         grid: {
                             color: function(context) {
-                                const year = labels[context.tick.value].substring(0, 4);
-                                const quarter = labels[context.tick.value].substring(5, 7);
-                                if (quarter === '01' && parseInt(year) % 5 === 0) {
-                                    return 'rgba(0, 0, 0, 0.1)'; // 격자선 보이기
-                                }
-                                return 'transparent'; // 격자선 숨기기
+                                const tickLabel = context.chart.scales.x.ticks[context.tick.value].label;
+                                return tickLabel ? 'rgba(0, 0, 0, 0.1)' : 'transparent';
                             }
                         }
                     },
                     y: { 
                         title: { display: true, text: '성장률 (%)' },
                         grid: {
-                            color: ctx => (ctx.tick.value === 0) ? '#333' : 'rgba(0, 0, 0, 0.1)',
-                            lineWidth: ctx => (ctx.tick.value === 0) ? 2 : 1
+                            color: c => (c.tick.value === 0) ? '#666' : 'rgba(0, 0, 0, 0.1)',
+                            lineWidth: c => (c.tick.value === 0) ? 1.5 : 1
                         }
                     }
                 },
@@ -178,12 +187,9 @@ export async function renderGdpConsumptionChart() {
 
     } catch (error) {
         console.error("소비/GDP 차트 렌더링 실패:", error);
-        if (ctx) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#dc3545";
-            ctx.textAlign = "center";
-            ctx.fillText("차트 데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
-        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#dc3545";
+        ctx.fillText("차트 데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
     }
 }
 
@@ -199,9 +205,9 @@ export async function renderMarshallKChart() {
 
     try {
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-            fetchFredData('GDP', 2000, 'desc'),
-            fetchFredData('M2SL', 5000, 'desc'),
-            fetchFredData('DGS10', 15000, 'desc')
+            fetchFredData('GDP', 200, 'desc'),
+            fetchFredData('M2SL', 500, 'desc'),
+            fetchFredData('DGS10', 1500, 'desc')
         ]);
 
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
@@ -252,29 +258,41 @@ export async function renderMarshallKChart() {
         
         if (marshallKChart) marshallKChart.destroy();
         
+        // 💡 변경된 부분: 침체 표시 색상 및 스타일 강화
         const crisisAnnotations = [
-            { year: '2000 Q1', label: 'IT 버블' }, { year: '2008 Q3', label: '금융위기' },
-            { year: '2020 Q2', label: '팬데믹' }, { year: '1980 Q1', label: '침체' }
-        ].map(c => ({
-            type: 'line', mode: 'vertical', scaleID: 'x',
-            value: chartData.findIndex(d => d.label === c.year),
-            borderColor: 'rgba(0, 123, 255, 0.5)', borderWidth: 1,
-            label: { content: c.label, enabled: true, position: 'top', font: {size: 10}, backgroundColor: 'rgba(0, 123, 255, 0.2)' }
-        })).filter(a => a.value !== -1);
+            { date: '2001-03-01', label: 'IT 버블' }, 
+            { date: '2007-12-01', label: '금융위기' },
+            { date: '2020-02-01', label: '팬데믹' }
+        ].map(c => {
+            const index = chartData.findIndex(d => new Date(d.date) >= new Date(c.date));
+            if (index === -1) return null;
+            return {
+                type: 'line', mode: 'vertical', scaleID: 'x',
+                value: index,
+                borderColor: 'rgba(0, 86, 179, 0.7)', // 진한 파란색
+                borderWidth: 2,
+                borderDash: [6, 6], // 점선 스타일
+                label: { 
+                    content: c.label, 
+                    display: true, 
+                    position: 'end',
+                    yAdjust: 20,
+                    font: { size: 12, weight: 'bold' },
+                    backgroundColor: 'rgba(0, 86, 179, 0.7)',
+                    color: 'white',
+                    padding: 4,
+                    borderRadius: 4
+                }
+            };
+        }).filter(a => a !== null);
 
         marshallKChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: chartData.map(d => d.label),
                 datasets: [
-                    {
-                        label: '국채 10년 (%)', data: chartData.map(d => d.interestRate),
-                        borderColor: '#0056b3', yAxisID: 'y', borderWidth: 2, pointRadius: 0
-                    },
-                    {
-                        label: '마샬케이', data: chartData.map(d => d.marshallK),
-                        borderColor: '#dc3545', yAxisID: 'y1', borderWidth: 2, pointRadius: 0
-                    }
+                    { label: '국채 10년 (%)', data: chartData.map(d => d.interestRate), borderColor: '#0056b3', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+                    { label: '마샬케이', data: chartData.map(d => d.marshallK), borderColor: '#dc3545', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
                 ]
             },
             options: {
@@ -284,24 +302,16 @@ export async function renderMarshallKChart() {
                         ticks: {
                             callback: function(value, index) {
                                 const year = chartData[index].year;
-                                const quarter = chartData[index].label.substring(5);
-                                if (quarter === 'Q1' && year % 4 === 0) {
-                                    return year;
-                                }
+                                if (year % 4 === 0 && chartData[index].label.endsWith('Q1')) return year;
                                 return '';
                             },
-                            autoSkip: false, maxRotation: 0, minRotation: 0
+                            autoSkip: false, maxRotation: 0,
                         },
-                        // 💡 추가된 부분: 연도 레이블이 있을 때만 격자선 표시
                         grid: {
-                            color: function(context) {
-                                const year = chartData[context.tick.value].year;
-                                const quarter = chartData[context.tick.value].label.substring(5);
-                                if (quarter === 'Q1' && year % 4 === 0) {
-                                    return 'rgba(0, 0, 0, 0.1)'; // 격자선 보이기
-                                }
-                                return 'transparent'; // 격자선 숨기기
-                            }
+                           color: function(context) {
+                                const tickLabel = context.chart.scales.x.ticks[context.tick.value].label;
+                                return tickLabel ? 'rgba(0, 0, 0, 0.1)' : 'transparent';
+                           }
                         }
                     },
                     y: { position: 'left', title: { display: true, text: '금리 (%)' }, ticks: { color: '#0056b3' } },
@@ -313,12 +323,9 @@ export async function renderMarshallKChart() {
 
     } catch (error) {
         console.error("마샬케이 차트 렌더링 실패:", error);
-        if (ctx) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#dc3545";
-            ctx.textAlign = "center";
-            ctx.fillText("데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
-        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#dc3545";
+        ctx.fillText("데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
     }
 }
 
