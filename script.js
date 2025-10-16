@@ -1128,7 +1128,7 @@ async function renderGdpConsumptionChart() {
         const [gdpObs, pceObs, usrecObs] = await Promise.all([
             fetchFredData('GDPC1', 200, 'desc'), 
             fetchFredData('PCEC', 200, 'desc'),   
-            fetchFredData('USRECQ', 200, 'desc') // 👈 USREC를 USRECQ로 수정
+            fetchFredData('USRECQ', 200, 'desc') // <<< 수정된 부분
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) {
@@ -1245,22 +1245,21 @@ async function renderGdpConsumptionChart() {
                         }
                     },
                     y: { 
-                            beginAtZero: false,
-                            title: { display: true, text: '성장률 (%)' },
-                            // min, max 속성 삭제하여 Y축 범위가 자동 조절되도록 함
-                            grid: {
-                                color: function(context) {
-                                    if (context.tick.value === 0) {
-                                        return '#333'; // 0% 라인 진하게
-                                    }
-                                    return 'rgba(0, 0, 0, 0.1)';
-                                },
-                                lineWidth: function(context) {
-                                    if (context.tick.value === 0) {
-                                        return 2; // 0% 라인 두껍게
-                                    }
-                                    return 1;
+                        beginAtZero: false,
+                        title: { display: true, text: '성장률 (%)' },
+                        // <<< 수정된 부분: min, max 삭제
+                        grid: {
+                            color: function(context) {
+                                if (context.tick.value === 0) {
+                                    return '#333'; // 0% 라인 진하게
                                 }
+                                return 'rgba(0, 0, 0, 0.1)';
+                            },
+                            lineWidth: function(context) {
+                                if (context.tick.value === 0) {
+                                    return 2; // 0% 라인 두껍게
+                                }
+                                return 1;
                             }
                         }
                     }
