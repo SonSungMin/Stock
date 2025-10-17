@@ -46,13 +46,15 @@ function createRecessionAnnotations(chartData) {
                 borderWidth: 0,
             };
             if (labelKey) {
+                // 💡 [수정] 레이블이 명확하게 보이도록 스타일 변경
                 annotation.label = {
                     content: recessionPeriods[labelKey],
                     display: true,
                     position: 'start',
                     yAdjust: 10,
                     font: { size: 11, weight: 'bold' },
-                    color: 'rgba(108, 117, 125, 0.9)'
+                    color: 'white', // 글자색을 흰색으로
+                    backgroundColor: 'rgba(108, 117, 125, 0.7)' // 반투명 회색 배경 추가
                 };
             }
             annotations.push(annotation);
@@ -127,11 +129,10 @@ export async function renderGdpGapChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                // 5년 주기로 1분기(01-01) 데이터에만 연도 표시
                                 if (year % 5 === 0 && label.substring(5, 10) === '01-01') {
                                     return year;
                                 }
-                                return null; // 그 외에는 레이블 숨김
+                                return null;
                             },
                             autoSkip: false,
                             maxRotation: 0
@@ -228,7 +229,6 @@ export async function renderGdpConsumptionChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                // 5년 주기로 1분기 데이터에만 연도 표시
                                 if (year % 5 === 0 && label.substring(5, 10) === '01-01') {
                                     return year;
                                 }
@@ -247,7 +247,6 @@ export async function renderGdpConsumptionChart() {
             }
         });
         
-        // 분석용으로 원본 데이터 반환 (순서를 다시 desc로)
         return { gdp: gdpObs.reverse(), pce: pceObs.reverse() };
     } catch (error) {
         console.error("소비/GDP 차트 렌더링 실패:", error);
