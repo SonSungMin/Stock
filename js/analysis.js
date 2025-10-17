@@ -6,6 +6,7 @@
 export function analyzeIndicators(indicators) {
     // 각 지표의 중요도에 따라 '가중치(weight)'를 부여합니다.
     return indicators.map(indicator => {
+        if (!indicator) return null;
         const { id, value } = indicator;
         let status = 'neutral', icon = '😐', text = '보통', weight = 2; // 기본 가중치
         switch (id) {
@@ -44,9 +45,18 @@ export function analyzeIndicators(indicators) {
                 else if (value <= 1380) { status = 'neutral'; icon = '〰️'; text = '변동성 확대'; }
                 else { status = 'negative'; icon = '💸'; text = '원화 약세'; }
                 weight = 4; break;
+            case 'kor_bond_3y':
+                if (value <= 3.5) { status = 'positive'; icon = '✅'; text = '금리 안정'; }
+                else if (value <= 4.0) { status = 'neutral'; icon = '⚠️'; text = '상승 압력'; }
+                else { status = 'negative'; icon = '🚨'; text = '고금리 부담'; }
+                weight = 3; break;
+            case 'm2_growth':
+                if (value >= 5 && value <= 7) { status = 'positive'; icon = '💧'; text = '유동성 적정'; }
+                else { status = 'neutral'; icon = '〰️'; text = '과잉/부족 우려'; }
+                weight = 2; break;
         }
         return { ...indicator, status, icon, text, weight };
-    });
+    }).filter(Boolean); // null 값을 제거
 }
 
 /**
