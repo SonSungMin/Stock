@@ -73,13 +73,14 @@ export async function fetchEcosIndicators() {
             kospi: { keywords: ['KOSPI'] },
             producer_price_index: { keywords: ['생산자물가지수', '총지수', '등락률'] },
             corp_bond_spread: { keywords: ['회사채', '수익률', '스프레드'] },
+            kor_bond_3y: { keywords: ['국고채', '3년'] },
+            m2_growth: { keywords: ['M2', '광의통화', '증감률'] },
         };
         
         const found = {};
         allStats.forEach(stat => {
             for (const [key, value] of Object.entries(mapping)) {
                 if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
-                    // 💡 변경된 부분: stat.TIME이 유효한지 먼저 확인합니다.
                     if (stat.TIME && stat.DATA_VALUE && stat.TIME.length >= 8) {
                         found[key] = {
                             id: key, name: indicatorDetails[key].title, value: parseFloat(stat.DATA_VALUE),
