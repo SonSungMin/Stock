@@ -9,7 +9,7 @@ let gdpConsumptionChart = null;
 let indicatorChart = null;
 let gdpGapChart = null;
 
-// 주요 경기 침체 기간과 명칭 정의
+// 주요 경기 침체 기간과 명칭 정의 (Source of Truth)
 const recessionPeriods = {
     '1973-11-01': '오일 쇼크',
     '1980-01-01': '더블 딥 침체',
@@ -20,49 +20,60 @@ const recessionPeriods = {
 };
 
 /**
- * 경기 침체 기간 데이터를 기반으로 차트 어노테이션을 생성하는 헬퍼 함수
- * @param {object[]} chartData - 날짜와 경기 침체 여부(isRecession)를 포함하는 차트 데이터
- * @returns {object[]} - Chart.js 어노테이션 설정 배열
+ * 경기 침체 기간에 대한 회색 음영(box) 어노테이션을 생성합니다.
+ * @param {object[]} chartData - isRecession 플래그를 포함하는 차트 데이터
+ * @returns {object[]} - Chart.js box 어노테이션 배열
  */
-function createRecessionAnnotations(chartData) {
-    const annotations = [];
+function createRecessionBoxes(chartData) {
+    const boxes = [];
     let startRecession = null;
-    let recessionStartDate = null;
 
     chartData.forEach((d, index) => {
         if (d.isRecession && startRecession === null) {
             startRecession = index;
-            recessionStartDate = d.date;
         } else if ((!d.isRecession || index === chartData.length - 1) && startRecession !== null) {
-            const labelKey = Object.keys(recessionPeriods).find(key =>
-                new Date(key) >= new Date(recessionStartDate) && new Date(key) < new Date(d.date)
-            );
-            const annotation = {
+            boxes.push({
                 type: 'box',
                 xMin: startRecession,
                 xMax: index,
                 backgroundColor: 'rgba(0, 0, 0, 0.05)',
                 borderColor: 'transparent',
-                borderWidth: 0,
-            };
-            if (labelKey) {
-                // 💡 [수정] 레이블이 명확하게 보이도록 스타일 변경
-                annotation.label = {
-                    content: recessionPeriods[labelKey],
-                    display: true,
-                    position: 'start',
-                    yAdjust: 10,
-                    font: { size: 11, weight: 'bold' },
-                    color: 'white', // 글자색을 흰색으로
-                    backgroundColor: 'rgba(108, 117, 125, 0.7)' // 반투명 회색 배경 추가
-                };
-            }
-            annotations.push(annotation);
+            });
             startRecession = null;
-            recessionStartDate = null;
         }
     });
-    return annotations;
+    return boxes;
+}
+
+/**
+ * 💡 [핵심 수정] 마샬케이 차트와 동일한 방식으로 경기 침체 '레이블' 어노테이션을 생성합니다.
+ * @param {object[]} chartData - 날짜 정보를 포함하는 차트 데이터
+ * @returns {object[]} - Chart.js line/label 어노테이션 배열
+ */
+function createRecessionLabels(chartData) {
+    return Object.entries(recessionPeriods).map(([date, label]) => {
+        const crisisDate = new Date(date);
+        const index = chartData.findIndex(d => new Date(d.date) >= crisisDate);
+        if (index === -1) return null;
+
+        return {
+            type: 'line',
+            scaleID: 'x',
+            value: index,
+            borderColor: 'rgba(220, 53, 69, 0.7)',
+            borderWidth: 1.5,
+            borderDash: [6, 6],
+            label: {
+                content: label,
+                display: true,
+                position: 'start',
+                yAdjust: 10,
+                font: { size: 11, weight: 'bold' },
+                color: 'white',
+                backgroundColor: 'rgba(220, 53, 69, 0.7)'
+            }
+        };
+    }).filter(Boolean);
 }
 
 
@@ -108,7 +119,10 @@ export async function renderGdpGapChart() {
             isRecession: usrecMap.get(date) || false
         }));
 
-        const recessionAnnotations = createRecessionAnnotations(chartData);
+        // 💡 [수정] 음영과 레이블을 별도로 생성하여 결합
+        const recessionBoxes = createRecessionBoxes(chartData);
+        const recessionLabels = createRecessionLabels(chartData);
+        const combinedAnnotations = [...recessionBoxes, ...recessionLabels];
 
         gdpGapChart = new Chart(ctx, {
             type: 'bar',
@@ -129,23 +143,20 @@ export async function renderGdpGapChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') {
-                                    return year;
-                                }
+                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { return year; }
                                 return null;
                             },
                             autoSkip: false,
                             maxRotation: 0
                         }
                     },
-                    y: {
-                        title: { display: true, text: 'GDP 갭 (%)' }
-                    }
+                    y: { title: { display: true, text: 'GDP 갭 (%)' } }
                 },
                 plugins: {
                     legend: { display: false },
                     annotation: {
-                        annotations: recessionAnnotations
+                        annotations: combinedAnnotations,
+                        clip: false // 레이블이 잘리지 않도록 설정
                     }
                 }
             }
@@ -175,25 +186,17 @@ export async function renderGdpConsumptionChart() {
         ]);
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
         
-        gdpObs.reverse();
-        pceObs.reverse();
-        usrecObs.reverse();
-
+        const chartData = [];
         const gdpMap = new Map(gdpObs.map(d => [d.date, parseFloat(d.value)]));
         const pceMap = new Map(pceObs.map(d => [d.date, parseFloat(d.value)]));
         const usrecMap = new Map(usrecObs.map(d => [d.date, d.value === '1']));
-
-        const chartData = [];
-        const uniqueDates = Array.from(new Set([...gdpMap.keys(), ...pceMap.keys()])).sort((a, b) => new Date(a) - new Date(b));
         
+        const uniqueDates = Array.from(gdpMap.keys()).sort((a, b) => new Date(a) - new Date(b));
+
         for (let i = 4; i < uniqueDates.length; i++) {
-            const currentDate = uniqueDates[i];
-            const previousDate = uniqueDates[i - 4];
-            
-            const currentGdp = gdpMap.get(currentDate);
-            const prevGdp = gdpMap.get(previousDate);
-            const currentPce = pceMap.get(currentDate);
-            const prevPce = pceMap.get(previousDate);
+            const currentDate = uniqueDates[i], previousDate = uniqueDates[i - 4];
+            const currentGdp = gdpMap.get(currentDate), prevGdp = gdpMap.get(previousDate);
+            const currentPce = pceMap.get(currentDate), prevPce = pceMap.get(previousDate);
 
             if ([currentGdp, prevGdp, currentPce, prevPce].every(v => v !== undefined && !isNaN(v))) {
                 chartData.push({
@@ -204,11 +207,13 @@ export async function renderGdpConsumptionChart() {
                 });
             }
         }
-
         if (chartData.length === 0) throw new Error("GDP/소비 데이터 가공에 실패했습니다.");
         
         const labels = chartData.map(d => d.date);
-        const recessionAnnotations = createRecessionAnnotations(chartData);
+        // 💡 [수정] 음영과 레이블을 별도로 생성하여 결합
+        const recessionBoxes = createRecessionBoxes(chartData);
+        const recessionLabels = createRecessionLabels(chartData);
+        const combinedAnnotations = [...recessionBoxes, ...recessionLabels];
 
         gdpConsumptionChart = new Chart(ctx, {
             type: 'line',
@@ -229,9 +234,7 @@ export async function renderGdpConsumptionChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') {
-                                    return year;
-                                }
+                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { return year; }
                                 return null;
                             },
                             autoSkip: false,
@@ -242,12 +245,15 @@ export async function renderGdpConsumptionChart() {
                 },
                 plugins: {
                     legend: { position: 'top' },
-                    annotation: { annotations: recessionAnnotations }
+                    annotation: { 
+                        annotations: combinedAnnotations,
+                        clip: false // 레이블이 잘리지 않도록 설정
+                    }
                 }
             }
         });
         
-        return { gdp: gdpObs.reverse(), pce: pceObs.reverse() };
+        return { gdp: gdpObs, pce: pceObs };
     } catch (error) {
         console.error("소비/GDP 차트 렌더링 실패:", error);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -273,64 +279,26 @@ export async function renderMarshallKChart() {
         
         const gdpMap = new Map(gdpSeries.filter(p => p.value !== '.').map(p => [p.date, parseFloat(p.value)]));
         const m2Map = new Map(m2Series.filter(p => p.value !== '.').map(p => [p.date.substring(0, 7), parseFloat(p.value)]));
-        
         const rateMonthlyAvg = new Map();
-        rateSeries.filter(p => p.value !== '.').forEach(p => {
-            const key = p.date.substring(0, 7);
-            if (!rateMonthlyAvg.has(key)) rateMonthlyAvg.set(key, []);
-            rateMonthlyAvg.get(key).push(parseFloat(p.value));
-        });
-        
+        rateSeries.filter(p => p.value !== '.').forEach(p => { const key = p.date.substring(0, 7); if (!rateMonthlyAvg.has(key)) rateMonthlyAvg.set(key, []); rateMonthlyAvg.get(key).push(parseFloat(p.value)); });
         const rateMap = new Map();
         rateMonthlyAvg.forEach((values, key) => rateMap.set(key, values.reduce((a, b) => a + b, 0) / values.length));
         
         const chartData = [];
         gdpMap.forEach((gdpValue, gdpDate) => {
-            const date = new Date(gdpDate);
-            const year = date.getFullYear();
-            const quarter = Math.floor(date.getMonth() / 3) + 1;
-            
+            const date = new Date(gdpDate), year = date.getFullYear(), quarter = Math.floor(date.getMonth() / 3) + 1;
             const quarterMonths = Array.from({length: 3}, (_, i) => `${year}-${String((quarter - 1) * 3 + i + 1).padStart(2, '0')}`);
             const m2Values = quarterMonths.map(m => m2Map.get(m)).filter(v => v);
             const rateValues = quarterMonths.map(m => rateMap.get(m)).filter(v => v);
-            
             if (m2Values.length > 0 && rateValues.length > 0) {
-                const avgM2 = m2Values.reduce((a, b) => a + b, 0) / m2Values.length;
-                const avgRate = rateValues.reduce((a, b) => a + b, 0) / rateValues.length;
-                chartData.push({
-                    label: `${year} Q${quarter}`,
-                    year: year,
-                    marshallK: avgM2 / gdpValue,
-                    interestRate: avgRate,
-                    date: date
-                });
+                chartData.push({ label: `${year} Q${quarter}`, year, marshallK: (m2Values.reduce((a,b)=>a+b,0)/m2Values.length / gdpValue), interestRate: rateValues.reduce((a,b)=>a+b,0)/rateValues.length, date });
             }
         });
 
         if (chartData.length === 0) throw new Error("데이터 매칭 실패");
         chartData.sort((a, b) => a.date - b.date);
         
-        const crisisAnnotations = Object.entries(recessionPeriods).map(([date, label]) => {
-            const crisisDate = new Date(date);
-            const index = chartData.findIndex(d => d.date >= crisisDate);
-            return index === -1 ? null : {
-                type: 'line',
-                scaleID: 'x',
-                value: index,
-                borderColor: 'rgba(220, 53, 69, 0.7)',
-                borderWidth: 1.5,
-                borderDash: [6, 6],
-                label: {
-                    content: label,
-                    display: true,
-                    position: 'start',
-                    yAdjust: -10,
-                    font: { size: 11, weight: 'bold' },
-                    color: 'white',
-                    backgroundColor: 'rgba(220, 53, 69, 0.7)'
-                }
-            };
-        }).filter(Boolean);
+        const crisisAnnotations = createRecessionLabels(chartData);
         
         marshallKChart = new Chart(ctx, {
             type: 'line',
@@ -349,9 +317,7 @@ export async function renderMarshallKChart() {
                         ticks: {
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
-                                if (data && data.year % 5 === 0 && data.label.endsWith('Q1')) {
-                                    return data.year;
-                                }
+                                if (data && data.year % 5 === 0 && data.label.endsWith('Q1')) { return data.year; }
                                 return null;
                             },
                             autoSkip: false,
@@ -382,36 +348,18 @@ export async function renderMarshallKChart() {
 export async function showModalChart(indicatorId) {
     const details = indicatorDetails[indicatorId];
     if (!details || !details.seriesId) return;
-    
     const chartCanvas = document.getElementById('indicator-chart');
     const ctx = chartCanvas.getContext('2d');
     if (indicatorChart) indicatorChart.destroy();
     chartCanvas.style.display = 'none';
-
     try {
-        const seriesId = Array.isArray(details.seriesId) ? details.seriesId[0] : details.seriesId;
-        const obs = await fetchFredData(seriesId, 100);
+        const series = Array.isArray(details.seriesId) ? details.seriesId[0] : details.seriesId;
+        const obs = await fetchFredData(series, 100);
         if (obs) {
-            const historicalData = obs.map(d => ({ date: d.date, value: parseFloat(d.value) })).reverse();
+            const historicalData = obs.map(d => ({date: d.date, value: parseFloat(d.value)})).reverse();
             if (historicalData.length > 0) {
                 chartCanvas.style.display = 'block';
-                indicatorChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: historicalData.map(d => d.date),
-                        datasets: [{
-                            label: details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim(),
-                            data: historicalData.map(d => d.value),
-                            borderColor: '#0056b3',
-                            borderWidth: 2,
-                            pointRadius: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
-                });
+                indicatorChart = new Chart(ctx, { type: 'line', data: { labels: historicalData.map(d => d.date), datasets: [{ label: details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim(), data: historicalData.map(d => d.value), borderColor: '#0056b3', borderWidth: 2, pointRadius: 1 }] }, options: { responsive: true, maintainAspectRatio: false } });
             }
         }
     } catch(error) {
