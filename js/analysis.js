@@ -519,3 +519,66 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
     if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
     resultsObject.gdpGap = result;
 }
+
+/**
+ * 🇰🇷 한국 경기순환지표(선행/동행)를 분석합니다.
+ * @param {object} cycleData - { coincident: [...], leading: [...] }
+ * @param {object} resultsObject - 종합 분석 결과 저장 객체
+ */
+export function analyzeCycleIndicators(cycleData, resultsObject) {
+    const analysisDiv = document.getElementById('cycle-analysis');
+    let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
+
+    try {
+        if (!cycleData || cycleData.leading.length < 6 || cycleData.coincident.length < 6) {
+            throw new Error("분석할 경기 순환 데이터가 부족합니다.");
+        }
+
+        // 1. 최신 데이터 추출
+        const latestLeading = cycleData.leading[cycleData.leading.length - 1];
+        const latestCoincident = cycleData.coincident[cycleData.coincident.length - 1];
+        
+        // 2. 모멘텀(방향성) 분석 (3개월 전 데이터와 비교)
+        const prevLeading = cycleData.leading[cycleData.leading.length - 4];
+        const leadingMomentum = latestLeading.value - prevLeading.value;
+        const leadingMomentumText = leadingMomentum > 0 ? "상승" : "하락";
+
+        // 3. 경기 국면 판단 (선행지수 기준)
+        const level = latestLeading.value;
+        const isRising = leadingMomentum > 0;
+
+        let investmentTiming = '';
+
+        if (level > 100 && isRising) {
+            // Q1: 확장 (호황)
+            result = { status: 'positive', outlook: '✅ 경기 확장 국면', summary: '선행지수가 100을 상회하며 상승 중입니다. 경기가 활발하게 확장되고 있습니다.' };
+            investmentTiming = '<b>[투자 견해]</b> 긍정적. 경기 호황이 지속되는 구간입니다. 다만, 선행지수가 고점에서 꺾이는지(경기 둔화 신호) 주의 깊게 관찰해야 합니다.';
+        } else if (level > 100 && !isRising) {
+            // Q2: 둔화 (후퇴)
+            result = { status: 'negative', outlook: '📉 경기 둔화 국면', summary: '선행지수가 100을 상회하지만 하락 전환했습니다. 경기 정점(Peak)을 통과했을 가능성이 높습니다.' };
+            investmentTiming = '<b>[투자 견해]</b> 부정적. 주식 비중 축소 및 현금/안전자산 확보가 필요한 시점입니다. 경기 방어주(필수소비재, 헬스케어) 비중 확대가 유리합니다.';
+        } else if (level < 100 && !isRising) {
+            // Q3: 침체 (불황)
+            result = { status: 'negative', outlook: '🚨 경기 침체 국면', summary: '선행지수가 100을 하회하며 하락 중입니다. 명백한 경기 침체(Recession) 신호입니다.' };
+            investmentTiming = '<b>[투자 견해]</b> 매우 부정적. 위험자산 비중을 최소화하고 채권, 달러 등 안전자산 비중을 극대화해야 합니다. 경기 저점(Trough)을 기다려야 합니다.';
+        } else {
+            // Q4: 회복 (초기)
+            result = { status: 'positive', outlook: '🚀 경기 회복 국면', summary: '선행지수가 100을 하회하지만 상승 전환했습니다. 경기 저점(Trough)을 통과하는 가장 강력한 회복 신호입니다.' };
+            investmentTiming = '<b>[투자 견해]</b> 매우 긍정적. 주식 비중을 적극적으로 확대해야 하는 "골든 크로스" 시점입니다. 경기민감주(IT, 금융, 산업재)가 시장을 주도할 수 있습니다.';
+        }
+
+        result.analysis = `<p><strong>최신 데이터 (${latestLeading.date.substring(0,4)}년 ${latestLeading.date.substring(4,6)}월):</strong></p>
+            <ul>
+                <li><strong>선행지수 (미래): ${latestLeading.value.toFixed(1)}</strong> (3개월 전 대비 ${leadingMomentum.toFixed(1)}p, <strong>[${leadingMomentumText} 추세]</strong>)</li>
+                <li><strong>동행지수 (현재):</strong> ${latestCoincident.value.toFixed(1)}</li>
+            </ul>
+            <p><strong>💡 종합 분석:</strong> ${result.summary}</p>
+            <p>${investmentTiming}</p>`;
+
+    } catch (error) {
+        result.analysis = `<p class="loading-text">${error.message}</p>`;
+    }
+    
+    if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
+    resultsObject.cycle = result; // 💡 종합 분석 객체에 추가
+}
