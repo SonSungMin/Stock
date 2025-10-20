@@ -201,49 +201,128 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
 
     try {
-        // 데이터가 최소 2년치(8분기)는 있어야 추세 비교 가능
-        if (!gdpObs || gdpObs.length < 9 || !pceObs || pceObs.length < 9) throw new Error("데이터 부족");
+        // 데이터가 최소 3년치(12분기)는 있어야 추세 비교 가능
+        if (!gdpObs || gdpObs.length < 13 || !pceObs || pceObs.length < 13) throw new Error("데이터 부족");
         
         // 1. 최신 분기 성장률 (YoY)
         const gdpGrowth = ((parseFloat(gdpObs[0].value) / parseFloat(gdpObs[4].value)) - 1) * 100;
         const pceGrowth = ((parseFloat(pceObs[0].value) / parseFloat(pceObs[4].value)) - 1) * 100;
 
-        // 2. 직전 분기 성장률 (YoY) - '추세' 계산용
-        const prevGdpGrowth = ((parseFloat(gdpObs[1].value) / parseFloat(gdpObs[5].value)) - 1) * 100;
+        // 2. 최근 4분기 이동평균 성장률 계산 (장기 추세)
+        const recentGdpGrowths = [];
+        for (let i = 0; i < 4; i++) {
+            const growth = ((parseFloat(gdpObs[i].value) / parseFloat(gdpObs[i + 4].value)) - 1) * 100;
+            recentGdpGrowths.push(growth);
+        }
+        const avgRecentGrowth = recentGdpGrowths.reduce((a, b) => a + b, 0) / 4;
         
-        // 3. 추세 판단 (최신 성장률 > 직전 성장률)
-        const gdpTrendPositive = gdpGrowth > prevGdpGrowth;
-        const trendText = gdpTrendPositive ? "(추세 개선)" : "(추세 둔화)";
+        // 3. 1년 전 4분기 이동평균 성장률 (과거 추세와 비교)
+        const pastGdpGrowths = [];
+        for (let i = 4; i < 8; i++) {
+            const growth = ((parseFloat(gdpObs[i].value) / parseFloat(gdpObs[i + 4].value)) - 1) * 100;
+            pastGdpGrowths.push(growth);
+        }
+        const avgPastGrowth = pastGdpGrowths.reduce((a, b) => a + b, 0) / 4;
 
-        // 4. 새로운 4분면 로직 적용
-        if (gdpGrowth > 1.5) {
-            if (gdpTrendPositive) {
-                result = { status: 'positive', outlook: '✅ 확장 국면', summary: `GDP와 소비가 모두 견조하며 성장률이 가속화${trendText}되고 있습니다.` };
+        // 4. 추세 판단: 최근 평균이 과거 평균보다 높으면 상승 추세
+        const trendImproving = avgRecentGrowth > avgPastGrowth;
+        const trendStrength = Math.abs(avgRecentGrowth - avgPastGrowth);
+        
+        // 5. 모멘텀 분석: 최근 2분기 vs 그 이전 2분기
+        const veryRecentMomentum = (recentGdpGrowths[0] + recentGdpGrowths[1]) / 2;
+        const slightlyOlderMomentum = (recentGdpGrowths[2] + recentGdpGrowths[3]) / 2;
+        const momentumAccelerating = veryRecentMomentum > slightlyOlderMomentum;
+
+        // 6. 종합 판단 로직
+        let trendText, momentumText;
+        
+        if (trendImproving) {
+            trendText = trendStrength > 0.5 ? "강한 상승 추세" : "완만한 상승 추세";
+        } else {
+            trendText = trendStrength > 0.5 ? "뚜렷한 하락 추세" : "완만한 하락 추세";
+        }
+        
+        momentumText = momentumAccelerating ? "가속" : "둔화";
+
+        // 7. 4분면 분석 (절대 수준 + 추세 방향)
+        if (gdpGrowth > 2.0) {
+            // 높은 성장률 구간
+            if (trendImproving && momentumAccelerating) {
+                result = { 
+                    status: 'positive', 
+                    outlook: '🚀 강한 확장 국면', 
+                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 견조하며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` 
+                };
+            } else if (!trendImproving && !momentumAccelerating) {
+                result = { 
+                    status: 'neutral', 
+                    outlook: '⚠️ 고점 경계 국면', 
+                    summary: `GDP 성장률은 ${gdpGrowth.toFixed(2)}%로 양호하나, ${trendText} + 모멘텀 ${momentumText}로 전환되어 고점 통과 가능성이 있습니다.` 
+                };
             } else {
-                // 이 부분이 사용자님이 지적한 현재 상황입니다.
-                result = { status: 'neutral', outlook: '⚠️ 둔화 국면', summary: `GDP 성장률은 양호한 수준이나, 직전 분기 대비 성장 모멘텀이 약화${trendText}되고 있습니다.` };
+                result = { 
+                    status: 'positive', 
+                    outlook: '✅ 확장 국면', 
+                    summary: `GDP 성장률 ${gdpGrowth.toFixed(2)}%로 양호한 수준이며, ${trendText}입니다.` 
+                };
+            }
+        } else if (gdpGrowth > 1.0) {
+            // 중간 성장률 구간
+            if (trendImproving && momentumAccelerating) {
+                result = { 
+                    status: 'positive', 
+                    outlook: '📈 회복 국면', 
+                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 회복 중이며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` 
+                };
+            } else if (!trendImproving && !momentumAccelerating) {
+                result = { 
+                    status: 'negative', 
+                    outlook: '📉 둔화 국면', 
+                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 둔화되고 있으며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` 
+                };
+            } else {
+                result = { 
+                    status: 'neutral', 
+                    outlook: '😐 혼조 국면', 
+                    summary: `GDP 성장률 ${gdpGrowth.toFixed(2)}%이며, ${trendText}로 방향성이 불명확합니다.` 
+                };
             }
         } else if (gdpGrowth > 0) {
-             if (gdpTrendPositive) {
-                result = { status: 'positive', outlook: '📈 회복 국면', summary: `경기가 바닥을 다지고 성장 모멘텀이 개선${trendText}되고 있습니다.` };
+            // 낮은 성장률 구간
+            if (trendImproving) {
+                result = { 
+                    status: 'neutral', 
+                    outlook: '🌱 초기 회복 신호', 
+                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 낮은 수준이나, ${trendText}로 회복 조짐이 보입니다.` 
+                };
             } else {
-                result = { status: 'negative', outlook: '📉 침체 우려', summary: `성장률이 0%에 근접하고 모멘텀도 약화${trendText}되어 경기 침체 우려가 있습니다.` };
+                result = { 
+                    status: 'negative', 
+                    outlook: '🚨 침체 우려', 
+                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 매우 낮으며, ${trendText} + 모멘텀 ${momentumText}로 침체 위험이 높습니다.` 
+                };
             }
         } else {
-            // gdpGrowth가 0 미만일 때
-            result = { status: 'negative', outlook: '🚨 경기 침체 국면', summary: `GDP가 마이너스 성장을 기록했습니다 ${trendText}.` };
+            // 마이너스 성장
+            result = { 
+                status: 'negative', 
+                outlook: '💥 경기 침체', 
+                summary: `GDP가 ${gdpGrowth.toFixed(2)}%로 마이너스 성장을 기록했습니다. ${trendText}입니다.` 
+            };
         }
 
         result.analysis = `<p><strong>최신 데이터 (${gdpObs[0].date.substring(0,7)}):</strong></p>
             <ul>
-                <li>실질 GDP (YoY): <strong>${gdpGrowth.toFixed(2)}%</strong> ${trendText}</li>
-                <li>실질 PCE (YoY): <strong>${pceGrowth.toFixed(2)}%</strong></li>
-                <li>(참고) 직전분기 GDP (YoY): ${prevGdpGrowth.toFixed(2)}%</li>
+                <li>실질 GDP 성장률 (YoY): <strong>${gdpGrowth.toFixed(2)}%</strong></li>
+                <li>실질 PCE 성장률 (YoY): <strong>${pceGrowth.toFixed(2)}%</strong></li>
+                <li>최근 4분기 평균: <strong>${avgRecentGrowth.toFixed(2)}%</strong> (1년 전 평균: ${avgPastGrowth.toFixed(2)}%)</li>
+                <li>추세 분석: <strong>${trendText}</strong> (${trendImproving ? '+' : ''}${(avgRecentGrowth - avgPastGrowth).toFixed(2)}%p)</li>
+                <li>단기 모멘텀: <strong>${momentumText}</strong> (최근 2분기 평균: ${veryRecentMomentum.toFixed(2)}% vs 이전: ${slightlyOlderMomentum.toFixed(2)}%)</li>
             </ul>
-            <p><strong>분석:</strong> ${result.summary}</p>`;
+            <p><strong>💡 종합 분석:</strong> ${result.summary}</p>`;
 
     } catch (error) {
-        result.analysis = `<p style="color:#dc3545;">GDP/소비 데이터 분석에 실패했습니다. (데이터 부족 또는 오류)</p>`;
+        result.analysis = `<p style="color:#dc3545;">GDP/소비 데이터 분석에 실패했습니다. (${error.message})</p>`;
     }
 
     if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
