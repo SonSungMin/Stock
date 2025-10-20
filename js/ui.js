@@ -24,9 +24,27 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
     if (outlookSection) {
         if (marketOutlook && marketOutlook.status) {
             outlookSection.className = `outlook-section ${marketOutlook.status}-bg`;
+
+            // 💡 [수정] 점수를 %로 변환 (범위: -100 ~ +100)
+            const score = parseFloat(marketOutlook.score);
+            // -100점일 때 0%, 0점일 때 50%, +100점일 때 100%
+            const scorePercent = ((score + 100) / 200) * 100;
+
             outlookSection.innerHTML = `
                 <div class="outlook-signal">${marketOutlook.signal}</div>
                 <h3 class="outlook-title ${marketOutlook.status}-text">${marketOutlook.title}</h3>
+                
+                <div class="score-gauge-container">
+                    <div class="score-label danger">위험 (≤-50)</div>
+                    <div class="score-bar-track">
+                        <div class="score-bar ${marketOutlook.status}" style="width: ${scorePercent}%;"></div>
+                        <div class="score-current" style="left: ${scorePercent}%;">
+                            현재 (${marketOutlook.score}점)
+                        </div>
+                    </div>
+                    <div class="score-label positive">안전 (≥+50)</div>
+                </div>
+                
                 <p class="outlook-analysis">${marketOutlook.analysis}</p>
             `;
         } else {
