@@ -75,7 +75,8 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     const safeMacroResults = macroResults || {};
 
     if (!analyzedIndicators || analyzedIndicators.length === 0) {
-        return { status: 'neutral', signal: '🤔', title: '분석 데이터 부족', analysis: '시장 종합 전망을 분석하기 위한 데이터가 부족합니다.' };
+        // 💡 [수정] score: 0을 반환하도록 추가
+        return { status: 'neutral', signal: '🤔', title: '분석 데이터 부족', analysis: '시장 종합 전망을 분석하기 위한 데이터가 부족합니다.', score: 0 };
     }
 
     // 1. 가중치 기반 단기 지표 점수 계산
@@ -169,31 +170,31 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
         finalStatus = 'positive';
         finalSignal = '🚀';
         finalTitle = '강한 상승 모멘텀';
-        finalAnalysis = `<b>[종합 분석]</b> 거시 경제 펀더멘털과 단기 지표 모두 강한 긍정 신호를 보내고 있어, 지속적인 상승 랠리가 기대됩니다. (종합 점수: <strong>+${finalScore.toFixed(0)}점</strong>)<br><br><b>[핵심 동력]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span> 등이 시장 상승을 강력히 뒷받침하고 있습니다.${negativeDrivers.length > 0 ? `<br><br><b>[잠재 리스크]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등은 단기 변동성 요인이 될 수 있으나, 전체 흐름을 바꾸기는 어려워 보입니다.` : ''}`;
+        finalAnalysis = `<b>[종합 분석]</b> 거시 경제 펀더멘털과 단기 지표 모두 강한 긍정 신호를 보내고 있어, 지속적인 상승 랠리가 기대됩니다.<br><br><b>[핵심 동력]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span> 등이 시장 상승을 강력히 뒷받침하고 있습니다.${negativeDrivers.length > 0 ? `<br><br><b>[잠재 리스크]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등은 단기 변동성 요인이 될 수 있으나, 전체 흐름을 바꾸기는 어려워 보입니다.` : ''}`;
     } else if (finalScore > 20) {
         // 온건한 긍정
         finalStatus = 'positive';
         finalSignal = '📈';
         finalTitle = '완만한 회복 기대';
-        finalAnalysis = `<b>[종합 분석]</b> 주요 경제 지표들이 점진적인 개선 흐름을 보이고 있어, 완만한 상승세가 이어질 것으로 예상됩니다. (종합 점수: <strong>+${finalScore.toFixed(0)}점</strong>)<br><br><b>[긍정 요인]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span>.<br><br>${negativeDrivers.length > 0 ? `<b>[주의 요인]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등은 상승 속도를 제한하는 요인으로 작용할 수 있습니다.` : '긍정적인 흐름을 저해하는 뚜렷한 악재는 보이지 않습니다.'}`;
+        finalAnalysis = `<b>[종합 분석]</b> 주요 경제 지표들이 점진적인 개선 흐름을 보이고 있어, 완만한 상승세가 이어질 것으로 예상됩니다.<br><br><b>[긍정 요인]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span>.<br><br>${negativeDrivers.length > 0 ? `<b>[주의 요인]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등은 상승 속도를 제한하는 요인으로 작용할 수 있습니다.` : '긍정적인 흐름을 저해하는 뚜렷한 악재는 보이지 않습니다.'}`;
     } else if (finalScore > -20) {
         // 혼조
         finalStatus = 'neutral';
         finalSignal = '📊';
         finalTitle = '방향성 탐색 구간';
-        finalAnalysis = `<b>[종합 분석]</b> 거시 지표와 단기 지표에서 상반된 신호가 나오며, 시장은 뚜렷한 방향성 없이 박스권에서 등락을 반복할 가능성이 높습니다. (종합 점수: <strong>${finalScore.toFixed(0)}점</strong>)<br><br><b>[긍정 요인]</b> <span class="positive-text">${positiveDrivers.length > 0 ? positiveDrivers.join(', ') : '없음'}</span>.<br><b>[부정 요인]</b> <span class="negative-text">${negativeDrivers.length > 0 ? negativeDrivers.join(', ') : '없음'}</span>.<br><br><b>[전략 제안]</b> 주요 이벤트(CPI, NFP, FOMC 등)의 결과에 따라 균형이 한쪽으로 기울 수 있으니, 섣부른 방향성 베팅보다는 변동성 관리에 집중하는 것이 바람직합니다.`;
+        finalAnalysis = `<b>[종합 분석]</b> 거시 지표와 단기 지표에서 상반된 신호가 나오며, 시장은 뚜렷한 방향성 없이 박스권에서 등락을 반복할 가능성이 높습니다.<br><br><b>[긍정 요인]</b> <span class="positive-text">${positiveDrivers.length > 0 ? positiveDrivers.join(', ') : '없음'}</span>.<br><b>[부정 요인]</b> <span class="negative-text">${negativeDrivers.length > 0 ? negativeDrivers.join(', ') : '없음'}</span>.<br><br><b>[전략 제안]</b> 주요 이벤트(CPI, NFP, FOMC 등)의 결과에 따라 균형이 한쪽으로 기울 수 있으니, 섣부른 방향성 베팅보다는 변동성 관리에 집중하는 것이 바람직합니다.`;
     } else if (finalScore > -50) {
         // 온건한 부정
         finalStatus = 'negative';
         finalSignal = '📉';
         finalTitle = '경기 둔화 우려';
-        finalAnalysis = `<b>[종합 분석]</b> 여러 지표에서 경고 신호가 감지되어, 경기 둔화와 조정 국면에 대비해야 할 시점입니다. (종합 점수: <strong>${finalScore.toFixed(0)}점</strong>)<br><br><b>[핵심 위험]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등이 시장에 하방 압력을 가하고 있습니다.${positiveDrivers.length > 0 ? `<br><br><b>[방어 요인]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span> 등이 추가 하락을 제한하는 완충 역할을 할 수 있습니다.` : '<br><br>반등을 이끌만한 뚜렷한 긍정 요인이 부족한 상황입니다.'}`;
+        finalAnalysis = `<b>[종합 분석]</b> 여러 지표에서 경고 신호가 감지되어, 경기 둔화와 조정 국면에 대비해야 할 시점입니다.<br><br><b>[핵심 위험]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등이 시장에 하방 압력을 가하고 있습니다.${positiveDrivers.length > 0 ? `<br><br><b>[방어 요인]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span> 등이 추가 하락을 제한하는 완충 역할을 할 수 있습니다.` : '<br><br>반등을 이끌만한 뚜렷한 긍정 요인이 부족한 상황입니다.'}`;
     } else {
         // 강한 부정
         finalStatus = 'negative';
         finalSignal = '🚨';
         finalTitle = '강한 하방 압력';
-        finalAnalysis = `<b>[종합 분석]</b> 거시 환경과 단기 심리 모두 비관적이며, 위험 관리가 매우 중요한 시점입니다. (종합 점수: <strong>${finalScore.toFixed(0)}점</strong>)<br><br><b>[주요 악재]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span>.<br><br><b>[전략 제안]</b> 보수적인 포트폴리오를 유지하며 현금 비중을 확보하고, 시장의 변곡점을 확인하기 전까지 방어적인 자세가 필요합니다.`;
+        finalAnalysis = `<b>[종합 분석]</b> 거시 환경과 단기 심리 모두 비관적이며, 위험 관리가 매우 중요한 시점입니다.<br><br><b>[주요 악재]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span>.<br><br><b>[전략 제안]</b> 보수적인 포트폴리오를 유지하며 현금 비중을 확보하고, 시장의 변곡점을 확인하기 전까지 방어적인 자세가 필요합니다.`;
     }
 
     // 6. 특수 시나리오: 스태그플레이션 (물가↑ + 성장↓)
@@ -206,10 +207,17 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     {
         finalSignal = '⚠️';
         finalTitle = '스태그플레이션 우려';
-        finalAnalysis = `<b>[특수 시나리오]</b> <span class="negative-text">높은 물가(${cpi.name} ${cpi.text})</span>와 <span class="negative-text">경제 성장 둔화(${gdp.name} ${gdp.text})</span>가 동시에 감지되어 스태그플레이션 위험이 부각되고 있습니다. (종합 점수: <strong>${finalScore.toFixed(0)}점</strong>)<br><br><b>[전략 제안]</b> 이는 자산 배분에 가장 어려운 시나리오로, 전통적인 주식/채권 분산 효과가 약화될 수 있습니다. 현금, 원자재, 달러 등 대체 안전자산의 비중을 고려해야 합니다.`;
+        finalAnalysis = `<b>[특수 시나리오]</b> <span class="negative-text">높은 물가(${cpi.name} ${cpi.text})</span>와 <span class="negative-text">경제 성장 둔화(${gdp.name} ${gdp.text})</span>가 동시에 감지되어 스태그플레이션 위험이 부각되고 있습니다.<br><br><b>[전략 제안]</b> 이는 자산 배분에 가장 어려운 시나리오로, 전통적인 주식/채권 분산 효과가 약화될 수 있습니다. 현금, 원자재, 달러 등 대체 안전자산의 비중을 고려해야 합니다.`;
     }
 
-    return { status: finalStatus, signal: finalSignal, title: finalTitle, analysis: finalAnalysis };
+    // 💡 [수정] 반환 객체에 'score' 추가
+    return { 
+        status: finalStatus, 
+        signal: finalSignal, 
+        title: finalTitle, 
+        analysis: finalAnalysis,
+        score: finalScore.toFixed(0) // 💡 점수 데이터를 별도로 반환
+    };
 }
 
 
