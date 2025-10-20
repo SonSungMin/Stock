@@ -16,8 +16,8 @@ import {
 import {
     renderInitialPlaceholders,
     renderDashboard,
-    renderEconomicCalendar,
-    renderReleaseSchedule,
+    // renderEconomicCalendar, // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
+    // renderReleaseSchedule,  // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
     setupEventListeners
 } from './js/ui.js';
 
@@ -42,8 +42,8 @@ async function main() {
     // UI 기본 설정 초기화
     setupEventListeners();
     renderInitialPlaceholders();
-    renderEconomicCalendar();
-    renderReleaseSchedule();
+    // renderEconomicCalendar(); // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
+    // renderReleaseSchedule();  // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
 
     try {
         // --- 1. 데이터 로딩 단계 ---
