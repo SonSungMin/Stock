@@ -266,20 +266,62 @@ export function analyzeMarshallKTrend(chartData, resultsObject) {
     const analysisDiv = document.getElementById('marshall-analysis');
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
 
-    if (!chartData || chartData.length < 8) {
-        result.analysis = '<p class="loading-text">분석할 데이터가 부족합니다.</p>';
-    } else {
-        const latest = chartData[chartData.length - 1];
-        const avgMarshallK = chartData.reduce((sum, d) => sum + d.marshallK, 0) / chartData.length;
-        
-        if (latest.marshallK > avgMarshallK * 1.1) { // 평균보다 10% 이상 높을 때
-            result = { status: 'negative', outlook: '🚨 과잉 유동성 우려', summary: '시중에 과도한 유동성이 공급되어 자산 버블 및 경기 둔화의 위험이 있습니다.' };
-        } else if (latest.marshallK < chartData[chartData.length - 5].marshallK && latest.interestRate < chartData[chartData.length - 5].interestRate) {
-             result = { status: 'positive', outlook: '✅ 경기 회복 초기 신호', summary: '유동성이 정상화되고 금리가 하락하는 추세로, 경기 회복의 초기 신호일 수 있습니다.' };
-        } else {
-             result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '유동성과 금리가 명확한 방향성 없이 과도기적 국면에 있습니다.' };
+    try {
+        // 최소 2년치(8분기) 데이터 필요 (추세 비교를 위해)
+        if (!chartData || chartData.length < 8) {
+            throw new Error("분석할 데이터가 부족합니다.");
         }
-        result.analysis = `<p><strong>현재 상황:</strong> 마샬케이 ${latest.marshallK.toFixed(2)}, 10년물 금리 ${latest.interestRate.toFixed(2)}%</p><p>${result.summary}</p>`;
+        
+        const latest = chartData[chartData.length - 1];
+        const prevYear = chartData[chartData.length - 5]; // 1년 전 데이터
+
+        // 1. 1년 전 대비 추세(방향성) 계산
+        const mkTrend = latest.marshallK - prevYear.marshallK;
+        const rateTrend = latest.interestRate - prevYear.interestRate;
+
+        // 2. 추세에 따른 4분면 분석 (유동성 사이클)
+        let trendText_MK = mkTrend > 0 ? "증가" : "감소";
+        let trendText_Rate = rateTrend > 0 ? "상승" : "하락";
+
+        if (rateTrend < 0 && mkTrend > 0) {
+            // Q1: 금리 하락 + 유동성 증가 (가장 좋음)
+            result = { 
+                status: 'positive', 
+                outlook: '✅ 유동성 장세 (완화)', 
+                summary: '금리가 하락하고 시중 유동성이 증가하는 가장 이상적인 "금융 완화" 국면입니다. 자산 시장에 긍정적입니다.' 
+            };
+        } else if (rateTrend > 0 && mkTrend > 0) {
+            // Q2: 금리 상승 + 유동성 증가 (과열)
+            result = { 
+                status: 'neutral', 
+                outlook: '⚠️ 과열/버블 우려', 
+                summary: '풍부한 유동성이 인플레이션/과열 우려를 자극해 금리가 상승하는 "과열" 국면입니다. 경기 사이클 후반부 신호입니다.' 
+            };
+        } else if (rateTrend > 0 && mkTrend < 0) {
+            // Q3: 금리 상승 + 유동성 감소 (긴축)
+            result = { 
+                status: 'negative', 
+                outlook: '🚨 금융 긴축 국면', 
+                summary: '금리가 상승하고 유동성이 축소되는 "금융 긴축" 국면입니다. 자산 시장에 가장 부정적인 환경입니다.' 
+            };
+        } else {
+            // Q4: 금리 하락 + 유동성 감소 (침체)
+            result = { 
+                status: 'negative', 
+                outlook: '📉 침체 국면 (바닥권)', 
+                summary: '경기 둔화로 인해 금리는 하락하지만, 신용 경색 등으로 유동성이 마르는 "침체" 국면입니다. 위험 관리가 필요합니다.' 
+            };
+        }
+
+        result.analysis = `<p><strong>최신 데이터 (${latest.label}):</strong></p>
+            <ul>
+                <li>마샬케이: ${latest.marshallK.toFixed(2)} (1년 전 대비 ${mkTrend.toFixed(2)}) - <strong>[${trendText_MK} 추세]</strong></li>
+                <li>10년물 금리: ${latest.interestRate.toFixed(2)}% (1년 전 대비 ${rateTrend.toFixed(2)}%p) - <strong>[${trendText_Rate} 추세]</strong></li>
+            </ul>
+            <p><strong>💡 종합 분석:</strong> ${result.summary}</p>`;
+
+    } catch (error) {
+         result.analysis = `<p class="loading-text">${error.message}</p>`;
     }
     
     if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
