@@ -366,3 +366,108 @@ export async function showModalChart(indicatorId) {
         console.error("과거 데이터 로딩 실패:", error);
     }
 }
+
+export async function renderCycleChart() {
+    const canvas = document.getElementById('cycle-chart');
+    if (!canvas) return null;
+    const ctx = canvas.getContext('2d');
+    if (cycleChart) cycleChart.destroy();
+
+    try {
+        // 1. API로부터 데이터 가져오기
+        const cycleData = await fetchEcosCycleData();
+        if (!cycleData || !cycleData.coincident || !cycleData.leading) {
+             throw new Error("경기 순환 데이터가 없습니다.");
+        }
+        
+        // 2. 데이터 가공 (오름차순 정렬 및 매핑)
+        const coincident = cycleData.coincident.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) })).reverse();
+        const leading = cycleData.leading.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) })).reverse();
+        
+        // 선행지수 데이터가 더 최신일 수 있으므로, 동행지수 길이에 맞춤
+        const labels = coincident.map(d => `${d.date.substring(0,4)}-${d.date.substring(4,6)}`);
+        const coincidentValues = coincident.map(d => d.value);
+        
+        // leading 데이터를 coincident 길이에 맞게 매핑
+        const leadingMap = new Map(leading.map(d => [d.date, d.value]));
+        const leadingValues = coincident.map(d => leadingMap.get(d.date) || null); // 날짜가 안 맞으면 null
+
+        // 3. 차트 생성
+        cycleChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '선행지수 순환변동치 (미래)',
+                        data: leadingValues,
+                        borderColor: '#dc3545', // 빨간색 (미래 예측)
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        tension: 0.1
+                    },
+                    {
+                        label: '동행지수 순환변동치 (현재)',
+                        data: coincidentValues,
+                        borderColor: '#0056b3', // 파란색 (현재 상태)
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        ticks: {
+                             callback: function(value, index, ticks) {
+                                const label = this.getLabelForValue(value);
+                                if (label.endsWith('-01')) { // 매년 1월만 표시
+                                    return label.substring(0, 4); 
+                                }
+                                return null;
+                            },
+                            autoSkip: false,
+                            maxRotation: 0
+                        }
+                    },
+                    y: { title: { display: true, text: '2020=100' } }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    annotation: {
+                        annotations: {
+                            baseline: {
+                                type: 'line',
+                                yMin: 100,
+                                yMax: 100,
+                                borderColor: 'rgba(0, 0, 0, 0.5)',
+                                borderWidth: 1.5,
+                                borderDash: [6, 6],
+                                label: {
+                                    content: '기준선 (100)',
+                                    display: true,
+                                    position: 'start',
+                                    font: { size: 10 },
+                                    backgroundColor: 'rgba(0, 0, 0, 0.5)'
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 4. 분석 함수를 위해 가공된 데이터 반환
+        return { coincident, leading };
+
+    } catch(error) {
+        console.error("경기 순환 차트 렌더링 실패:", error);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillText("데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
+        return null;
+    }
+}
