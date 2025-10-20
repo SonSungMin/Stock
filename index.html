@@ -29,15 +29,20 @@
             </div>
 
         <div class="accordion">
-            <button class="accordion-header">📊 시장 종합 전망</button>
-            <div class="accordion-panel" style="display: block;">
-                <div id="outlook-section"><p class="loading-text">지표 분석 중...</p></div>
-                <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">주요 섹터 전망</h3>
-                <div id="sector-outlook-grid" class="sector-outlook-grid"></div>
-                <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">자산군별 투자 의견</h3>
-                <div id="investment-suggestions-grid" class="sector-outlook-grid"></div>
-                 <p class="disclaimer">※ 본 분석은 제공된 경제 지표를 기반으로 한 단순 전망이며, 투자 추천이 아닙니다. 모든 투자의 책임은 본인에게 있습니다.</p>
-            </div>
+                <button class="accordion-header">🇰🇷 한국 경기 순환 분석 (선행/동행지수)</button>
+                <div class="accordion-panel" style="display: block;">
+                     <h3 class="section-title" style="font-size: 1.4em; margin-top: 0;">경기순환지수 추이 (10년)</h3>
+                    <div id="cycle-analysis" class="analysis-content" style="padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px;">
+                        <p class="loading-text">차트 분석 중...</p>
+                    </div>
+                    <div class="stock-chart-container" style="height: 450px;">
+                        <canvas id="cycle-chart"></canvas>
+                    </div>
+                    <p style="font-size: 0.8em; color: #6c757d; text-align: right; margin-top: 5px;">
+                        주: 선행지수(미래 경기 예측)와 동행지수(현재 경기 상태)의 100 기준선(점선) 교차 및 방향성이 중요합니다.
+                    </p>
+                </div>
+            </div>        
         </div>
 
         <div class="accordion">
