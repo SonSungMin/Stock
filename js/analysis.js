@@ -465,18 +465,55 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
     const analysisDiv = document.getElementById('gdp-gap-analysis');
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
 
-    if (!gdpGapData || gdpGapData.length < 2) {
-        result.analysis = '<p class="loading-text">분석할 데이터가 부족합니다.</p>';
-    } else {
-        const latestGap = gdpGapData[gdpGapData.length - 1];
-        if (latestGap.value > 0.5) {
-            result = { status: 'negative', outlook: '🔥 인플레이션 압력', summary: `GDP 갭(${latestGap.value.toFixed(2)}%)이 플러스를 기록, 잠재 성장률을 상회하여 인플레이션 압력이 높습니다.` };
-        } else if (latestGap.value < -0.5) {
-            result = { status: 'negative', outlook: '📉 경기 침체 우려', summary: `GDP 갭(${latestGap.value.toFixed(2)}%)이 마이너스를 기록, 잠재 성장률을 하회하여 경기 침체 우려가 있습니다.` };
-        } else {
-            result = { status: 'positive', outlook: '✅ 안정적인 상태', summary: `GDP 갭(${latestGap.value.toFixed(2)}%)이 0에 가까워 경제가 균형 상태에 있습니다.` };
+    try {
+        // 최소 1년치(4분기) 데이터 필요 (모멘텀 비교를 위해)
+        if (!gdpGapData || gdpGapData.length < 4) {
+            throw new Error("분석할 데이터가 부족합니다.");
         }
-        result.analysis = `<p><strong>최신 데이터 (${latestGap.date.substring(0,7)}):</strong></p><ul><li>현재 GDP 갭: <strong>${latestGap.value.toFixed(2)}%</strong></li></ul><p><strong>분석:</strong> ${result.summary}</p>`;
+        
+        const latest = gdpGapData[gdpGapData.length - 1];
+        const prev = gdpGapData[gdpGapData.length - 2]; // 직전 분기
+        
+        // 1. 모멘텀 계산 (직전 분기 대비)
+        const momentum = latest.value - prev.value;
+        const momentumText = momentum > 0 ? "확대" : "축소";
+        
+        // 2. 레벨과 모멘텀을 조합한 4분면 분석
+        if (latest.value > 0.5) {
+            // 레벨: 플러스 갭 (과열)
+            if (momentum > 0) {
+                result = { status: 'negative', outlook: '🔥 과열 심화', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 플러스를 기록 중이며, 갭이 더욱 확대되고 있습니다. 인플레이션 압력이 매우 높습니다.` };
+            } else {
+                result = { status: 'neutral', outlook: '⚠️ 정점 통과 신호', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 여전히 높으나, 모멘텀이 둔화(축소)되고 있습니다. 경기 고점 통과 신호일 수 있습니다.` };
+            }
+        } else if (latest.value < -0.5) {
+            // 레벨: 마이너스 갭 (침체)
+             if (momentum > 0) {
+                result = { status: 'positive', outlook: '🌱 경기 회복 초기', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 마이너스 상태이나, 갭이 축소(개선)되고 있습니다. 경기 회복의 초기 신호입니다.` };
+            } else {
+                result = { status: 'negative', outlook: '🚨 침체 심화', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 마이너스를 기록 중이며, 갭이 더욱 확대(악화)되고 있습니다. 경기 침체 우려가 매우 높습니다.` };
+            }
+        } else {
+            // 레벨: 0 근방 (균형)
+            if (momentum > 0.1) {
+                 result = { status: 'positive', outlook: '📈 확장 국면 진입', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 균형 상태에서 플러스(+)로 확장되고 있습니다. 경기가 확장 국면에 진입하고 있습니다.` };
+            } else if (momentum < -0.1) {
+                 result = { status: 'negative', outlook: '📉 둔화 국면 진입', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 균형 상태에서 마이너스(-)로 축소되고 있습니다. 경기가 둔화 국면에 진입하고 있습니다.` };
+            } else {
+                 result = { status: 'positive', outlook: '✅ 안정적 균형', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 0에 가까우며 모멘텀도 중립적이어서 경제가 이상적인 균형 상태에 있습니다.` };
+            }
+        }
+
+        result.analysis = `<p><strong>최신 데이터 (${latest.date.substring(0,7)}):</strong></p>
+            <ul>
+                <li>현재 GDP 갭: <strong>${latest.value.toFixed(2)}%</strong></li>
+                <li>직전 분기 갭: ${prev.value.toFixed(2)}%</li>
+                <li>분기 모멘텀: <strong>${momentum.toFixed(2)}%p</strong> (${momentumText} 중)</li>
+            </ul>
+            <p><strong>💡 종합 분석:</strong> ${result.summary}</p>`;
+            
+    } catch (error) {
+        result.analysis = `<p class="loading-text">${error.message}</p>`;
     }
     
     if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
