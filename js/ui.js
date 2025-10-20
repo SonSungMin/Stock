@@ -186,3 +186,94 @@ export function setupEventListeners() {
         });
     }
 }
+
+/**
+ * 💡 [추가된 함수 1]
+ * 자산군별 투자 의견을 렌더링합니다.
+ * (analysis.js의 getInvestmentSuggestions를 호출합니다)
+ */
+function renderInvestmentSuggestions(marketOutlook) {
+    const grid = document.getElementById('investment-suggestions-grid');
+    if (!grid) return;
+
+    // js/ui.js 상단에서 이미 import 하고 있는 함수를 사용합니다.
+    const suggestions = getInvestmentSuggestions(marketOutlook); 
+    
+    grid.innerHTML = Object.entries(suggestions).map(([asset, details]) => `
+        <div class="sector-card">
+            <h4 class="sector-title">
+                <span class="sector-icon">${details.icon}</span>
+                ${asset}
+            </h4>
+            <p class="sector-outlook">${details.outlook}</p>
+            <p class="sector-reason">${details.reason}</p>
+        </div>
+    `).join('');
+}
+
+/**
+ * 💡 [추가된 함수 2]
+ * 섹터별 전망을 렌더링합니다. (오류의 원인)
+ * (간단한 분석 로직을 포함하여 재구성했습니다.)
+ */
+function renderSectorOutlook(analyzedIndicators) {
+    const grid = document.getElementById('sector-outlook-grid');
+    if (!grid) return;
+
+    // 주요 지표를 찾습니다.
+    const sox = analyzedIndicators.find(i => i.id === 'sox_index');
+    const wti = analyzedIndicators.find(i => i.id === 'wti_price');
+    const sales = analyzedIndicators.find(i => i.id === 'retail_sales' || i.id === 'auto_sales');
+    const cpi = analyzedIndicators.find(i => i.id === 'us_cpi' || i.id === 'cpi');
+
+    // 간단한 섹터별 로직
+    const sectors = {
+        '반도체 ⚡️': (sox && sox.status === 'positive') ? 
+            { outlook: '긍정적', reason: '필라델피아 반도체 지수가 안정적입니다.' } : 
+            { outlook: '중립적/부정적', reason: '반도체 지수 모멘텀이 약화되었습니다.' },
+        '에너지 🛢️': (wti && wti.value < 80) ?
+            { outlook: '중립적', reason: '유가 안정으로 비용 부담이 완화되었습니다.' } :
+            { outlook: '긍정적 (유가 상승 시)', reason: '고유가로 인한 수혜가 기대될 수 있습니다.' },
+        '경기소비재 🚗': (sales && sales.status === 'positive') ?
+            { outlook: '긍정적', reason: '소매 판매 및 자동차 판매가 양호합니다.' } :
+            { outlook: '부정적', reason: '소비 심리 위축으로 수요 둔화가 우려됩니다.' },
+        '금리민감주 🏦': (cpi && cpi.status === 'positive') ?
+            { outlook: '긍정적', reason: '물가 안정으로 금리 인하 기대감이 있습니다.' } :
+            { outlook: '부정적', reason: '높은 물가로 인해 고금리 유지가 부담됩니다.' }
+    };
+    
+    grid.innerHTML = Object.entries(sectors).map(([sector, details]) => `
+        <div class="sector-card">
+            <h4 class="sector-title">${sector}</h4>
+            <p class="sector-outlook">${details.outlook}</p>
+            <p class="sector-reason">${details.reason}</p>
+        </div>
+    `).join('');
+}
+
+/**
+ * 💡 [추가된 함수 3]
+ * '자세히 보기' 클릭 시 모달창을 엽니다.
+ * (renderDashboard의 이벤트 리스너가 호출합니다.)
+ */
+function showModal(indicatorId) {
+    const modal = document.getElementById('modal');
+    const titleEl = document.getElementById('modal-title');
+    const descEl = document.getElementById('modal-description');
+    const criteriaEl = document.getElementById('modal-criteria');
+    
+    // js/ui.js 상단에서 이미 import 하고 있는 변수를 사용합니다.
+    const details = indicatorDetails[indicatorId];
+    if (!details) return;
+
+    if (titleEl) titleEl.innerText = details.title;
+    if (descEl) descEl.innerText = details.description;
+    if (criteriaEl) {
+        criteriaEl.innerHTML = details.criteria.map(item => `<li>${item}</li>`).join('');
+    }
+    
+    // js/ui.js 상단에서 이미 import 하고 있는 함수를 사용합니다.
+    showModalChart(indicatorId); 
+    
+    if (modal) modal.style.display = 'block';
+}
