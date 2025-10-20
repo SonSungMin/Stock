@@ -134,4 +134,55 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
     });
 }
 
-// ... (파일의 나머지 함수들: renderSectorOutlook, setupEventListeners 등) ...
+export function setupEventListeners() {
+    const searchInput = document.getElementById('stock-code-input');
+    const searchBtn = document.getElementById('stock-search-btn');
+    const modal = document.getElementById('modal');
+    const closeBtn = document.querySelector('.modal .close-btn');
+
+    // 1. 개별 종목 검색 버튼 클릭
+    if (searchBtn && searchInput) {
+        searchBtn.addEventListener('click', () => {
+            // 💡 참고: 실제로는 autocomplete에서 선택된 코드값을 사용해야 할 수 있습니다.
+            const stockCode = searchInput.value.split(' ')[0]; // 코드만 추출 (예: "005930")
+            fetchAndRenderStockData(stockCode);
+        });
+    }
+
+    // 2. 검색창에서 엔터 키 입력
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchBtn.click();
+            }
+        });
+        
+        // (참고: Autocomplete 검색 로직은 이 함수 내에 추가되어야 할 수 있습니다)
+    }
+
+    // 3. 아코디언 메뉴 클릭
+    document.querySelectorAll('.accordion-header').forEach(button => {
+        button.addEventListener('click', () => {
+            const panel = button.nextElementSibling;
+            if (panel) {
+                panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+            }
+        });
+    });
+
+    // 4. 모달 닫기 버튼
+    if (modal && closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    // 5. 모달 바깥 영역 클릭 시 닫기 (선택 사항)
+    if (modal) {
+        window.addEventListener('click', (event) => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+}
