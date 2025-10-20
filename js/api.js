@@ -96,3 +96,47 @@ export async function fetchEcosIndicators() {
         return [];
     }
 }
+
+// ECOS API에서 10년치(120개월) 경기순환지표 데이터를 가져옵니다.
+export async function fetchEcosCycleData() {
+    const apiKey = API_KEYS.ECOS;
+    const proxy = PROXY_URL;
+    
+    // 10년 전 오늘 날짜 (YYYYMM 형식)
+    const endDate = new Date().toISOString().slice(0, 7).replace('-', '');
+    const startDate = (new Date(new Date().setFullYear(new Date().getFullYear() - 10)))
+                        .toISOString().slice(0, 7).replace('-', '');
+
+    // ECOS 통계표 코드
+    const STAT_CODE = '901Y001'; // 경기순환지표
+    const COINCIDENT_ITEM = '0001'; // 동행지수 순환변동치
+    const LEADING_ITEM = '0002'; // 선행지수 순환변동치
+    const CYCLE_TYPE = 'M'; // 월별
+    const DATA_COUNT = 120; // 10년치 월 데이터
+
+    // API URL 생성 함수
+    const createUrl = (itemCode) => {
+        return `https://ecos.bok.or.kr/api/StatisticSearch/${apiKey}/json/kr/1/${DATA_COUNT}/${STAT_CODE}/${CYCLE_TYPE}/${startDate}/${endDate}/${itemCode}`;
+    };
+
+    try {
+        const [coincidentRes, leadingRes] = await Promise.all([
+            fetch(`${proxy}${encodeURIComponent(createUrl(COINCIDENT_ITEM))}`),
+            fetch(`${proxy}${encodeURIComponent(createUrl(LEADING_ITEM))}`)
+        ]);
+
+        if (!coincidentRes.ok || !leadingRes.ok) throw new Error("ECOS 경기순환지표 API 응답 오류");
+
+        const coincidentData = await coincidentRes.json();
+        const leadingData = await leadingRes.json();
+
+        return {
+            coincident: coincidentData.StatisticSearch.row,
+            leading: leadingData.StatisticSearch.row
+        };
+
+    } catch (error) {
+        console.error("ECOS 경기순환지표 데이터 로딩 실패:", error);
+        return null;
+    }
+}
