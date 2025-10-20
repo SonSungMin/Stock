@@ -69,6 +69,7 @@ export function analyzeIndicators(indicators) {
  * 1. macroResults가 null이나 undefined로 전달될 경우를 대비하여, 빈 객체(safeMacroResults)로 초기화하는 방어 코드를 추가했습니다.
  * 2. macroCount가 0일 때 (즉, 분석된 거시 지표가 없을 때) 종합 점수(finalScore)가 0.4만 곱해지는 오류를 수정했습니다.
  * 이제 거시 지표가 없으면 단기 지표 점수(normalizedShortTerm)를 그대로 종합 점수로 사용합니다.
+ * 3. [최신] 최종 점수를 분석 텍스트에서 분리하고, 반환 객체에 'score' 키로 추가합니다.
  */
 export function getMarketOutlook(analyzedIndicators, macroResults) {
     // 💡 [수정] macroResults가 null일 경우를 대비해 빈 객체로 안전하게 처리합니다.
