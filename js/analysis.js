@@ -1,5 +1,5 @@
 // js/analysis.js
-import { indicatorDetails } from './indicators.js'; // 💡 추가 (이전에 누락되었을 수 있음)
+import { indicatorDetails } from './indicators.js'; 
 
 // ==================================================================
 // 데이터 분석 및 가공 함수
@@ -86,7 +86,7 @@ export function analyzeIndicators(indicators) {
                      else if (value > -5) { status = 'neutral'; icon = '횡보'; text = '보합/소폭 하락'; weight = 2; }
                      else { status = 'negative'; icon = '📉'; text = '하락 추세'; weight = 3; } 
                  } else {
-                     status = 'neutral'; icon = '❓'; text = '추세 분석 불가'; weight = 0; // 💡 YoY 계산 실패 시 가중치 0
+                     status = 'neutral'; icon = '❓'; text = '추세 분석 불가'; weight = 0; // YoY 계산 실패 시 가중치 0
                  }
                 break;
             // --- 한국 지표들 ---
@@ -261,8 +261,12 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
 /**
  * 주요 선행 지표들을 바탕으로 S&P 500의 단기 전망을 예측합니다.
  * 구리 가격 YoY 계산 실패 시(weight=0) 처리를 수정합니다.
+ * 💡 [수정] console.warn 로그 수정
  */
 export function getSP500Outlook(analyzedIndicators) {
+    // [디버깅 코드] 함수 시작 시 받은 데이터를 콘솔에 출력 (필요시 주석 해제)
+    // console.log("getSP500Outlook received indicators:", analyzedIndicators); 
+
     // 예측에 사용할 주요 지표 추출
     const pmi = analyzedIndicators.find(i => i.id === 'ism_pmi');
     const csi = analyzedIndicators.find(i => i.id === 'consumer_sentiment'); // 미국 CSI
@@ -271,8 +275,12 @@ export function getSP500Outlook(analyzedIndicators) {
 
     // 필수 지표 중 하나라도 없으면 예측 불가
     if (!pmi || !csi || !spread) {
-        // 💡 콘솔에 어떤 지표가 누락되었는지 로그 추가
-        console.warn("S&P 500 예측 필수 지표 부족:", { pmi, csi, spread });
+        // 💡 [수정] 콘솔 로그가 실제 변수 값을 반영하도록 수정
+        console.warn("S&P 500 예측 필수 지표 부족:", { 
+            pmi_found: !!pmi, // pmi 변수가 존재하는지 (true/false)
+            csi_found: !!csi, // csi 변수가 존재하는지 (true/false)
+            spread_found: !!spread // spread 변수가 존재하는지 (true/false)
+        });
         return { status: 'neutral', signal: '❓', title: '예측 데이터 부족', analysis: 'S&P 500 전망을 예측하기 위한 핵심 지표(ISM PMI, 소비심리, 장단기금리차) 데이터가 부족합니다.' };
     }
 
@@ -312,7 +320,7 @@ export function getSP500Outlook(analyzedIndicators) {
     }
 
     // 4. 구리 가격 (참고 지표)
-    // 💡 [수정] copper 데이터가 존재하고, weight가 0보다 클 때만 점수 계산
+    // [수정] copper 데이터가 존재하고, weight가 0보다 클 때만 점수 계산
     if (copper && copper.weight > 0) { 
         if (copper.status === 'positive') {
             score += (copper.value > 5) ? 1 : 0.5; 
