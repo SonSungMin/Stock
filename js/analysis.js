@@ -3,6 +3,11 @@
 // ==================================================================
 // 데이터 분석 및 가공 함수
 // ==================================================================
+
+/**
+ * 💡 [수정됨]
+ * 신규 지표(ISM PMI, 소비자심리지수, 구리 가격) 분석 로직 추가
+ */
 export function analyzeIndicators(indicators) {
     // 각 지표의 중요도에 따라 '가중치(weight)'를 부여합니다.
     return indicators.map(indicator => {
@@ -10,6 +15,7 @@ export function analyzeIndicators(indicators) {
         const { id, value } = indicator;
         let status = 'neutral', icon = '😐', text = '보통', weight = 2; // 기본 가중치
         switch (id) {
+            // --- 기존 지표 분석 ---
             case 'yield_spread':
                 if (value >= 0.1) { status = 'positive'; icon = '✅'; text = '정상 범위'; }
                 else if (value > -0.2) { status = 'neutral'; icon = '⚠️'; text = '역전 우려'; }
@@ -54,15 +60,45 @@ export function analyzeIndicators(indicators) {
                 if (value >= 5 && value <= 7) { status = 'positive'; icon = '💧'; text = '유동성 적정'; }
                 else { status = 'neutral'; icon = '〰️'; text = '과잉/부족 우려'; }
                 weight = 2; break;
-            // 💡 [신규 추가] 반도체 지수 분석 로직
             case 'sox_index':
                 // (임시 로직: 예시로 4000 이상이면 긍정으로 판단)
-                // TODO: 실제로는 전일 대비 등락률 등을 기준으로 판단해야 함
                 if (value >= 4000) { status = 'positive'; icon = '📈'; text = '상승 추세'; }
                 else { status = 'negative'; icon = '📉'; text = '하락/조정'; }
-                weight = 3; // 가중치 부여 (예시)
+                weight = 3; 
                 break;
-            // 다른 지표들도 필요에 따라 분석 로직 추가...
+                
+            // --- 💡 [신규 추가] S&P 500 예측 관련 지표 분석 ---
+            case 'ism_pmi':
+                if (value >= 55) { status = 'positive'; icon = '🚀'; text = '강한 확장'; weight = 4; } // S&P 500에 중요
+                else if (value >= 50) { status = 'positive'; icon = '📈'; text = '확장 국면'; weight = 3; }
+                else if (value >= 45) { status = 'negative'; icon = '⚠️'; text = '둔화/위축 우려'; weight = 4; } // 하락 신호 중요
+                else { status = 'negative'; icon = '🚨'; text = '경기 위축'; weight = 5; } // 매우 중요
+                break;
+            case 'consumer_sentiment': // 미국 미시간대 CSI
+                if (value >= 80) { status = 'positive'; icon = '😊'; text = '소비 심리 낙관'; weight = 3; }
+                else if (value >= 70) { status = 'neutral'; icon = '😐'; text = '소비 심리 중립'; weight = 2; }
+                else { status = 'negative'; icon = '😟'; text = '소비 심리 비관'; weight = 3; }
+                break;
+             case 'copper_price': // 구리 가격 (YoY)
+                 // YoY 기준, 0% 이상이면 긍정으로 단순 판단 (추후 개선 필요)
+                 // 만약 YoY 계산 실패로 레벨 값($/mt)이 들어온 경우, 분석 불가(neutral)
+                 if (indicator.unit === '%') {
+                     if (value > 5) { status = 'positive'; icon = '📈'; text = '강한 상승'; weight = 3; } // 경기 회복 기대 강함
+                     else if (value >= 0) { status = 'positive'; icon = '📈'; text = '상승 추세'; weight = 2; }
+                     else if (value > -5) { status = 'neutral'; icon = '횡보'; text = '보합/소폭 하락'; weight = 2; }
+                     else { status = 'negative'; icon = '📉'; text = '하락 추세'; weight = 3; } // 경기 둔화 우려
+                 } else {
+                     status = 'neutral'; icon = '❓'; text = '추세 분석 불가'; weight = 0; // YoY 계산 실패 시
+                 }
+                break;
+            // 다른 한국 지표들 분석 로직 (기존과 동일) ...
+            case 'kor_consumer_sentiment': // 한국 CSI
+                if (value >= 100) { status = 'positive'; icon = '😊'; text = '소비 심리 낙관'; }
+                else if (value >= 90) { status = 'neutral'; icon = '😐'; text = '소비 심리 중립'; }
+                else { status = 'negative'; icon = '😟'; text = '소비 심리 비관'; }
+                weight = 2;
+                break;
+            // ... (나머지 한국 지표들)
         }
         return { ...indicator, status, icon, text, weight };
     }).filter(Boolean); // null 값을 제거
@@ -221,9 +257,112 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
 }
 
 
+// ==================================================================
+// 💡 [신규 추가] S&P 500 예측 함수
+// ==================================================================
+/**
+ * 주요 선행 지표들을 바탕으로 S&P 500의 단기 전망을 예측합니다.
+ * @param {object[]} analyzedIndicators - analyzeIndicators 함수로 분석된 지표 배열
+ * @returns {object} - { status: 'positive'|'neutral'|'negative', signal: '...', title: '...', analysis: '...' }
+ */
+export function getSP500Outlook(analyzedIndicators) {
+    // 예측에 사용할 주요 지표 추출
+    const pmi = analyzedIndicators.find(i => i.id === 'ism_pmi');
+    const csi = analyzedIndicators.find(i => i.id === 'consumer_sentiment'); // 미국 CSI
+    const copper = analyzedIndicators.find(i => i.id === 'copper_price');
+    const spread = analyzedIndicators.find(i => i.id === 'yield_spread');
+
+    // 필수 지표 중 하나라도 없으면 예측 불가
+    if (!pmi || !csi || !spread) {
+        return { status: 'neutral', signal: '❓', title: '예측 데이터 부족', analysis: 'S&P 500 전망을 예측하기 위한 핵심 지표(ISM PMI, 소비심리, 장단기금리차) 데이터가 부족합니다.' };
+    }
+
+    let score = 0;
+    const factors = [];
+
+    // 1. ISM PMI (가중치 높음)
+    if (pmi.status === 'positive') {
+        score += (pmi.value >= 55) ? 2 : 1; // 강한 확장이면 +2
+        factors.push(`<span class="positive-text">ISM PMI ${pmi.text}</span>`);
+    } else {
+        score -= (pmi.value < 45) ? 2 : 1; // 경기 위축이면 -2
+        factors.push(`<span class="negative-text">ISM PMI ${pmi.text}</span>`);
+    }
+
+    // 2. 소비자 심리지수
+    if (csi.status === 'positive') {
+        score += 1;
+        factors.push(`<span class="positive-text">소비심리 ${csi.text}</span>`);
+    } else if (csi.status === 'negative') {
+        score -= 1;
+        factors.push(`<span class="negative-text">소비심리 ${csi.text}</span>`);
+    } else {
+         factors.push(`소비심리 ${csi.text}`);
+    }
+
+    // 3. 장단기 금리차 (가중치 높음)
+    if (spread.status === 'positive') {
+        score += 1;
+        factors.push(`<span class="positive-text">장단기 금리차 ${spread.text}</span>`);
+    } else if (spread.status === 'negative') {
+        score -= 2; // 침체 신호는 매우 중요
+        factors.push(`<span class="negative-text">장단기 금리차 ${spread.text}</span>`);
+    } else { // 'neutral' (주의 구간)
+        score -= 1;
+        factors.push(`<span class="negative-text">장단기 금리차 ${spread.text}</span>`);
+    }
+
+    // 4. 구리 가격 (참고 지표)
+    if (copper) { // 구리 데이터가 있을 경우만
+        if (copper.status === 'positive') {
+            score += (copper.value > 5) ? 1 : 0.5; // 강한 상승이면 +1
+            factors.push(`<span class="positive-text">구리 가격 ${copper.text}</span>`);
+        } else if (copper.status === 'negative') {
+            score -= 1;
+            factors.push(`<span class="negative-text">구리 가격 ${copper.text}</span>`);
+        } else {
+            factors.push(`구리 가격 ${copper.text}`);
+        }
+    } else {
+         factors.push("구리 가격 데이터 없음");
+    }
+
+    // 최종 예측 결과 생성
+    let finalStatus, finalSignal, finalTitle, finalAnalysis;
+
+    if (score >= 3) {
+        finalStatus = 'positive';
+        finalSignal = '🚀';
+        finalTitle = '긍정적 전망';
+        finalAnalysis = `주요 선행 지표(${factors.join(', ')})들이 강한 경기 확장 및 위험 선호 신호를 보내고 있어, S&P 500의 추가 상승이 기대됩니다.`;
+    } else if (score >= 1) {
+        finalStatus = 'positive';
+        finalSignal = '📈';
+        finalTitle = '다소 긍정적 전망';
+        finalAnalysis = `선행 지표(${factors.join(', ')})들이 혼재되어 있으나, 전반적으로 경기 회복 또는 완만한 확장세를 지지하고 있어 S&P 500의 점진적 상승이 예상됩니다.`;
+    } else if (score > -2) {
+        finalStatus = 'neutral';
+        finalSignal = '📊';
+        finalTitle = '중립적/혼조 전망';
+        finalAnalysis = `긍정 및 부정적 신호(${factors.join(', ')})가 혼재되어 있어 S&P 500의 뚜렷한 방향성을 예측하기 어렵습니다. 변동성 확대에 유의하며 주요 지표 변화를 주시해야 합니다.`;
+    } else { // score <= -2
+        finalStatus = 'negative';
+        finalSignal = '📉';
+        finalTitle = '부정적 전망';
+        finalAnalysis = `주요 선행 지표(${factors.join(', ')})들이 경기 둔화 또는 침체 가능성을 강하게 시사하고 있어, S&P 500의 조정 또는 하락 위험이 높은 구간입니다.`;
+    }
+
+    return { 
+        status: finalStatus, 
+        signal: finalSignal, 
+        title: finalTitle, 
+        analysis: finalAnalysis
+    };
+}
+
 
 // ==================================================================
-// 자산군별 투자 의견 및 섹터 전망
+// 자산군별 투자 의견 및 섹터 전망 (기존 함수들)
 // ==================================================================
 export function getInvestmentSuggestions(marketOutlook) {
     const status = marketOutlook.status;
@@ -312,10 +451,8 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
 
     try {
-        // 데이터가 최소 3년치(12분기)는 있어야 추세 비교 가능 (오름차순 데이터 기준)
         if (!gdpObs || gdpObs.length < 13 || !pceObs || pceObs.length < 13) throw new Error("데이터 부족");
         
-        // 1. 최신 분기 성장률 (YoY) - 오름차순 데이터이므로 마지막 인덱스 사용
         const latestIdx = gdpObs.length - 1;
         const oneYearAgoIdx = latestIdx - 4;
         
@@ -324,42 +461,36 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
         const gdpGrowth = ((parseFloat(gdpObs[latestIdx].value) / parseFloat(gdpObs[oneYearAgoIdx].value)) - 1) * 100;
         const pceGrowth = ((parseFloat(pceObs[latestIdx].value) / parseFloat(pceObs[oneYearAgoIdx].value)) - 1) * 100;
 
-        // 2. 최근 4분기 이동평균 성장률 계산 (장기 추세)
         const recentGdpGrowths = [];
         for (let i = latestIdx; i > latestIdx - 4; i--) {
-            if (i < 4) break; // 데이터 부족 방지
+            if (i < 4) break; 
             const growth = ((parseFloat(gdpObs[i].value) / parseFloat(gdpObs[i - 4].value)) - 1) * 100;
             recentGdpGrowths.push(growth);
         }
         if (recentGdpGrowths.length < 4) throw new Error("최근 4분기 성장률 계산 데이터 부족");
         const avgRecentGrowth = recentGdpGrowths.reduce((a, b) => a + b, 0) / 4;
         
-        // 3. 1년 전 4분기 이동평균 성장률 (과거 추세와 비교)
         const pastGdpGrowths = [];
         for (let i = oneYearAgoIdx; i > oneYearAgoIdx - 4; i--) {
-            if (i < 4) break; // 데이터 부족 방지
+            if (i < 4) break; 
             const growth = ((parseFloat(gdpObs[i].value) / parseFloat(gdpObs[i - 4].value)) - 1) * 100;
             pastGdpGrowths.push(growth);
         }
         if (pastGdpGrowths.length < 4) throw new Error("과거 4분기 성장률 계산 데이터 부족");
         const avgPastGrowth = pastGdpGrowths.reduce((a, b) => a + b, 0) / 4;
 
-        // 4. 추세 판단
         const trendImproving = avgRecentGrowth > avgPastGrowth;
         const trendStrength = Math.abs(avgRecentGrowth - avgPastGrowth);
         
-        // 5. 모멘텀 분석: 최근 2분기 vs 그 이전 2분기
         const veryRecentMomentum = (recentGdpGrowths[0] + recentGdpGrowths[1]) / 2;
         const slightlyOlderMomentum = (recentGdpGrowths[2] + recentGdpGrowths[3]) / 2;
         const momentumAccelerating = veryRecentMomentum > slightlyOlderMomentum;
 
-        // 6. 종합 판단 로직
         let trendText = trendImproving ? 
             (trendStrength > 0.5 ? "강한 상승 추세" : "완만한 상승 추세") : 
             (trendStrength > 0.5 ? "뚜렷한 하락 추세" : "완만한 하락 추세");
         let momentumText = momentumAccelerating ? "가속" : "둔화";
 
-        // 7. 4분면 분석 (절대 수준 + 추세 방향)
         if (gdpGrowth > 2.0) {
             if (trendImproving && momentumAccelerating) {
                 result = { status: 'positive', outlook: '🚀 강한 확장 국면', summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 견조하며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` };
