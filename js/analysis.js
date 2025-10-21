@@ -11,35 +11,35 @@ export function analyzeIndicators(indicators) {
         let status = 'neutral', icon = '😐', text = '보통', weight = 2; // 기본 가중치
         switch (id) {
             case 'yield_spread':
-                if (value >= 0.1) { status = 'positive'; icon = '✅'; text = '정상 범위'; } 
-                else if (value > -0.2) { status = 'neutral'; icon = '⚠️'; text = '역전 우려'; } 
+                if (value >= 0.1) { status = 'positive'; icon = '✅'; text = '정상 범위'; }
+                else if (value > -0.2) { status = 'neutral'; icon = '⚠️'; text = '역전 우려'; }
                 else { status = 'negative'; icon = '🚨'; text = '침체 신호'; }
-                weight = 5; break; // 💡 핵심 선행 지표, 가장 높은 가중치
+                weight = 5; break;
             case 'us_cpi':
-                if (value <= 2.5) { status = 'positive'; icon = '😌'; text = '물가 안정'; } 
-                else if (value <= 3.5) { status = 'neutral'; icon = '😐'; text = '인플레 둔화'; } 
+                if (value <= 2.5) { status = 'positive'; icon = '😌'; text = '물가 안정'; }
+                else if (value <= 3.5) { status = 'neutral'; icon = '😐'; text = '인플레 둔화'; }
                 else { status = 'negative'; icon = '🔥'; text = '물가 압력'; }
-                weight = 5; break; // 💡 연준 정책의 핵심 변수, 가장 높은 가중치
+                weight = 5; break;
             case 'nfp':
-                if (value >= 250) { status = 'positive'; icon = '👍'; text = '고용 서프라이즈'; } 
-                else if (value >= 150) { status = 'neutral'; icon = '😐'; text = '예상 부합'; } 
+                if (value >= 250) { status = 'positive'; icon = '👍'; text = '고용 서프라이즈'; }
+                else if (value >= 150) { status = 'neutral'; icon = '😐'; text = '예상 부합'; }
                 else { status = 'negative'; icon = '👎'; text = '고용 쇼크'; }
-                weight = 5; break; // 💡 미국 경제의 펀더멘털, 가장 높은 가중치
+                weight = 5; break;
             case 'vix':
-                if (value <= 20) { status = 'positive'; icon = '😌'; text = '시장 안정'; } 
-                else if (value <= 30) { status = 'neutral'; icon = '😟'; text = '불안 심리'; } 
+                if (value <= 20) { status = 'positive'; icon = '😌'; text = '시장 안정'; }
+                else if (value <= 30) { status = 'neutral'; icon = '😟'; text = '불안 심리'; }
                 else { status = 'negative'; icon = '😱'; text = '공포 심리'; }
-                weight = 4; break; // 💡 시장 심리 반영, 높은 가중치
+                weight = 4; break;
             case 'export_growth':
-                if (value >= 2.0) { status = 'positive'; icon = '📈'; text = '수출 호조'; } 
-                else if (value >= 0) { status = 'neutral'; icon = '📊'; text = '소폭 개선'; } 
+                if (value >= 2.0) { status = 'positive'; icon = '📈'; text = '수출 호조'; }
+                else if (value >= 0) { status = 'neutral'; icon = '📊'; text = '소폭 개선'; }
                 else { status = 'negative'; icon = '📉'; text = '수출 부진'; }
-                weight = 4; break; // 💡 한국 경제 핵심 동력, 높은 가중치
+                weight = 4; break;
             case 'gdp_growth':
-                 if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복'; } 
-                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; } 
+                 if (value >= 0.7) { status = 'positive'; icon = '👍'; text = '견조한 회복'; }
+                else if (value >= 0.3) { status = 'neutral'; icon = '😐'; text = '완만한 성장'; }
                 else { status = 'negative'; icon = '👎'; text = '성장 둔화'; }
-                weight = 5; break; // 💡 경제 성장의 바로미터, 가장 높은 가중치
+                weight = 5; break;
             case 'exchange_rate':
                 if (value <= 1300) { status = 'positive'; icon = '💵'; text = '환율 안정'; }
                 else if (value <= 1380) { status = 'neutral'; icon = '〰️'; text = '변동성 확대'; }
@@ -54,21 +54,27 @@ export function analyzeIndicators(indicators) {
                 if (value >= 5 && value <= 7) { status = 'positive'; icon = '💧'; text = '유동성 적정'; }
                 else { status = 'neutral'; icon = '〰️'; text = '과잉/부족 우려'; }
                 weight = 2; break;
+            // 💡 [신규 추가] 반도체 지수 분석 로직
+            case 'sox_index':
+                // (임시 로직: 예시로 4000 이상이면 긍정으로 판단)
+                // TODO: 실제로는 전일 대비 등락률 등을 기준으로 판단해야 함
+                if (value >= 4000) { status = 'positive'; icon = '📈'; text = '상승 추세'; }
+                else { status = 'negative'; icon = '📉'; text = '하락/조정'; }
+                weight = 3; // 가중치 부여 (예시)
+                break;
+            // 다른 지표들도 필요에 따라 분석 로직 추가...
         }
         return { ...indicator, status, icon, text, weight };
     }).filter(Boolean); // null 값을 제거
 }
 
 /**
- * 💡 [핵심 업그레이드]
  * 모든 단기/장기 지표를 종합하여 복합적인 시장 시나리오를 분석하고 구체적인 전망을 생성합니다.
  */
 export function getMarketOutlook(analyzedIndicators, macroResults) {
-    // 💡 [수정] macroResults가 null일 경우를 대비해 빈 객체로 안전하게 처리합니다.
     const safeMacroResults = macroResults || {};
 
     if (!analyzedIndicators || analyzedIndicators.length === 0) {
-        // 💡 [수정] score: 0을 반환하도록 추가
         return { status: 'neutral', signal: '🤔', title: '분석 데이터 부족', analysis: '시장 종합 전망을 분석하기 위한 데이터가 부족합니다.', score: 0 };
     }
 
@@ -88,7 +94,6 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     let macroScore = 0;
     let macroCount = 0;
     
-    // 💡 [수정] safeMacroResults를 사용하여 안전하게 접근합니다.
     if (safeMacroResults.marshallK) {
         macroCount++;
         if (safeMacroResults.marshallK.status === 'positive') macroScore += 1;
@@ -104,8 +109,6 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
         if (safeMacroResults.gdpConsumption.status === 'positive') macroScore += 1;
         else if (safeMacroResults.gdpConsumption.status === 'negative') macroScore -= 1;
     }
-
-    // 💡 [추가] 한국 경기 순환 지표를 거시 점수에 반영
     if (safeMacroResults.cycle) {
         macroCount++;
         if (safeMacroResults.cycle.status === 'positive') macroScore += 1;
@@ -114,8 +117,7 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     
     const normalizedMacro = macroCount > 0 ? (macroScore / macroCount) * 100 : 0;
 
-    // 3. 종합 점수: 단기 40% + 거시 60% (거시가 더 중요)
-    // 💡 [수정] 거시 지표가 없으면(macroCount === 0) 단기 점수를 100% 반영, 있으면 가중 평균
+    // 3. 종합 점수: 단기 40% + 거시 60%
     const finalScore = (macroCount > 0)
         ? (normalizedShortTerm * 0.4) + (normalizedMacro * 0.6)
         : normalizedShortTerm;
@@ -125,30 +127,25 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     const negativeDrivers = [];
     const neutralFactors = [];
 
-    // 거시 분석 요약 추가 (우선 순위 높음)
-    // 💡 [수정] safeMacroResults를 사용하여 안전하게 접근합니다.
+    // 거시 분석 요약 추가
     if (safeMacroResults.gdpConsumption) {
         const indicator = safeMacroResults.gdpConsumption;
         if (indicator.status === 'positive') positiveDrivers.push(`경기 사이클(${indicator.outlook})`);
         else if (indicator.status === 'negative') negativeDrivers.push(`경기 사이클(${indicator.outlook})`);
         else neutralFactors.push(`경기 사이클(${indicator.outlook})`);
     }
-    
     if (safeMacroResults.gdpGap) {
         const indicator = safeMacroResults.gdpGap;
         if (indicator.status === 'positive') positiveDrivers.push(`GDP 갭(${indicator.outlook})`);
         else if (indicator.status === 'negative') negativeDrivers.push(`GDP 갭(${indicator.outlook})`);
         else neutralFactors.push(`GDP 갭(${indicator.outlook})`);
     }
-    
     if (safeMacroResults.marshallK) {
         const indicator = safeMacroResults.marshallK;
         if (indicator.status === 'positive') positiveDrivers.push(`유동성 환경(${indicator.outlook})`);
         else if (indicator.status === 'negative') negativeDrivers.push(`유동성 환경(${indicator.outlook})`);
         else neutralFactors.push(`유동성 환경(${indicator.outlook})`);
     }
-
-    // 💡 [추가] 한국 경기 순환 요인을 드라이버에 추가
     if (safeMacroResults.cycle) {
         const indicator = safeMacroResults.cycle;
         const name = '🇰🇷韓 경기순환';
@@ -171,42 +168,37 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
             }
         });
 
-    // 5. 최종 전망 동적 생성 (더 세밀한 구간 분할)
+    // 5. 최종 전망 동적 생성
     let finalStatus, finalSignal, finalTitle, finalAnalysis;
 
     if (finalScore > 50) {
-        // 강한 긍정
         finalStatus = 'positive';
         finalSignal = '🚀';
         finalTitle = '강한 상승 모멘텀';
         finalAnalysis = `<b>[종합 분석]</b> 거시 경제 펀더멘털과 단기 지표 모두 강한 긍정 신호를 보내고 있어, 지속적인 상승 랠리가 기대됩니다.<br><br><b>[핵심 동력]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span> 등이 시장 상승을 강력히 뒷받침하고 있습니다.${negativeDrivers.length > 0 ? `<br><br><b>[잠재 리스크]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등은 단기 변동성 요인이 될 수 있으나, 전체 흐름을 바꾸기는 어려워 보입니다.` : ''}`;
     } else if (finalScore > 20) {
-        // 온건한 긍정
         finalStatus = 'positive';
         finalSignal = '📈';
         finalTitle = '완만한 회복 기대';
         finalAnalysis = `<b>[종합 분석]</b> 주요 경제 지표들이 점진적인 개선 흐름을 보이고 있어, 완만한 상승세가 이어질 것으로 예상됩니다.<br><br><b>[긍정 요인]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span>.<br><br>${negativeDrivers.length > 0 ? `<b>[주의 요인]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등은 상승 속도를 제한하는 요인으로 작용할 수 있습니다.` : '긍정적인 흐름을 저해하는 뚜렷한 악재는 보이지 않습니다.'}`;
     } else if (finalScore > -20) {
-        // 혼조
         finalStatus = 'neutral';
         finalSignal = '📊';
         finalTitle = '방향성 탐색 구간';
         finalAnalysis = `<b>[종합 분석]</b> 거시 지표와 단기 지표에서 상반된 신호가 나오며, 시장은 뚜렷한 방향성 없이 박스권에서 등락을 반복할 가능성이 높습니다.<br><br><b>[긍정 요인]</b> <span class="positive-text">${positiveDrivers.length > 0 ? positiveDrivers.join(', ') : '없음'}</span>.<br><b>[부정 요인]</b> <span class="negative-text">${negativeDrivers.length > 0 ? negativeDrivers.join(', ') : '없음'}</span>.<br><br><b>[전략 제안]</b> 주요 이벤트(CPI, NFP, FOMC 등)의 결과에 따라 균형이 한쪽으로 기울 수 있으니, 섣부른 방향성 베팅보다는 변동성 관리에 집중하는 것이 바람직합니다.`;
     } else if (finalScore > -50) {
-        // 온건한 부정
         finalStatus = 'negative';
         finalSignal = '📉';
         finalTitle = '경기 둔화 우려';
         finalAnalysis = `<b>[종합 분석]</b> 여러 지표에서 경고 신호가 감지되어, 경기 둔화와 조정 국면에 대비해야 할 시점입니다.<br><br><b>[핵심 위험]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span> 등이 시장에 하방 압력을 가하고 있습니다.${positiveDrivers.length > 0 ? `<br><br><b>[방어 요인]</b> <span class="positive-text">${positiveDrivers.join(', ')}</span> 등이 추가 하락을 제한하는 완충 역할을 할 수 있습니다.` : '<br><br>반등을 이끌만한 뚜렷한 긍정 요인이 부족한 상황입니다.'}`;
     } else {
-        // 강한 부정
         finalStatus = 'negative';
         finalSignal = '🚨';
         finalTitle = '강한 하방 압력';
         finalAnalysis = `<b>[종합 분석]</b> 거시 환경과 단기 심리 모두 비관적이며, 위험 관리가 매우 중요한 시점입니다.<br><br><b>[주요 악재]</b> <span class="negative-text">${negativeDrivers.join(', ')}</span>.<br><br><b>[전략 제안]</b> 보수적인 포트폴리오를 유지하며 현금 비중을 확보하고, 시장의 변곡점을 확인하기 전까지 방어적인 자세가 필요합니다.`;
     }
 
-    // 6. 특수 시나리오: 스태그플레이션 (물가↑ + 성장↓)
+    // 6. 특수 시나리오: 스태그플레이션
     const cpi = analyzedIndicators.find(i => i.id === 'us_cpi' || i.id === 'cpi');
     const gdp = analyzedIndicators.find(i => i.id === 'gdp_growth');
 
@@ -219,20 +211,19 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
         finalAnalysis = `<b>[특수 시나리오]</b> <span class="negative-text">높은 물가(${cpi.name} ${cpi.text})</span>와 <span class="negative-text">경제 성장 둔화(${gdp.name} ${gdp.text})</span>가 동시에 감지되어 스태그플레이션 위험이 부각되고 있습니다.<br><br><b>[전략 제안]</b> 이는 자산 배분에 가장 어려운 시나리오로, 전통적인 주식/채권 분산 효과가 약화될 수 있습니다. 현금, 원자재, 달러 등 대체 안전자산의 비중을 고려해야 합니다.`;
     }
 
-    // 💡 [수정] 반환 객체에 'score' 추가
     return { 
         status: finalStatus, 
         signal: finalSignal, 
         title: finalTitle, 
         analysis: finalAnalysis,
-        score: finalScore.toFixed(0) // 💡 점수 데이터를 별도로 반환
+        score: finalScore.toFixed(0) 
     };
 }
 
 
 
 // ==================================================================
-// 자산군별 투자 의견 및 섹터 전망 (더 정교하게 수정)
+// 자산군별 투자 의견 및 섹터 전망
 // ==================================================================
 export function getInvestmentSuggestions(marketOutlook) {
     const status = marketOutlook.status;
@@ -271,57 +262,34 @@ export function getInvestmentSuggestions(marketOutlook) {
 }
 
 /**
- * 💡 [수정됨] 마샬케이(유동성)와 금리의 방향성을 조합하여 4가지 국면으로 분석합니다.
+ * 마샬케이(유동성)와 금리의 방향성을 조합하여 4가지 국면으로 분석합니다.
  */
 export function analyzeMarshallKTrend(chartData, resultsObject) {
     const analysisDiv = document.getElementById('marshall-analysis');
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
 
     try {
-        // 최소 2년치(8분기) 데이터 필요 (추세 비교를 위해)
         if (!chartData || chartData.length < 8) {
             throw new Error("분석할 데이터가 부족합니다.");
         }
         
         const latest = chartData[chartData.length - 1];
-        const prevYear = chartData[chartData.length - 5]; // 1년 전 데이터
+        const prevYear = chartData[chartData.length - 5]; 
 
-        // 1. 1년 전 대비 추세(방향성) 계산
         const mkTrend = latest.marshallK - prevYear.marshallK;
         const rateTrend = latest.interestRate - prevYear.interestRate;
 
-        // 2. 추세에 따른 4분면 분석 (유동성 사이클)
         let trendText_MK = mkTrend > 0 ? "증가" : "감소";
         let trendText_Rate = rateTrend > 0 ? "상승" : "하락";
 
         if (rateTrend < 0 && mkTrend > 0) {
-            // Q1: 금리 하락 + 유동성 증가 (가장 좋음)
-            result = { 
-                status: 'positive', 
-                outlook: '✅ 유동성 장세 (완화)', 
-                summary: '금리가 하락하고 시중 유동성이 증가하는 가장 이상적인 "금융 완화" 국면입니다. 자산 시장에 긍정적입니다.' 
-            };
+            result = { status: 'positive', outlook: '✅ 유동성 장세 (완화)', summary: '금리가 하락하고 시중 유동성이 증가하는 가장 이상적인 "금융 완화" 국면입니다. 자산 시장에 긍정적입니다.' };
         } else if (rateTrend > 0 && mkTrend > 0) {
-            // Q2: 금리 상승 + 유동성 증가 (과열)
-            result = { 
-                status: 'neutral', 
-                outlook: '⚠️ 과열/버블 우려', 
-                summary: '풍부한 유동성이 인플레이션/과열 우려를 자극해 금리가 상승하는 "과열" 국면입니다. 경기 사이클 후반부 신호입니다.' 
-            };
+            result = { status: 'neutral', outlook: '⚠️ 과열/버블 우려', summary: '풍부한 유동성이 인플레이션/과열 우려를 자극해 금리가 상승하는 "과열" 국면입니다. 경기 사이클 후반부 신호입니다.' };
         } else if (rateTrend > 0 && mkTrend < 0) {
-            // Q3: 금리 상승 + 유동성 감소 (긴축)
-            result = { 
-                status: 'negative', 
-                outlook: '🚨 금융 긴축 국면', 
-                summary: '금리가 상승하고 유동성이 축소되는 "금융 긴축" 국면입니다. 자산 시장에 가장 부정적인 환경입니다.' 
-            };
+            result = { status: 'negative', outlook: '🚨 금융 긴축 국면', summary: '금리가 상승하고 유동성이 축소되는 "금융 긴축" 국면입니다. 자산 시장에 가장 부정적인 환경입니다.' };
         } else {
-            // Q4: 금리 하락 + 유동성 감소 (침체)
-            result = { 
-                status: 'negative', 
-                outlook: '📉 침체 국면 (바닥권)', 
-                summary: '경기 둔화로 인해 금리는 하락하지만, 신용 경색 등으로 유동성이 마르는 "침체" 국면입니다. 위험 관리가 필요합니다.' 
-            };
+            result = { status: 'negative', outlook: '📉 침체 국면 (바닥권)', summary: '경기 둔화로 인해 금리는 하락하지만, 신용 경색 등으로 유동성이 마르는 "침체" 국면입니다. 위험 관리가 필요합니다.' };
         }
 
         result.analysis = `<p><strong>최신 데이터 (${latest.label}):</strong></p>
@@ -344,30 +312,39 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
 
     try {
-        // 데이터가 최소 3년치(12분기)는 있어야 추세 비교 가능
+        // 데이터가 최소 3년치(12분기)는 있어야 추세 비교 가능 (오름차순 데이터 기준)
         if (!gdpObs || gdpObs.length < 13 || !pceObs || pceObs.length < 13) throw new Error("데이터 부족");
         
-        // 1. 최신 분기 성장률 (YoY)
-        const gdpGrowth = ((parseFloat(gdpObs[0].value) / parseFloat(gdpObs[4].value)) - 1) * 100;
-        const pceGrowth = ((parseFloat(pceObs[0].value) / parseFloat(pceObs[4].value)) - 1) * 100;
+        // 1. 최신 분기 성장률 (YoY) - 오름차순 데이터이므로 마지막 인덱스 사용
+        const latestIdx = gdpObs.length - 1;
+        const oneYearAgoIdx = latestIdx - 4;
+        
+        if (oneYearAgoIdx < 0) throw new Error("1년 전 데이터 부족");
+
+        const gdpGrowth = ((parseFloat(gdpObs[latestIdx].value) / parseFloat(gdpObs[oneYearAgoIdx].value)) - 1) * 100;
+        const pceGrowth = ((parseFloat(pceObs[latestIdx].value) / parseFloat(pceObs[oneYearAgoIdx].value)) - 1) * 100;
 
         // 2. 최근 4분기 이동평균 성장률 계산 (장기 추세)
         const recentGdpGrowths = [];
-        for (let i = 0; i < 4; i++) {
-            const growth = ((parseFloat(gdpObs[i].value) / parseFloat(gdpObs[i + 4].value)) - 1) * 100;
+        for (let i = latestIdx; i > latestIdx - 4; i--) {
+            if (i < 4) break; // 데이터 부족 방지
+            const growth = ((parseFloat(gdpObs[i].value) / parseFloat(gdpObs[i - 4].value)) - 1) * 100;
             recentGdpGrowths.push(growth);
         }
+        if (recentGdpGrowths.length < 4) throw new Error("최근 4분기 성장률 계산 데이터 부족");
         const avgRecentGrowth = recentGdpGrowths.reduce((a, b) => a + b, 0) / 4;
         
         // 3. 1년 전 4분기 이동평균 성장률 (과거 추세와 비교)
         const pastGdpGrowths = [];
-        for (let i = 4; i < 8; i++) {
-            const growth = ((parseFloat(gdpObs[i].value) / parseFloat(gdpObs[i + 4].value)) - 1) * 100;
+        for (let i = oneYearAgoIdx; i > oneYearAgoIdx - 4; i--) {
+            if (i < 4) break; // 데이터 부족 방지
+            const growth = ((parseFloat(gdpObs[i].value) / parseFloat(gdpObs[i - 4].value)) - 1) * 100;
             pastGdpGrowths.push(growth);
         }
+        if (pastGdpGrowths.length < 4) throw new Error("과거 4분기 성장률 계산 데이터 부족");
         const avgPastGrowth = pastGdpGrowths.reduce((a, b) => a + b, 0) / 4;
 
-        // 4. 추세 판단: 최근 평균이 과거 평균보다 높으면 상승 추세
+        // 4. 추세 판단
         const trendImproving = avgRecentGrowth > avgPastGrowth;
         const trendStrength = Math.abs(avgRecentGrowth - avgPastGrowth);
         
@@ -377,84 +354,39 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
         const momentumAccelerating = veryRecentMomentum > slightlyOlderMomentum;
 
         // 6. 종합 판단 로직
-        let trendText, momentumText;
-        
-        if (trendImproving) {
-            trendText = trendStrength > 0.5 ? "강한 상승 추세" : "완만한 상승 추세";
-        } else {
-            trendText = trendStrength > 0.5 ? "뚜렷한 하락 추세" : "완만한 하락 추세";
-        }
-        
-        momentumText = momentumAccelerating ? "가속" : "둔화";
+        let trendText = trendImproving ? 
+            (trendStrength > 0.5 ? "강한 상승 추세" : "완만한 상승 추세") : 
+            (trendStrength > 0.5 ? "뚜렷한 하락 추세" : "완만한 하락 추세");
+        let momentumText = momentumAccelerating ? "가속" : "둔화";
 
         // 7. 4분면 분석 (절대 수준 + 추세 방향)
         if (gdpGrowth > 2.0) {
-            // 높은 성장률 구간
             if (trendImproving && momentumAccelerating) {
-                result = { 
-                    status: 'positive', 
-                    outlook: '🚀 강한 확장 국면', 
-                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 견조하며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` 
-                };
+                result = { status: 'positive', outlook: '🚀 강한 확장 국면', summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 견조하며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` };
             } else if (!trendImproving && !momentumAccelerating) {
-                result = { 
-                    status: 'neutral', 
-                    outlook: '⚠️ 고점 경계 국면', 
-                    summary: `GDP 성장률은 ${gdpGrowth.toFixed(2)}%로 양호하나, ${trendText} + 모멘텀 ${momentumText}로 전환되어 고점 통과 가능성이 있습니다.` 
-                };
+                result = { status: 'neutral', outlook: '⚠️ 고점 경계 국면', summary: `GDP 성장률은 ${gdpGrowth.toFixed(2)}%로 양호하나, ${trendText} + 모멘텀 ${momentumText}로 전환되어 고점 통과 가능성이 있습니다.` };
             } else {
-                result = { 
-                    status: 'positive', 
-                    outlook: '✅ 확장 국면', 
-                    summary: `GDP 성장률 ${gdpGrowth.toFixed(2)}%로 양호한 수준이며, ${trendText}입니다.` 
-                };
+                result = { status: 'positive', outlook: '✅ 확장 국면', summary: `GDP 성장률 ${gdpGrowth.toFixed(2)}%로 양호한 수준이며, ${trendText}입니다.` };
             }
         } else if (gdpGrowth > 1.0) {
-            // 중간 성장률 구간
             if (trendImproving && momentumAccelerating) {
-                result = { 
-                    status: 'positive', 
-                    outlook: '📈 회복 국면', 
-                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 회복 중이며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` 
-                };
+                result = { status: 'positive', outlook: '📈 회복 국면', summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 회복 중이며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` };
             } else if (!trendImproving && !momentumAccelerating) {
-                result = { 
-                    status: 'negative', 
-                    outlook: '📉 둔화 국면', 
-                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 둔화되고 있으며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` 
-                };
+                result = { status: 'negative', outlook: '📉 둔화 국면', summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 둔화되고 있으며, ${trendText} + 모멘텀 ${momentumText} 중입니다.` };
             } else {
-                result = { 
-                    status: 'neutral', 
-                    outlook: '😐 혼조 국면', 
-                    summary: `GDP 성장률 ${gdpGrowth.toFixed(2)}%이며, ${trendText}로 방향성이 불명확합니다.` 
-                };
+                result = { status: 'neutral', outlook: '😐 혼조 국면', summary: `GDP 성장률 ${gdpGrowth.toFixed(2)}%이며, ${trendText}로 방향성이 불명확합니다.` };
             }
         } else if (gdpGrowth > 0) {
-            // 낮은 성장률 구간
             if (trendImproving) {
-                result = { 
-                    status: 'neutral', 
-                    outlook: '🌱 초기 회복 신호', 
-                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 낮은 수준이나, ${trendText}로 회복 조짐이 보입니다.` 
-                };
+                result = { status: 'neutral', outlook: '🌱 초기 회복 신호', summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 낮은 수준이나, ${trendText}로 회복 조짐이 보입니다.` };
             } else {
-                result = { 
-                    status: 'negative', 
-                    outlook: '🚨 침체 우려', 
-                    summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 매우 낮으며, ${trendText} + 모멘텀 ${momentumText}로 침체 위험이 높습니다.` 
-                };
+                result = { status: 'negative', outlook: '🚨 침체 우려', summary: `GDP 성장률이 ${gdpGrowth.toFixed(2)}%로 매우 낮으며, ${trendText} + 모멘텀 ${momentumText}로 침체 위험이 높습니다.` };
             }
         } else {
-            // 마이너스 성장
-            result = { 
-                status: 'negative', 
-                outlook: '💥 경기 침체', 
-                summary: `GDP가 ${gdpGrowth.toFixed(2)}%로 마이너스 성장을 기록했습니다. ${trendText}입니다.` 
-            };
+            result = { status: 'negative', outlook: '💥 경기 침체', summary: `GDP가 ${gdpGrowth.toFixed(2)}%로 마이너스 성장을 기록했습니다. ${trendText}입니다.` };
         }
 
-        result.analysis = `<p><strong>최신 데이터 (${gdpObs[0].date.substring(0,7)}):</strong></p>
+        result.analysis = `<p><strong>최신 데이터 (${gdpObs[latestIdx].date.substring(0,7)}):</strong></p>
             <ul>
                 <li>실질 GDP 성장률 (YoY): <strong>${gdpGrowth.toFixed(2)}%</strong></li>
                 <li>실질 PCE 성장률 (YoY): <strong>${pceGrowth.toFixed(2)}%</strong></li>
@@ -473,42 +405,36 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
 }
 
 /**
- * 💡 [수정됨] GDP 갭의 레벨과 모멘텀(방향성)을 조합하여 분석을 세분화합니다.
+ * GDP 갭의 레벨과 모멘텀(방향성)을 조합하여 분석을 세분화합니다.
  */
 export function analyzeGdpGap(gdpGapData, resultsObject) {
     const analysisDiv = document.getElementById('gdp-gap-analysis');
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
 
     try {
-        // 최소 1년치(4분기) 데이터 필요 (모멘텀 비교를 위해)
         if (!gdpGapData || gdpGapData.length < 4) {
             throw new Error("분석할 데이터가 부족합니다.");
         }
         
         const latest = gdpGapData[gdpGapData.length - 1];
-        const prev = gdpGapData[gdpGapData.length - 2]; // 직전 분기
+        const prev = gdpGapData[gdpGapData.length - 2]; 
         
-        // 1. 모멘텀 계산 (직전 분기 대비)
         const momentum = latest.value - prev.value;
         const momentumText = momentum > 0 ? "확대" : "축소";
         
-        // 2. 레벨과 모멘텀을 조합한 4분면 분석
         if (latest.value > 0.5) {
-            // 레벨: 플러스 갭 (과열)
             if (momentum > 0) {
                 result = { status: 'negative', outlook: '🔥 과열 심화', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 플러스를 기록 중이며, 갭이 더욱 확대되고 있습니다. 인플레이션 압력이 매우 높습니다.` };
             } else {
                 result = { status: 'neutral', outlook: '⚠️ 정점 통과 신호', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 여전히 높으나, 모멘텀이 둔화(축소)되고 있습니다. 경기 고점 통과 신호일 수 있습니다.` };
             }
         } else if (latest.value < -0.5) {
-            // 레벨: 마이너스 갭 (침체)
              if (momentum > 0) {
                 result = { status: 'positive', outlook: '🌱 경기 회복 초기', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 마이너스 상태이나, 갭이 축소(개선)되고 있습니다. 경기 회복의 초기 신호입니다.` };
             } else {
                 result = { status: 'negative', outlook: '🚨 침체 심화', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 마이너스를 기록 중이며, 갭이 더욱 확대(악화)되고 있습니다. 경기 침체 우려가 매우 높습니다.` };
             }
         } else {
-            // 레벨: 0 근방 (균형)
             if (momentum > 0.1) {
                  result = { status: 'positive', outlook: '📈 확장 국면 진입', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 균형 상태에서 플러스(+)로 확장되고 있습니다. 경기가 확장 국면에 진입하고 있습니다.` };
             } else if (momentum < -0.1) {
@@ -535,10 +461,7 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
 }
 
 /**
- * 💡 [신규 추가]
  * 🇰🇷 한국 경기순환지표(선행/동행)를 분석합니다.
- * @param {object} cycleData - { coincident: [...], leading: [...] }
- * @param {object} resultsObject - 종합 분석 결과 저장 객체
  */
 export function analyzeCycleIndicators(cycleData, resultsObject) {
     const analysisDiv = document.getElementById('cycle-analysis');
@@ -549,35 +472,28 @@ export function analyzeCycleIndicators(cycleData, resultsObject) {
             throw new Error("분석할 경기 순환 데이터가 부족합니다.");
         }
 
-        // 1. 최신 데이터 추출
         const latestLeading = cycleData.leading[cycleData.leading.length - 1];
         const latestCoincident = cycleData.coincident[cycleData.coincident.length - 1];
         
-        // 2. 모멘텀(방향성) 분석 (3개월 전 데이터와 비교)
         const prevLeading = cycleData.leading[cycleData.leading.length - 4];
         const leadingMomentum = latestLeading.value - prevLeading.value;
         const leadingMomentumText = leadingMomentum > 0 ? "상승" : "하락";
 
-        // 3. 경기 국면 판단 (선행지수 기준)
         const level = latestLeading.value;
         const isRising = leadingMomentum > 0;
 
         let investmentTiming = '';
 
         if (level > 100 && isRising) {
-            // Q1: 확장 (호황)
             result = { status: 'positive', outlook: '✅ 경기 확장 국면', summary: '선행지수가 100을 상회하며 상승 중입니다. 경기가 활발하게 확장되고 있습니다.' };
             investmentTiming = '<b>[투자 견해]</b> 긍정적. 경기 호황이 지속되는 구간입니다. 다만, 선행지수가 고점에서 꺾이는지(경기 둔화 신호) 주의 깊게 관찰해야 합니다.';
         } else if (level > 100 && !isRising) {
-            // Q2: 둔화 (후퇴)
             result = { status: 'negative', outlook: '📉 경기 둔화 국면', summary: '선행지수가 100을 상회하지만 하락 전환했습니다. 경기 정점(Peak)을 통과했을 가능성이 높습니다.' };
             investmentTiming = '<b>[투자 견해]</b> 부정적. 주식 비중 축소 및 현금/안전자산 확보가 필요한 시점입니다. 경기 방어주(필수소비재, 헬스케어) 비중 확대가 유리합니다.';
         } else if (level < 100 && !isRising) {
-            // Q3: 침체 (불황)
             result = { status: 'negative', outlook: '🚨 경기 침체 국면', summary: '선행지수가 100을 하회하며 하락 중입니다. 명백한 경기 침체(Recession) 신호입니다.' };
             investmentTiming = '<b>[투자 견해]</b> 매우 부정적. 위험자산 비중을 최소화하고 채권, 달러 등 안전자산 비중을 극대화해야 합니다. 경기 저점(Trough)을 기다려야 합니다.';
         } else {
-            // Q4: 회복 (초기)
             result = { status: 'positive', outlook: '🚀 경기 회복 국면', summary: '선행지수가 100을 하회하지만 상승 전환했습니다. 경기 저점(Trough)을 통과하는 가장 강력한 회복 신호입니다.' };
             investmentTiming = '<b>[투자 견해]</b> 매우 긍정적. 주식 비중을 적극적으로 확대해야 하는 "골든 크로스" 시점입니다. 경기민감주(IT, 금융, 산업재)가 시장을 주도할 수 있습니다.';
         }
@@ -595,5 +511,5 @@ export function analyzeCycleIndicators(cycleData, resultsObject) {
     }
     
     if(analysisDiv) analysisDiv.innerHTML = `<div class="market-outlook-badge ${result.status}">${result.outlook}</div><div class="analysis-text">${result.analysis}</div>`;
-    resultsObject.cycle = result; // 💡 종합 분석 객체에 추가
+    resultsObject.cycle = result; 
 }
