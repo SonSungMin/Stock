@@ -7,18 +7,19 @@ import {
     analyzeMarshallKTrend, 
     analyzeGdpConsumption, 
     analyzeGdpGap,
-    analyzeCycleIndicators // 💡 [추가]
+    analyzeCycleIndicators,
+    getSP500Outlook // 💡 [추가]
 } from './js/analysis.js';
 import { 
     renderMarshallKChart, 
     renderGdpConsumptionChart, 
     renderGdpGapChart,
-    renderCycleChart // 💡 [추가]
+    renderCycleChart 
 } from './js/charts.js';
 import {
     renderInitialPlaceholders,
     renderDashboard,
-    setupEventListeners // 💡 오류 수정됨
+    setupEventListeners 
 } from './js/ui.js';
 
 // ==================================================================
@@ -32,63 +33,83 @@ async function main() {
         return;
     }
 
-    // 모든 거시 경제 분석 결과를 저장할 중앙 객체
     const macroAnalysisResults = {
         marshallK: null,
         gdpGap: null,
         gdpConsumption: null,
-        cycle: null // 💡 [추가]
+        cycle: null 
     };
 
-    // UI 기본 설정 초기화
-    setupEventListeners(); // 💡 오류 수정됨
+    setupEventListeners(); 
     renderInitialPlaceholders();
-    // renderEconomicCalendar(); // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
-    // renderReleaseSchedule();  // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
 
     try {
         // --- 1. 데이터 로딩 단계 ---
-        // 모든 단기 지표와 거시 경제 데이터를 병렬로 최대한 빠르게 불러옵니다.
         const [
             fredData,
             ecosData,
             marshallKData,
             gdpConsumptionData,
             gdpGapData,
-            cycleData // 💡 [추가]
+            cycleData 
         ] = await Promise.all([
             fetchFredIndicators(),
             fetchEcosIndicators(),
-            renderMarshallKChart(),      // 차트를 그리고 분석에 필요한 데이터를 반환합니다.
-            renderGdpConsumptionChart(), // 차트를 그리고 분석에 필요한 데이터를 반환합니다.
-            renderGdpGapChart(),          // 차트를 그리고 분석에 필요한 데이터를 반환합니다.
-            renderCycleChart() // 💡 [추가]
+            renderMarshallKChart(),      
+            renderGdpConsumptionChart(), 
+            renderGdpGapChart(),
+            renderCycleChart() 
         ]);
 
         // --- 2. 분석 실행 단계 ---
-        // 데이터 로딩이 모두 완료된 것을 확인한 후, 분석을 순차적으로 실행합니다.
-        // 각 분석 함수는 결과를 macroAnalysisResults 객체에 저장합니다.
         if (marshallKData) analyzeMarshallKTrend(marshallKData, macroAnalysisResults);
-        if (gdpConsumptionData) analyzeGdpConsumption(gdpConsumptionData.gdp, gdpConsumptionData.pce, macroAnalysisResults);
-        if (gdpGapData) analyzeGdpGap(gdpGapData, macroAnalysisResults);
-        if (cycleData) analyzeCycleIndicators(cycleData, macroAnalysisResults); // 💡 [추가]
+        if (gdpConsumptionData) analyzeGdpConsumption(gdpConsumptionData.gdp, gdpConsumptionData.pce, macroAnalysisResults); // 수정: API 응답 구조 고려
+        if (gdpGapData) analyzeGdpGap(gdpGapData, macroAnalysisResults); 
+        if (cycleData) analyzeCycleIndicators(cycleData, macroAnalysisResults); 
 
         const allIndicators = [...fredData, ...ecosData].filter(Boolean);
         const analyzedIndicators = analyzeIndicators(allIndicators);
 
         // --- 3. 최종 종합 및 렌더링 단계 ---
-        // 모든 단기/장기 분석이 완료된 후, 최종 시장 전망을 생성합니다.
         const marketOutlook = getMarketOutlook(analyzedIndicators, macroAnalysisResults);
-        
-        // 최종 결과를 화면에 표시합니다.
+        const sp500Outlook = getSP500Outlook(analyzedIndicators); // 💡 [추가] S&P 500 예측 실행
+
         renderDashboard(analyzedIndicators, marketOutlook);
+        renderSP500Prediction(sp500Outlook); // 💡 [추가] S&P 500 예측 결과 렌더링
 
     } catch (error) {
         console.error("전체 데이터 로딩 또는 분석 실패:", error);
         document.getElementById('update-time').innerText = "데이터 로딩/분석 중 오류가 발생했습니다.";
         
-        // 오류가 발생하더라도, 분석된 부분까지만이라도 화면에 표시를 시도합니다.
+        // 오류 발생 시에도 부분 결과 렌더링 시도
         const partialOutlook = getMarketOutlook([], macroAnalysisResults);
         renderDashboard([], partialOutlook);
+        // S&P 500 예측은 데이터 부족으로 실패할 가능성이 높음
+        renderSP500Prediction({ status: 'neutral', signal: '❓', title: '예측 불가', analysis: '데이터 로딩 오류로 S&P 500 전망 예측에 실패했습니다.' });
+    }
+}
+
+// ==================================================================
+// 💡 [신규 추가] S&P 500 예측 결과 렌더링 함수
+// ==================================================================
+function renderSP500Prediction(sp500Outlook) {
+    const section = document.getElementById('sp500-prediction-section');
+    if (!section) return;
+
+    if (sp500Outlook && sp500Outlook.status) {
+        section.className = `outlook-section ${sp500Outlook.status}-bg`; // 종합 전망과 동일한 스타일 적용
+        section.innerHTML = `
+            <div class="outlook-signal">${sp500Outlook.signal}</div>
+            <h3 class="outlook-title ${sp500Outlook.status}-text">${sp500Outlook.title}</h3>
+            <p class="outlook-analysis" style="text-align: center;">${sp500Outlook.analysis}</p> 
+        `;
+    } else {
+        // 기본 상태 또는 오류 시
+        section.className = 'outlook-section neutral-bg';
+        section.innerHTML = `
+            <div class="outlook-signal">❓</div>
+            <h3 class="outlook-title neutral-text">예측 데이터 부족</h3>
+            <p class="outlook-analysis" style="text-align: center;">S&P 500 전망을 예측하기 위한 데이터가 부족합니다.</p>
+        `;
     }
 }
