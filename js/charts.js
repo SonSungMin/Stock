@@ -1,5 +1,5 @@
 // js/charts.js
-import { fetchFredData } from './api.js';
+import { fetchFredData, fetchEcosCycleData } from './api.js'; 
 import { hpfilter } from './analysis_tools.js';
 
 let stockPriceChart = null;
