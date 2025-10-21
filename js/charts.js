@@ -1,7 +1,7 @@
 // js/charts.js
-import { fetchFredData, fetchEcosCycleData } from './api.js';
+import { fetchFredData, fetchEcosCycleData, fetchRecentSP500Data } from './api.js'; // fetchRecentSP500Data 추가
 import { hpfilter } from './analysis_tools.js';
-import { indicatorDetails } from './indicators.js'; 
+import { indicatorDetails } from './indicators.js';
 
 let stockPriceChart = null;
 let stockFinanceChart = null;
@@ -9,7 +9,8 @@ let marshallKChart = null;
 let gdpConsumptionChart = null;
 let indicatorChart = null;
 let gdpGapChart = null;
-let cycleChart = null; 
+let cycleChart = null;
+let sp500TrendChart = null; // S&P 500 추세 차트 변수
 
 // 주요 경기 침체 기간과 명칭 정의 (Source of Truth)
 const recessionPeriods = {
@@ -27,24 +28,16 @@ const recessionPeriods = {
 function createRecessionBoxes(chartData) {
     const boxes = [];
     let startRecession = null;
-
     chartData.forEach((d, index) => {
         if (d.isRecession && startRecession === null) {
             startRecession = index;
         } else if ((!d.isRecession || index === chartData.length - 1) && startRecession !== null) {
-            boxes.push({
-                type: 'box',
-                xMin: startRecession,
-                xMax: index,
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                borderColor: 'transparent',
-            });
+            boxes.push({ type: 'box', xMin: startRecession, xMax: index, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderColor: 'transparent' });
             startRecession = null;
         }
     });
     return boxes;
 }
-
 /**
  * 마샬케이 차트와 동일한 방식으로 경기 침체 '레이블' 어노테이션을 생성합니다.
  */
@@ -53,24 +46,7 @@ function createRecessionLabels(chartData) {
         const crisisDate = new Date(date);
         const index = chartData.findIndex(d => new Date(d.date) >= crisisDate);
         if (index === -1) return null;
-
-        return {
-            type: 'line',
-            scaleID: 'x',
-            value: index,
-            borderColor: 'rgba(220, 53, 69, 0.7)',
-            borderWidth: 1.5,
-            borderDash: [6, 6],
-            label: {
-                content: label,
-                display: true,
-                position: 'start',
-                yAdjust: 10,
-                font: { size: 11, weight: 'bold' },
-                color: 'white',
-                backgroundColor: 'rgba(220, 53, 69, 0.7)'
-            }
-        };
+        return { type: 'line', scaleID: 'x', value: index, borderColor: 'rgba(220, 53, 69, 0.7)', borderWidth: 1.5, borderDash: [6, 6], label: { content: label, display: true, position: 'start', yAdjust: 10, font: { size: 11, weight: 'bold' }, color: 'white', backgroundColor: 'rgba(220, 53, 69, 0.7)' } };
     }).filter(Boolean);
 }
 
@@ -198,7 +174,7 @@ export async function renderGdpConsumptionChart() {
         
         const uniqueDates = gdpObs.map(d => d.date); 
 
-        // 💡 [오류 수정] 루프를 0부터 시작하여 모든 S&P 데이터를 포함합니다.
+        // 루프를 0부터 시작하여 모든 S&P 데이터를 포함합니다.
         for (let i = 0; i < uniqueDates.length; i++) {
             const currentDate = uniqueDates[i];
             
@@ -588,4 +564,72 @@ export async function renderCycleChart() {
         ctx.fillText("데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
         return null;
     }
+}
+
+/**
+ * [신규 추가] S&P 500 최근 6개월 추세 차트 렌더링 함수
+ */
+export function renderSP500TrendChart(sp500Data) {
+    const canvas = document.getElementById('sp500-trend-chart');
+    if (!canvas) {
+        console.error("Canvas element 'sp500-trend-chart' not found.");
+        return;
+    }
+    const ctx = canvas.getContext('2d');
+    if (sp500TrendChart) sp500TrendChart.destroy();
+
+    if (!sp500Data || sp500Data.length === 0) {
+        console.warn("No recent S&P 500 data available for trend chart.");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillText("S&P 500 데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    // 데이터 가공 ( '.' 값 제외 )
+    const validData = sp500Data.filter(d => d.value !== '.');
+    const labels = validData.map(d => d.date);
+    const prices = validData.map(d => parseFloat(d.value));
+
+    sp500TrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'S&P 500 지수',
+                data: prices,
+                borderColor: '#dc3545', // 빨간색
+                borderWidth: 2,
+                pointRadius: 0, // 점 숨기기
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    ticks: {
+                        // 월별로 첫 날짜만 표시 (MM/DD 형식)
+                        callback: function(value, index, ticks) {
+                            const label = this.getLabelForValue(value);
+                            // 첫 데이터이거나 월이 바뀔 때만 표시
+                            if (index === 0 || label.substring(5, 7) !== this.getLabelForValue(value - 1)?.substring(5, 7)) {
+                                return label.substring(5); // MM-DD
+                            }
+                            return null; 
+                        },
+                        autoSkip: false,
+                        maxRotation: 0
+                    }
+                },
+                y: {
+                    title: { display: false } // Y축 제목 숨김
+                }
+            },
+            plugins: {
+                legend: { display: false } // 범례 숨김
+            }
+        }
+    });
 }
