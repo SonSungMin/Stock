@@ -8,8 +8,8 @@ import { indicatorDetails } from './indicators.js';
 
 /**
  * [수정됨]
- * frequency 파라미터를 추가하여 'q'(분기별), 'm'(월별) 등 주기를 지정할 수 있도록
- * FRED API 호출 함수를 확장합니다.
+ * S&P 500의 '분기 말(eop)' 값을 가져오기 위해
+ * 'aggregation_method' 파라미터를 추가합니다.
  */
 export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', frequency = null, aggregation_method = null) {
     let url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=${sortOrder}&limit=${limit}`;
@@ -22,15 +22,12 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
     }
     
     try {
-        // 💡 디버깅: 실제 요청 URL 확인
         // console.log(`Requesting FRED: ${url}`); 
         const res = await fetch(`${PROXY_URL}${encodeURIComponent(url)}`);
         if (!res.ok) throw new Error(`HTTP 오류: ${res.status} for ${seriesId}`);
         const data = await res.json();
-         // 💡 디버깅: API 응답 확인
         // console.log(`Response for ${seriesId}:`, data);
         
-        // 💡 디버깅: observations가 비어있는지 확인
         if (!data.observations || data.observations.length === 0) {
              console.warn(`FRED returned empty observations for ${seriesId}`);
              return null;
@@ -38,7 +35,6 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
         return data.observations;
         
     } catch (error) {
-        // 💡 오류 메시지에 Series ID 포함
         console.error(`FRED 데이터 로딩 실패 (${seriesId}):`, error.message); 
         return null;
     }
@@ -46,24 +42,21 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
 
 /**
  * [수정됨]
- * S&P 500 예측 관련 신규 지표(ISM PMI, 소비자심리지수, 구리 가격) 데이터를 가져오는 로직 추가.
- * 구리 가격(월별)은 YoY 변화율을 계산.
- * 💡 디버깅 로그 추가
+ * 단일 값 가져올 때 limit=5 적용
  */
 export async function fetchFredIndicators() {
     const fredIndicators = Object.entries(indicatorDetails).filter(([, details]) => details.seriesId);
     
     const promises = fredIndicators.map(async ([key, details]) => {
         
-         // 💡 디버깅: 어떤 키를 처리 중인지 확인
-         console.log(`Processing indicator key: ${key}`);
+         // console.log(`Processing indicator key: ${key}`);
          
-         let result = null; // 결과 저장 변수
+         let result = null; 
 
-        try { // 💡 오류 처리를 위해 try...catch 추가
+        try { 
             // 1. 장단기 금리차
             if (key === 'yield_spread') {
-                const [obs10Y, obs2Y] = await Promise.all([fetchFredData(details.seriesId[0], 1), fetchFredData(details.seriesId[1], 1)]); // limit=1 명시적 추가
+                const [obs10Y, obs2Y] = await Promise.all([fetchFredData(details.seriesId[0], 1), fetchFredData(details.seriesId[1], 1)]); 
                 if (!obs10Y || !obs2Y || obs10Y[0].value === '.' || obs2Y[0].value === '.') {
                      console.warn(`Yield spread data incomplete for key: ${key}`);
                      return null;
@@ -72,47 +65,50 @@ export async function fetchFredIndicators() {
                 result = { id: key, name: details.title, value: parseFloat(spread.toFixed(2)), unit: "%p", date: obs10Y[0].date.substring(5) };
             } else { // 2. 그 외 일반 FRED 지표 (단일 시리즈 ID)
                 
-                // 💡 디버깅: ism_pmi 또는 consumer_sentiment 인지 확인
                 const isPredictionIndicator = (key === 'ism_pmi' || key === 'consumer_sentiment');
-                if (isPredictionIndicator) console.log(`Fetching data for prediction indicator: ${key}`);
+                // if (isPredictionIndicator) console.log(`Fetching data for prediction indicator: ${key}`);
 
-                const obs = await fetchFredData(details.seriesId, 1); // 기본 limit=1
+                // 💡 [수정] limit=1 -> limit=5 변경
+                const obs = await fetchFredData(details.seriesId, 5, 'desc'); // 최신 5개 데이터 가져오기 (desc)
 
-                 // 💡 디버깅: fetchFredData 결과 확인
-                 if (isPredictionIndicator) console.log(`Raw obs for ${key}:`, obs);
+                 // if (isPredictionIndicator) console.log(`Raw obs for ${key}:`, obs);
 
-                if (!obs || !obs[0] || obs[0].value === '.') {
+                // 💡 최신 유효한 값 찾기 ('.' 제외)
+                const latestValidObs = obs ? obs.find(o => o.value !== '.') : null;
+
+                if (!latestValidObs) {
                     console.warn(`No valid data found for key: ${key}`);
-                    return null; // 데이터 없으면 null 반환하고 다음 지표로
+                    return null; 
                 }
-
-                let value = parseFloat(obs[0].value);
+                
+                // 💡 최신 유효 값 사용
+                let value = parseFloat(latestValidObs.value);
                 let unit = '';
-                let date = obs[0].date.substring(5); // 기본 날짜 형식 (MM-DD)
+                let date = latestValidObs.date.substring(5); // 기본 날짜 형식 (MM-DD)
 
-                 // 💡 디버깅: 파싱된 값 확인
-                 if (isPredictionIndicator) console.log(`Parsed value for ${key}: ${value}`);
+                 // if (isPredictionIndicator) console.log(`Parsed value for ${key}: ${value}`);
 
                 // 3. 지표별 특수 처리
                 if (key === 'nfp') { 
                     value = parseFloat((value / 1000).toFixed(1)); 
                     unit = '만명'; 
+                    date = latestValidObs.date.substring(0, 7); // YYYY-MM
                 }
                 else if (key === 'wti_price') { 
                     unit = '$/bbl'; 
-                    date = obs[0].date.substring(0, 7); // 월별 데이터 YYYY-MM
+                    date = latestValidObs.date.substring(0, 7); // YYYY-MM
                 }
                 else if (key === 'auto_sales') { 
                     unit = 'M'; 
-                    date = obs[0].date.substring(0, 7); // 월별 데이터 YYYY-MM
+                    date = latestValidObs.date.substring(0, 7); // YYYY-MM
                 }
                 // 미국 CPI (YoY 계산)
                 else if (key === 'us_cpi') {
-                    const obs_1y = await fetchFredData(details.seriesId, 13); 
+                    const obs_1y = await fetchFredData(details.seriesId, 13, 'desc'); // YoY 계산 위해 13개 desc로 가져옴
                     if (obs_1y && obs_1y.length > 12 && obs_1y[0].value !== '.' && obs_1y[12].value !== '.') {
                          const currentVal = parseFloat(obs_1y[0].value);
                          const prevVal = parseFloat(obs_1y[12].value);
-                         if (prevVal !== 0) { // 0으로 나누기 방지
+                         if (prevVal !== 0) { 
                             value = parseFloat(((currentVal - prevVal) / prevVal * 100).toFixed(1));
                             date = obs_1y[0].date.substring(0, 7); 
                             unit = '%';
@@ -128,20 +124,18 @@ export async function fetchFredIndicators() {
                 // ISM PMI (지수 레벨)
                 else if (key === 'ism_pmi') {
                     unit = ''; 
-                    date = obs[0].date.substring(0, 7); 
-                     // 💡 디버깅: 최종 객체 확인
-                     console.log(`Final object for ${key}:`, { id: key, name: details.title, value, unit, date });
+                    date = latestValidObs.date.substring(0, 7); 
+                     // console.log(`Final object for ${key}:`, { id: key, name: details.title, value, unit, date });
                 }
                 // 미시간대 소비자심리지수 (지수 레벨)
                 else if (key === 'consumer_sentiment') {
                      unit = ''; 
-                     date = obs[0].date.substring(0, 7); 
-                      // 💡 디버깅: 최종 객체 확인
-                      console.log(`Final object for ${key}:`, { id: key, name: details.title, value, unit, date });
+                     date = latestValidObs.date.substring(0, 7); 
+                      // console.log(`Final object for ${key}:`, { id: key, name: details.title, value, unit, date });
                 }
                  // 구리 가격 (YoY 계산)
                 else if (key === 'copper_price') {
-                     const obs_1y = await fetchFredData(details.seriesId, 13); 
+                     const obs_1y = await fetchFredData(details.seriesId, 13, 'desc'); 
                     if (obs_1y && obs_1y.length > 12 && obs_1y[0].value !== '.' && obs_1y[12].value !== '.') {
                          const currentVal = parseFloat(obs_1y[0].value);
                          const prevVal = parseFloat(obs_1y[12].value);
@@ -151,41 +145,36 @@ export async function fetchFredIndicators() {
                             unit = '%';
                          } else {
                               console.warn(`Cannot calculate YoY for ${key}, previous value is 0.`);
-                              // YoY 계산 불가 시 최신 레벨 값 사용
-                              value = parseFloat(obs[0].value); 
-                              unit = '$/mt'; // 단위 명시
-                              date = obs[0].date.substring(0, 7);
+                              value = parseFloat(latestValidObs.value); 
+                              unit = '$/mt'; 
+                              date = latestValidObs.date.substring(0, 7);
                               console.warn("Copper price YoY calculation failed, showing latest value.");
                          }
                     } else {
-                         // YoY 계산 불가 시 최신 레벨 값 사용
-                         value = parseFloat(obs[0].value); 
-                         unit = '$/mt'; // 단위 명시
-                         date = obs[0].date.substring(0, 7);
+                         value = parseFloat(latestValidObs.value); 
+                         unit = '$/mt'; 
+                         date = latestValidObs.date.substring(0, 7);
                          console.warn(`Insufficient data for YoY calculation for key: ${key}, showing latest value.`);
                     }
                 }
                 
-                // 결과 객체 생성 (오류 없으면)
-                 if (!isNaN(value)) { // 최종 value가 유효한 숫자인지 확인
+                 if (!isNaN(value)) { 
                      result = { id: key, name: details.title, value, unit, date };
                  } else {
                       console.warn(`Final value is NaN for key: ${key}`);
-                      return null; // 유효하지 않으면 null 반환
+                      return null; 
                  }
             }
         } catch (error) {
              console.error(`Error processing indicator ${key}:`, error);
-             return null; // 개별 지표 처리 중 오류 발생 시 null 반환
+             return null; 
         }
 
-        return result; // 성공 시 결과 객체 반환
+        return result; 
         
     });
-    // Promise.allSettled를 사용하여 일부 실패해도 나머지는 처리
     const results = await Promise.allSettled(promises);
     
-    // 성공한 결과만 필터링하여 반환 (null 제외)
     return results
         .filter(result => result.status === 'fulfilled' && result.value !== null)
         .map(result => result.value);
