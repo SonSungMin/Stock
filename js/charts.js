@@ -1,5 +1,5 @@
 // js/charts.js
-import { fetchFredData, fetchEcosCycleData } from './api.js'; 
+import { fetchFredData, fetchEcosCycleData } from './api.js';
 import { hpfilter } from './analysis_tools.js';
 
 let stockPriceChart = null;
@@ -8,7 +8,7 @@ let marshallKChart = null;
 let gdpConsumptionChart = null;
 let indicatorChart = null;
 let gdpGapChart = null;
-let cycleChart = null;
+let cycleChart = null; // 💡 추가됨
 
 // 주요 경기 침체 기간과 명칭 정의 (Source of Truth)
 const recessionPeriods = {
@@ -368,6 +368,11 @@ export async function showModalChart(indicatorId) {
     }
 }
 
+
+/**
+ * 💡 [신규 추가됨]
+ * ECOS 경기 순환 차트를 렌더링합니다.
+ */
 export async function renderCycleChart() {
     const canvas = document.getElementById('cycle-chart');
     if (!canvas) return null;
@@ -375,17 +380,21 @@ export async function renderCycleChart() {
     if (cycleChart) cycleChart.destroy();
 
     try {
-        // 1. API로부터 데이터 가져오기
+        // 1. API로부터 데이터 가져오기 (api.js가 100개를 반환)
         const cycleData = await fetchEcosCycleData();
         if (!cycleData || !cycleData.coincident || !cycleData.leading) {
              throw new Error("경기 순환 데이터가 없습니다.");
         }
         
         // 2. 데이터 가공 (오름차순 정렬 및 매핑)
-        const coincident = cycleData.coincident.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) })).reverse();
-        const leading = cycleData.leading.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) })).reverse();
+        // API가 최근 100개만 반환 (오름차순으로 옴)
+        const coincident = cycleData.coincident.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) }));
+        const leading = cycleData.leading.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) }));
         
-        // 선행지수 데이터가 더 최신일 수 있으므로, 동행지수 길이에 맞춤
+        // API가 데이터를 내림차순(desc)으로 반환하므로 .reverse()로 오름차순(asc) 정렬
+        coincident.reverse();
+        leading.reverse();
+
         const labels = coincident.map(d => `${d.date.substring(0,4)}-${d.date.substring(4,6)}`);
         const coincidentValues = coincident.map(d => d.value);
         
@@ -423,10 +432,13 @@ export async function renderCycleChart() {
                 scales: {
                     x: {
                         ticks: {
+                             // 💡 [수정] 100개(약 8년) 데이터에 맞게 2년마다 표시
                              callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
-                                if (label.endsWith('-01')) { // 매년 1월만 표시
-                                    return label.substring(0, 4); 
+                                const year = parseInt(label.substring(0, 4));
+                                // 2년 주기로 1월 데이터만 표시
+                                if (year % 2 === 0 && label.endsWith('-01')) { 
+                                    return year; 
                                 }
                                 return null;
                             },
