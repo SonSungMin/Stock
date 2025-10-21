@@ -107,10 +107,9 @@ export async function fetchEcosIndicators() {
 
 /**
  * 💡 [수정됨]
- * 1. 사용자님이 제공해주신 올바른 통계표 코드('901Y067')로 변경합니다.
- * 2. API가 100개(약 8년치)를 반환하므로 DATA_COUNT를 '100'으로 설정합니다.
- * 3. START_DATE는 '200001'로, END_DATE는 '현재'로 설정합니다.
- * (API는 이래도 최근 100개만 반환합니다.)
+ * 1. STAT_CODE를 '901Y067'로 변경.
+ * 2. ITEM_CODE를 'I16A'(선행), 'I16B'(동행)로 변경. (결정적 오류 수정)
+ * 3. DATA_COUNT를 100으로, START_DATE를 200001로 고정. (사용자님 URL 기준)
  */
 export async function fetchEcosCycleData() {
     const apiKey = API_KEYS.ECOS;
@@ -119,12 +118,12 @@ export async function fetchEcosCycleData() {
     // 1. 날짜 설정 (사용자님 URL 기준)
     const today = new Date();
     const endDate = today.toISOString().slice(0, 7).replace('-', ''); // 예: 202510
-    const sDateStr = '200001'; // 💡 사용자님 URL 기준
+    const sDateStr = '200001'; 
 
-    // 2. 통계표 코드 설정 (💡 수정된 지점)
+    // 2. 통계표 및 항목 코드 설정 (💡 수정된 지점)
     const STAT_CODE = '901Y067'; // 💡 사용자님 확인 코드
-    const COINCIDENT_ITEM = '0001'; // 동행지수 순환변동치
-    const LEADING_ITEM = '0002'; // 선행지수 순환변동치
+    const COINCIDENT_ITEM = 'I16B'; // 💡 동행지수 (0001 -> I16B)
+    const LEADING_ITEM = 'I16A'; // 💡 선행지수 (0002 -> I16A)
     const CYCLE_TYPE = 'M'; // 월별
     const DATA_COUNT = 100; // 💡 사용자님 URL 기준 (최근 100개)
 
@@ -136,6 +135,8 @@ export async function fetchEcosCycleData() {
 
     try {
         console.log(`ECOS API 요청 (STAT_CODE: ${STAT_CODE}): ${sDateStr} 부터 ${endDate} 까지 (최근 ${DATA_COUNT}개)`);
+        console.log(` - 선행지수(I16A) URL: ${createUrl(LEADING_ITEM)}`);
+        console.log(` - 동행지수(I16B) URL: ${createUrl(COINCIDENT_ITEM)}`);
 
         const [coincidentRes, leadingRes] = await Promise.all([
             fetch(`${proxy}${encodeURIComponent(createUrl(COINCIDENT_ITEM))}`),
@@ -156,7 +157,7 @@ export async function fetchEcosCycleData() {
     try {
         // 1. 동행지수 데이터 확인
         if (!coincidentData.StatisticSearch || !coincidentData.StatisticSearch.row || coincidentData.StatisticSearch.row.length === 0) {
-            let errorMsg = "동행지수 데이터가 없습니다.";
+            let errorMsg = "동행지수(I16B) 데이터가 없습니다.";
             if (coincidentData.RESULT) errorMsg = coincidentData.RESULT.MESSAGE;
             if (coincidentData.INFO) errorMsg = coincidentData.INFO.MESSAGE;
             throw new Error(`동행지수: ${errorMsg}`);
@@ -164,7 +165,7 @@ export async function fetchEcosCycleData() {
 
         // 2. 선행지수 데이터 확인
         if (!leadingData.StatisticSearch || !leadingData.StatisticSearch.row || leadingData.StatisticSearch.row.length === 0) {
-            let errorMsg = "선행지수 데이터가 없습니다.";
+            let errorMsg = "선행지수(I16A) 데이터가 없습니다.";
             if (leadingData.RESULT) errorMsg = leadingData.RESULT.MESSAGE;
             if (leadingData.INFO) errorMsg = leadingData.INFO.MESSAGE;
             throw new Error(`선행지수: ${errorMsg}`);
