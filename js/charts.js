@@ -171,10 +171,8 @@ export async function renderGdpGapChart() {
 
 /**
  * [수정됨]
- * 1. 모든 FRED 데이터를 오름차순('asc')으로 가져오도록 통일합니다.
- * 2. S&P 500 데이터 limit을 500으로 유지하여 전체 기간 표시를 시도합니다.
- * 3. 데이터 처리 로직(for 루프)은 오름차순 데이터에 맞게 유지합니다.
- * 4. S&P 500 라인 색상을 빨간색으로 유지합니다.
+ * S&P 500 데이터를 가져올 때 limit을 10000으로 대폭 늘려
+ * 1957년부터의 전체 기간 데이터가 표시되도록 합니다.
  */
 export async function renderGdpConsumptionChart() {
     const canvas = document.getElementById('gdp-consumption-chart');
@@ -182,28 +180,24 @@ export async function renderGdpConsumptionChart() {
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
-        // 💡 [수정] 모든 데이터를 'asc' (오름차순)으로 가져옵니다. limit 유지.
+        // 💡 [수정] S&P 500 데이터 limit을 500 -> 10000으로 변경
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
-             fetchFredData('GDPC1', 500, 'asc'), // limit 증가, asc
-             fetchFredData('PCEC', 500, 'asc'), // limit 증가, asc
-             fetchFredData('USRECQ', 500, 'asc'), // limit 증가, asc
-             fetchFredData('SP500', 500, 'asc', 'q', 'eop') // asc, limit=500
+             fetchFredData('GDPC1', 10000, 'asc'), // limit 증가, asc
+             fetchFredData('PCEC', 10000, 'asc'), // limit 증가, asc
+             fetchFredData('USRECQ', 10000, 'asc'), // limit 증가, asc
+             fetchFredData('SP500', 10000, 'asc', 'q', 'eop') // 💡 limit=10000, asc
         ]);
 
-        // 💡 기준 데이터를 gdpObs (오름차순)로 변경
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
         
         const chartData = [];
-        // 💡 오름차순 데이터이므로 Map 생성 방식은 동일
         const gdpMap = new Map(gdpObs.map(d => [d.date, parseFloat(d.value)]));
         const pceMap = new Map(pceObs.map(d => [d.date, parseFloat(d.value)]));
         const usrecMap = new Map(usrecObs.map(d => [d.date, d.value === '1']));
         const sp500Map = sp500Obs ? new Map(sp500Obs.map(d => [d.date, parseFloat(d.value)])) : new Map();
         
-        // 💡 오름차순이므로 sort 필요 없음, gdpObs 자체가 기준 날짜 배열
         const uniqueDates = gdpObs.map(d => d.date); 
 
-        // 💡 오름차순이므로 루프 시작점과 YoY 계산 인덱스 동일 (i와 i-4)
         for (let i = 4; i < uniqueDates.length; i++) {
             const currentDate = uniqueDates[i], previousDate = uniqueDates[i - 4];
             
@@ -233,7 +227,6 @@ export async function renderGdpConsumptionChart() {
         
         if (chartData.length === 0) throw new Error("GDP 데이터 가공에 실패했습니다.");
         
-        // 💡 오름차순 데이터이므로 labels 생성 동일
         const labels = chartData.map(d => d.date);
         const recessionBoxes = createRecessionBoxes(chartData);
         const recessionLabels = createRecessionLabels(chartData);
@@ -247,7 +240,7 @@ export async function renderGdpConsumptionChart() {
                     { 
                         label: 'S&P 500 지수 (우측 축)', 
                         data: chartData.map(d => d.sp500Level), 
-                        borderColor: '#dc3545', // 💡 빨간색 유지
+                        borderColor: '#dc3545', // 빨간색 유지
                         borderWidth: 2.5,
                         borderDash: [5, 5], 
                         pointRadius: 0,
@@ -308,7 +301,6 @@ export async function renderGdpConsumptionChart() {
             }
         });
         
-        // 💡 반환 데이터 순서 변경 없음 (오름차순 raw 데이터 반환)
         return { gdp: gdpObs, pce: pceObs, sp500: sp500Obs };
     } catch (error) {
         console.error("소비/GDP/S&P 500 차트 렌더링 실패:", error);
@@ -326,19 +318,17 @@ export async function renderMarshallKChart() {
     const ctx = canvas.getContext('2d');
     if (marshallKChart) marshallKChart.destroy();
     try {
-        // 💡 [수정] 모든 데이터를 'asc' (오름차순)으로 가져옵니다. limit 증가.
+        // [수정] 모든 데이터를 'asc' (오름차순)으로 가져옵니다. limit 증가.
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-             fetchFredData('GDP', 500, 'asc'), // limit 증가, asc
-             fetchFredData('M2SL', 1000, 'asc'), // limit 증가, asc (월별 데이터 더 많음)
-             fetchFredData('DGS10', 3000, 'asc') // limit 증가, asc (일별 데이터 더 많음)
+             fetchFredData('GDP', 10000, 'asc'), // limit 증가, asc
+             fetchFredData('M2SL', 10000, 'asc'), // limit 증가, asc (월별 데이터 더 많음)
+             fetchFredData('DGS10', 10000, 'asc') // limit 증가, asc (일별 데이터 더 많음)
         ]);
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         
-        // 💡 오름차순 데이터이므로 Map 생성 방식 동일
         const gdpMap = new Map(gdpSeries.filter(p => p.value !== '.').map(p => [p.date, parseFloat(p.value)]));
         const m2Map = new Map(m2Series.filter(p => p.value !== '.').map(p => [p.date.substring(0, 7), parseFloat(p.value)]));
         
-        // 월 평균 금리 계산 (오름차순 데이터 처리 동일)
         const rateMonthlyAvg = new Map();
         rateSeries.filter(p => p.value !== '.').forEach(p => { 
             const key = p.date.substring(0, 7); 
@@ -352,9 +342,8 @@ export async function renderMarshallKChart() {
         });
         
         const chartData = [];
-        // 💡 기준이 되는 GDP 날짜로 루프 (오름차순)
         gdpSeries.forEach(gdpPoint => {
-             if (gdpPoint.value === '.') return; // Skip invalid GDP data
+             if (gdpPoint.value === '.') return; 
             
             const gdpDate = gdpPoint.date;
             const gdpValue = parseFloat(gdpPoint.value);
@@ -362,18 +351,14 @@ export async function renderMarshallKChart() {
             const year = date.getFullYear();
             const quarter = Math.floor(date.getMonth() / 3) + 1;
             
-            // 해당 분기의 월 이름 생성 (예: '2023-01', '2023-02', '2023-03')
             const quarterMonths = Array.from({length: 3}, (_, i) => `${year}-${String((quarter - 1) * 3 + i + 1).padStart(2, '0')}`);
             
-            // 해당 분기의 M2 및 금리 데이터 가져오기
             const m2ValuesInQuarter = quarterMonths.map(m => m2Map.get(m)).filter(v => v !== undefined && !isNaN(v));
             const rateValuesInQuarter = quarterMonths.map(m => rateMap.get(m)).filter(v => v !== undefined && !isNaN(v));
 
-            // 평균 계산 및 chartData에 추가
             if (m2ValuesInQuarter.length > 0 && rateValuesInQuarter.length > 0) {
                 const avgM2 = m2ValuesInQuarter.reduce((a, b) => a + b, 0) / m2ValuesInQuarter.length;
                 const avgRate = rateValuesInQuarter.reduce((a, b) => a + b, 0) / rateValuesInQuarter.length;
-                // 마샬케이 계산: (분기 평균 M2 / 분기 명목 GDP)
                 const marshallKValue = avgM2 / gdpValue; 
                 
                 chartData.push({ 
@@ -381,15 +366,12 @@ export async function renderMarshallKChart() {
                     year: year, 
                     marshallK: marshallKValue, 
                     interestRate: avgRate, 
-                    date: date // 정렬 및 레이블 생성을 위한 Date 객체
+                    date: date 
                 });
             }
         });
 
         if (chartData.length === 0) throw new Error("마샬케이 데이터 매칭 또는 계산 실패");
-        
-        // 💡 오름차순 데이터이므로 sort 필요 없음
-        // chartData.sort((a, b) => a.date - b.date); 
         
         const crisisAnnotations = createRecessionLabels(chartData);
         
@@ -451,10 +433,10 @@ export async function showModalChart(indicatorId) {
     chartCanvas.style.display = 'none';
     try {
         const series = Array.isArray(details.seriesId) ? details.seriesId[0] : details.seriesId;
-        // 💡 오름차순('asc')으로 가져와서 reverse() 필요 없도록 수정
+        // 오름차순('asc')으로 가져와서 reverse() 필요 없도록 수정
         const obs = await fetchFredData(series, 100, 'asc'); 
         if (obs) {
-            // 💡 오름차순이므로 reverse() 제거
+            // 오름차순이므로 reverse() 제거
             const historicalData = obs.map(d => ({date: d.date, value: parseFloat(d.value)})); 
             if (historicalData.length > 0 && historicalData.some(d => d.value !== null && !isNaN(d.value))) { // 유효한 데이터가 있는지 확인
                 chartCanvas.style.display = 'block';
