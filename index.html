@@ -64,9 +64,29 @@
         <div class="accordion">
             <button class="accordion-header">🎯 S&P 500 단기 전망</button>
             <div class="accordion-panel" style="display: block;">
-                <div id="sp500-prediction-section"><p class="loading-text">선행 지표 분석 중...</p></div>
+                <div id="sp500-prediction-section"> <p class="loading-text">선행 지표 분석 중...</p>
+                </div>
+                
+                <h4 style="margin-top: 20px; margin-bottom: 10px; font-size: 1.1em;">예측 근거 지표 현황</h4>
+                <table id="sp500-factors-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa;">
+                            <th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">지표명</th>
+                            <th style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">현재 값</th>
+                            <th style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="3" class="loading-text" style="padding: 10px;">Loading...</td></tr>
+                    </tbody>
+                </table>
+
+                <h4 style="margin-top: 20px; margin-bottom: 10px; font-size: 1.1em;">S&P 500 최근 6개월 추이</h4>
+                 <div class="stock-chart-container" style="height: 250px;"> <canvas id="sp500-trend-chart"></canvas>
+                 </div>
+
                  <p style="font-size: 0.9em; margin-top: 15px; color: #6c757d;">
-                    주: ISM 제조업 PMI, 소비자심리지수, 구리 가격, 장단기 금리차 등 주요 선행 지표를 바탕으로 S&P 500의 단기 방향성을 예측합니다.
+                    주: ISM 제조업 PMI, 소비자심리지수, 구리 가격, 장단기 금리차 등 주요 선행 지표를 바탕으로 S&P 500의 단기 방향성을 예측합니다. 예측 지수 값은 제공하지 않습니다.
                 </p>
                 <p class="disclaimer">※ 본 예측은 과거 데이터를 기반으로 한 참고 자료이며, 실제 시장 움직임과 다를 수 있습니다.</p>
             </div>
