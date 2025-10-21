@@ -174,11 +174,9 @@ export async function renderGdpGapChart() {
 
 /**
  * 💡 [수정됨]
- * S&P 500, GDP, 소비 데이터가 모두 있어야만 차트에 표시되던
- * .every() 로직을 제거했습니다.
- * * 이제 GDP(uniqueDates) 기준으로 루프를 돌고,
- * PCE나 S&P 500 데이터가 없으면 'null'을 삽입하여
- * 차트에서 해당 부분만 비도록(Gap) 수정합니다.
+ * 1. S&P 500 데이터를 '분기 평균(avg)'이 아닌 '분기 말(eop)' 값으로 가져옵니다.
+ * 2. .every() 로직 대신 'null'을 삽입하여 데이터가 누락되어도
+ * 차트가 잘리지 않도록 수정합니다.
  */
 export async function renderGdpConsumptionChart() {
     const canvas = document.getElementById('gdp-consumption-chart');
@@ -186,11 +184,12 @@ export async function renderGdpConsumptionChart() {
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
+        // 💡 [수정] 'eop' (End of Period) 옵션을 추가합니다.
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
              fetchFredData('GDPC1', 220, 'desc'),
              fetchFredData('PCEC', 220, 'desc'),
              fetchFredData('USRECQ', 220, 'desc'),
-             fetchFredData('SP500', 220, 'desc', 'q') // S&P 500 분기별 데이터
+             fetchFredData('SP500', 220, 'desc', 'q', 'eop') // 💡 'eop' 추가
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -199,18 +198,13 @@ export async function renderGdpConsumptionChart() {
         const gdpMap = new Map(gdpObs.map(d => [d.date, parseFloat(d.value)]));
         const pceMap = new Map(pceObs.map(d => [d.date, parseFloat(d.value)]));
         const usrecMap = new Map(usrecObs.map(d => [d.date, d.value === '1']));
-        // 💡 S&P 500 데이터가 없어도 차트는 로드됩니다. (sp500Obs가 null일 수 있음)
         const sp500Map = sp500Obs ? new Map(sp500Obs.map(d => [d.date, parseFloat(d.value)])) : new Map();
         
-        // 💡 기준이 되는 GDP 날짜로 정렬
         const uniqueDates = Array.from(gdpMap.keys()).sort((a, b) => new Date(a) - new Date(b));
 
         for (let i = 4; i < uniqueDates.length; i++) {
             const currentDate = uniqueDates[i], previousDate = uniqueDates[i - 4];
             
-            // --- 💡 [수정된 로직] ---
-            // 각 데이터를 개별적으로 확인하고, 없으면 null을 할당합니다.
-
             // 1. GDP (기준 데이터)
             const currentGdp = gdpMap.get(currentDate), prevGdp = gdpMap.get(previousDate);
             const gdpGrowth = (currentGdp && prevGdp) ? ((currentGdp / prevGdp) - 1) * 100 : null;
@@ -226,7 +220,6 @@ export async function renderGdpConsumptionChart() {
             // 4. 경기 침체
             const isRecession = usrecMap.get(currentDate) || false;
             
-            // 💡 [수정] .every() 조건 없이, GDP 기준 날짜에 맞춰 모두 push
             chartData.push({
                 date: currentDate,
                 gdpGrowth: gdpGrowth,
@@ -250,7 +243,7 @@ export async function renderGdpConsumptionChart() {
                 datasets: [
                     { 
                         label: 'S&P 500 성장률 (%)', 
-                        data: chartData.map(d => d.sp500Growth), // 💡 null이 포함될 수 있음
+                        data: chartData.map(d => d.sp500Growth), 
                         borderColor: '#ffc107', 
                         borderWidth: 2.5,
                         borderDash: [5, 5], 
@@ -258,14 +251,14 @@ export async function renderGdpConsumptionChart() {
                     },
                     { 
                         label: '실질 GDP 성장률 (%)', 
-                        data: chartData.map(d => d.gdpGrowth), // 💡 null이 포함될 수 있음
+                        data: chartData.map(d => d.gdpGrowth), 
                         borderColor: '#28a745', 
                         borderWidth: 2, 
                         pointRadius: 0 
                     },
                     { 
                         label: '실질 PCE(소비) 성장률 (%)', 
-                        data: chartData.map(d => d.pceGrowth), // 💡 null이 포함될 수 있음
+                        data: chartData.map(d => d.pceGrowth), 
                         borderColor: '#0056b3', 
                         borderWidth: 2, 
                         pointRadius: 0 
@@ -407,7 +400,7 @@ export async function showModalChart(indicatorId) {
             const historicalData = obs.map(d => ({date: d.date, value: parseFloat(d.value)})).reverse();
             if (historicalData.length > 0) {
                 chartCanvas.style.display = 'block';
-                indicatorChart = new Chart(ctx, { type: 'line', data: { labels: historicalData.map(d => d.date), datasets: [{ label: details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim(), data: historicalData.map(d => d.value), borderColor: '#0056b3', borderWidth: 2, pointRadius: 1 }] }, options: { responsive: true, maintainAspectRatio: false } });
+                indicatorChart = new Chart(ctx, { type: 'line', data: { labels: historicalData.map(d => d.date), datasets: [{ label: details.title.replace(/[\u{1F1E6}-\u{F1FF}]/gu, '').trim(), data: historicalData.map(d => d.value), borderColor: '#0056b3', borderWidth: 2, pointRadius: 1 }] }, options: { responsive: true, maintainAspectRatio: false } });
             }
         }
     } catch(error) {
