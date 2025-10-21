@@ -1,7 +1,6 @@
 // js/charts.js
 import { fetchFredData, fetchEcosCycleData } from './api.js';
 import { hpfilter } from './analysis_tools.js';
-// 💡 indicatorDetails import 추가 (showModalChart에서 사용)
 import { indicatorDetails } from './indicators.js'; 
 
 let stockPriceChart = null;
@@ -24,8 +23,6 @@ const recessionPeriods = {
 
 /**
  * 경기 침체 기간에 대한 회색 음영(box) 어노테이션을 생성합니다.
- * @param {object[]} chartData - isRecession 플래그를 포함하는 차트 데이터
- * @returns {object[]} - Chart.js box 어노테이션 배열
  */
 function createRecessionBoxes(chartData) {
     const boxes = [];
@@ -50,8 +47,6 @@ function createRecessionBoxes(chartData) {
 
 /**
  * 마샬케이 차트와 동일한 방식으로 경기 침체 '레이블' 어노테이션을 생성합니다.
- * @param {object[]} chartData - 날짜 정보를 포함하는 차트 데이터
- * @returns {object[]} - Chart.js line/label 어노테이션 배열
  */
 function createRecessionLabels(chartData) {
     return Object.entries(recessionPeriods).map(([date, label]) => {
@@ -175,10 +170,10 @@ export async function renderGdpGapChart() {
 }
 
 /**
- * [수정됨]
- * 1. S&P 500 데이터를 '분기 평균(avg)'이 아닌 '분기 말(eop)' 값으로 가져옵니다.
- * 2. .every() 로직 대신 'null'을 삽입하여 데이터가 누락되어도
- * 차트가 잘리지 않도록 수정합니다.
+ * 💡 [수정됨]
+ * 1. S&P 500 데이터를 '성장률'이 아닌 '지수 레벨'로 표시합니다.
+ * 2. 이를 위해 차트 오른쪽에 별도의 Y축(y1)을 추가하고, S&P 500 데이터셋을 이 축에 할당합니다.
+ * 3. GDP/PCE 성장률은 기존 왼쪽 Y축(y)을 사용합니다.
  */
 export async function renderGdpConsumptionChart() {
     const canvas = document.getElementById('gdp-consumption-chart');
@@ -190,7 +185,7 @@ export async function renderGdpConsumptionChart() {
              fetchFredData('GDPC1', 220, 'desc'),
              fetchFredData('PCEC', 220, 'desc'),
              fetchFredData('USRECQ', 220, 'desc'),
-             fetchFredData('SP500', 220, 'desc', 'q', 'eop') // 'eop' 추가
+             fetchFredData('SP500', 220, 'desc', 'q', 'eop') // 분기 말(eop) 값
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -206,17 +201,17 @@ export async function renderGdpConsumptionChart() {
         for (let i = 4; i < uniqueDates.length; i++) {
             const currentDate = uniqueDates[i], previousDate = uniqueDates[i - 4];
             
-            // 1. GDP (기준 데이터)
+            // 1. GDP 성장률 (YoY)
             const currentGdp = gdpMap.get(currentDate), prevGdp = gdpMap.get(previousDate);
             const gdpGrowth = (currentGdp && prevGdp) ? ((currentGdp / prevGdp) - 1) * 100 : null;
 
-            // 2. PCE (소비)
+            // 2. PCE 성장률 (YoY)
             const currentPce = pceMap.get(currentDate), prevPce = pceMap.get(previousDate);
             const pceGrowth = (currentPce && prevPce) ? ((currentPce / prevPce) - 1) * 100 : null;
 
-            // 3. S&P 500
-            const currentSp500 = sp500Map.get(currentDate), prevSp500 = sp500Map.get(previousDate);
-            const sp500Growth = (currentSp500 && prevSp500) ? ((currentSp500 / prevSp500) - 1) * 100 : null;
+            // 3. S&P 500 지수 레벨 (💡 성장률 대신 레벨 사용)
+            const currentSp500 = sp500Map.get(currentDate); // 현재 분기 말 값
+            const sp500Level = (currentSp500 !== undefined && !isNaN(currentSp500)) ? currentSp500 : null; 
             
             // 4. 경기 침체
             const isRecession = usrecMap.get(currentDate) || false;
@@ -225,7 +220,7 @@ export async function renderGdpConsumptionChart() {
                 date: currentDate,
                 gdpGrowth: gdpGrowth,
                 pceGrowth: pceGrowth,
-                sp500Growth: sp500Growth,
+                sp500Level: sp500Level, // 💡 sp500Growth -> sp500Level
                 isRecession: isRecession
             });
         }
@@ -243,26 +238,30 @@ export async function renderGdpConsumptionChart() {
                 labels,
                 datasets: [
                     { 
-                        label: 'S&P 500 성장률 (%)', 
-                        data: chartData.map(d => d.sp500Growth), 
+                        // 💡 [수정] S&P 500 지수 (Level)
+                        label: 'S&P 500 지수 (우측 축)', 
+                        data: chartData.map(d => d.sp500Level), // 💡 sp500Growth -> sp500Level
                         borderColor: '#ffc107', 
                         borderWidth: 2.5,
                         borderDash: [5, 5], 
-                        pointRadius: 0
+                        pointRadius: 0,
+                        yAxisID: 'y1' // 💡 우측 Y축(y1) 사용
                     },
                     { 
                         label: '실질 GDP 성장률 (%)', 
                         data: chartData.map(d => d.gdpGrowth), 
                         borderColor: '#28a745', 
                         borderWidth: 2, 
-                        pointRadius: 0 
+                        pointRadius: 0,
+                        yAxisID: 'y' // 💡 좌측 Y축(y) 사용 (기본값)
                     },
                     { 
                         label: '실질 PCE(소비) 성장률 (%)', 
                         data: chartData.map(d => d.pceGrowth), 
                         borderColor: '#0056b3', 
                         borderWidth: 2, 
-                        pointRadius: 0 
+                        pointRadius: 0,
+                        yAxisID: 'y' // 💡 좌측 Y축(y) 사용 (기본값)
                     }
                 ]
             },
@@ -270,6 +269,7 @@ export async function renderGdpConsumptionChart() {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
+                // 💡 [수정] Y축 2개 정의 (y: 성장률, y1: S&P 500 지수)
                 scales: {
                     x: {
                         ticks: {
@@ -283,7 +283,17 @@ export async function renderGdpConsumptionChart() {
                             maxRotation: 0
                         }
                     },
-                    y: { title: { display: true, text: '성장률 (%)' } }
+                    // 좌측 Y축 (성장률)
+                    y: { 
+                        position: 'left',
+                        title: { display: true, text: '성장률 (%)' } 
+                    },
+                    // 우측 Y축 (S&P 500 지수)
+                    y1: { 
+                        position: 'right',
+                        title: { display: true, text: 'S&P 500 지수' },
+                        grid: { drawOnChartArea: false } // 배경 그리드 숨김
+                    }
                 },
                 plugins: {
                     legend: { position: 'top' },
@@ -386,8 +396,9 @@ export async function renderMarshallKChart() {
     }
 }
 
+
 /**
- * 💡 [수정됨]
+ * [수정됨]
  * 정규 표현식 오류를 수정합니다. (\u{F1FF} -> \u{1F1FF})
  */
 export async function showModalChart(indicatorId) {
@@ -404,7 +415,7 @@ export async function showModalChart(indicatorId) {
             const historicalData = obs.map(d => ({date: d.date, value: parseFloat(d.value)})).reverse();
             if (historicalData.length > 0) {
                 chartCanvas.style.display = 'block';
-                // 💡 [오류 수정] 정규 표현식 수정
+                // [오류 수정] 정규 표현식 수정
                 const cleanLabel = details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
                 indicatorChart = new Chart(ctx, { 
                     type: 'line', 
@@ -456,7 +467,7 @@ export async function renderCycleChart() {
         const leadingMap = new Map(leading.map(d => [d.date, d.value]));
         const leadingValues = coincident.map(d => leadingMap.get(d.date) || null); 
 
-        // 💡 [신규 추가] 경기 침체 레이블 생성
+        // [신규 추가] 경기 침체 레이블 생성
         // 1. 헬퍼 함수가 인식할 수 있도록 날짜 형식을 'YYYYMM' -> 'YYYY-MM-01'로 변경
         const chartDataForLabels = coincident.map(d => ({ 
             date: `${d.date.substring(0, 4)}-${d.date.substring(4, 6)}-01` 
