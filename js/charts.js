@@ -174,7 +174,11 @@ export async function renderGdpGapChart() {
 
 /**
  * 💡 [수정됨]
- * S&P 500 (YoY) 성장률을 차트에 함께 표시합니다.
+ * S&P 500, GDP, 소비 데이터가 모두 있어야만 차트에 표시되던
+ * .every() 로직을 제거했습니다.
+ * * 이제 GDP(uniqueDates) 기준으로 루프를 돌고,
+ * PCE나 S&P 500 데이터가 없으면 'null'을 삽입하여
+ * 차트에서 해당 부분만 비도록(Gap) 수정합니다.
  */
 export async function renderGdpConsumptionChart() {
     const canvas = document.getElementById('gdp-consumption-chart');
@@ -182,44 +186,57 @@ export async function renderGdpConsumptionChart() {
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
-        // 💡 [수정] Promise.all에 'SP500' 분기별(q) 데이터 요청 추가
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
              fetchFredData('GDPC1', 220, 'desc'),
              fetchFredData('PCEC', 220, 'desc'),
              fetchFredData('USRECQ', 220, 'desc'),
-             fetchFredData('SP500', 220, 'desc', 'q') // 💡 S&P 500 분기별 데이터
+             fetchFredData('SP500', 220, 'desc', 'q') // S&P 500 분기별 데이터
         ]);
 
-        if (!gdpObs || !pceObs || !usrecObs || !sp500Obs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
+        if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
         
         const chartData = [];
         const gdpMap = new Map(gdpObs.map(d => [d.date, parseFloat(d.value)]));
         const pceMap = new Map(pceObs.map(d => [d.date, parseFloat(d.value)]));
         const usrecMap = new Map(usrecObs.map(d => [d.date, d.value === '1']));
-        const sp500Map = new Map(sp500Obs.map(d => [d.date, parseFloat(d.value)])); // 💡 S&P 500 맵
+        // 💡 S&P 500 데이터가 없어도 차트는 로드됩니다. (sp500Obs가 null일 수 있음)
+        const sp500Map = sp500Obs ? new Map(sp500Obs.map(d => [d.date, parseFloat(d.value)])) : new Map();
         
+        // 💡 기준이 되는 GDP 날짜로 정렬
         const uniqueDates = Array.from(gdpMap.keys()).sort((a, b) => new Date(a) - new Date(b));
 
         for (let i = 4; i < uniqueDates.length; i++) {
             const currentDate = uniqueDates[i], previousDate = uniqueDates[i - 4];
             
-            // 💡 [수정] S&P 500 데이터 가져오기
-            const currentGdp = gdpMap.get(currentDate), prevGdp = gdpMap.get(previousDate);
-            const currentPce = pceMap.get(currentDate), prevPce = pceMap.get(previousDate);
-            const currentSp500 = sp500Map.get(currentDate), prevSp500 = sp500Map.get(previousDate);
+            // --- 💡 [수정된 로직] ---
+            // 각 데이터를 개별적으로 확인하고, 없으면 null을 할당합니다.
 
-            // 💡 [수정] S&P 500도 .every 검사에 포함
-            if ([currentGdp, prevGdp, currentPce, prevPce, currentSp500, prevSp500].every(v => v !== undefined && !isNaN(v) && v > 0)) {
-                chartData.push({
-                    date: currentDate,
-                    gdpGrowth: ((currentGdp / prevGdp) - 1) * 100,
-                    pceGrowth: ((currentPce / prevPce) - 1) * 100,
-                    sp500Growth: ((currentSp500 / prevSp500) - 1) * 100, // 💡 S&P 500 YoY 성장률
-                    isRecession: usrecMap.get(currentDate) || false
-                });
-            }
+            // 1. GDP (기준 데이터)
+            const currentGdp = gdpMap.get(currentDate), prevGdp = gdpMap.get(previousDate);
+            const gdpGrowth = (currentGdp && prevGdp) ? ((currentGdp / prevGdp) - 1) * 100 : null;
+
+            // 2. PCE (소비)
+            const currentPce = pceMap.get(currentDate), prevPce = pceMap.get(previousDate);
+            const pceGrowth = (currentPce && prevPce) ? ((currentPce / prevPce) - 1) * 100 : null;
+
+            // 3. S&P 500
+            const currentSp500 = sp500Map.get(currentDate), prevSp500 = sp500Map.get(previousDate);
+            const sp500Growth = (currentSp500 && prevSp500) ? ((currentSp500 / prevSp500) - 1) * 100 : null;
+            
+            // 4. 경기 침체
+            const isRecession = usrecMap.get(currentDate) || false;
+            
+            // 💡 [수정] .every() 조건 없이, GDP 기준 날짜에 맞춰 모두 push
+            chartData.push({
+                date: currentDate,
+                gdpGrowth: gdpGrowth,
+                pceGrowth: pceGrowth,
+                sp500Growth: sp500Growth,
+                isRecession: isRecession
+            });
         }
-        if (chartData.length === 0) throw new Error("GDP/소비/S&P 500 데이터 가공에 실패했습니다.");
+        
+        if (chartData.length === 0) throw new Error("GDP 데이터 가공에 실패했습니다.");
         
         const labels = chartData.map(d => d.date);
         const recessionBoxes = createRecessionBoxes(chartData);
@@ -231,26 +248,25 @@ export async function renderGdpConsumptionChart() {
             data: {
                 labels,
                 datasets: [
-                    // 💡 [신규 추가] S&P 500 데이터셋
                     { 
                         label: 'S&P 500 성장률 (%)', 
-                        data: chartData.map(d => d.sp500Growth), 
-                        borderColor: '#ffc107', // 노란색
+                        data: chartData.map(d => d.sp500Growth), // 💡 null이 포함될 수 있음
+                        borderColor: '#ffc107', 
                         borderWidth: 2.5,
-                        borderDash: [5, 5], // 점선
+                        borderDash: [5, 5], 
                         pointRadius: 0
                     },
                     { 
                         label: '실질 GDP 성장률 (%)', 
-                        data: chartData.map(d => d.gdpGrowth), 
-                        borderColor: '#28a745', // 녹색
+                        data: chartData.map(d => d.gdpGrowth), // 💡 null이 포함될 수 있음
+                        borderColor: '#28a745', 
                         borderWidth: 2, 
                         pointRadius: 0 
                     },
                     { 
                         label: '실질 PCE(소비) 성장률 (%)', 
-                        data: chartData.map(d => d.pceGrowth), 
-                        borderColor: '#0056b3', // 파란색
+                        data: chartData.map(d => d.pceGrowth), // 💡 null이 포함될 수 있음
+                        borderColor: '#0056b3', 
                         borderWidth: 2, 
                         pointRadius: 0 
                     }
@@ -285,7 +301,6 @@ export async function renderGdpConsumptionChart() {
             }
         });
         
-        // 💡 [수정] 반환 객체에 sp500Obs 추가
         return { gdp: gdpObs, pce: pceObs, sp500: sp500Obs };
     } catch (error) {
         console.error("소비/GDP/S&P 500 차트 렌더링 실패:", error);
