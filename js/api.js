@@ -107,27 +107,34 @@ export async function fetchEcosIndicators() {
 
 /**
  * 💡 [수정됨]
- * 1. STAT_CODE를 '901Y067'로 변경.
- * 2. ITEM_CODE를 'I16A'(선행), 'I16B'(동행)로 변경. (결정적 오류 수정)
- * 3. DATA_COUNT를 100으로, START_DATE를 200001로 고정. (사용자님 URL 기준)
+ * 1. "2008년" 데이터가 나오던 오류 수정
+ * 2. START_DATE를 '10년 전'으로 동적 계산 (잘못된 '200001' 고정값 제거)
+ * 3. DATA_COUNT를 '120'개 (10년치)로 수정 (잘못된 '100' 고정값 제거)
+ * 4. STAT_CODE('901Y067')와 ITEM_CODE('I16A', 'I16B')는 올바르게 유지
  */
 export async function fetchEcosCycleData() {
     const apiKey = API_KEYS.ECOS;
     const proxy = PROXY_URL;
     
-    // 1. 날짜 설정 (사용자님 URL 기준)
+    // 1. 날짜 설정 (최근 10년치)
     const today = new Date();
     const endDate = today.toISOString().slice(0, 7).replace('-', ''); // 예: 202510
-    const sDateStr = '200001'; 
 
-    // 2. 통계표 및 항목 코드 설정 (💡 수정된 지점)
-    const STAT_CODE = '901Y067'; // 💡 사용자님 확인 코드
-    const COINCIDENT_ITEM = 'I16B'; // 💡 동행지수 (0001 -> I16B)
-    const LEADING_ITEM = 'I16A'; // 💡 선행지수 (0002 -> I16A)
+    // 10년 전 (120개월) 날짜 계산
+    let startDate = new Date(today);
+    startDate.setFullYear(startDate.getFullYear() - 10);
+    startDate.setMonth(startDate.getMonth() + 1); // 10년 전의 다음 달
+    const sDateStr = startDate.toISOString().slice(0, 7).replace('-', ''); // 예: 201511
+
+    // 2. 통계표 및 항목 코드 설정
+    const STAT_CODE = '901Y067'; // 💡 올바른 코드
+    const COINCIDENT_ITEM = 'I16B'; // 💡 동행지수
+    const LEADING_ITEM = 'I16A'; // 💡 선행지수
     const CYCLE_TYPE = 'M'; // 월별
-    const DATA_COUNT = 100; // 💡 사용자님 URL 기준 (최근 100개)
+    const DATA_COUNT = 120; // 💡 10년치 (120개)
 
     const createUrl = (itemCode) => {
+        // ECOS API는 startDate, endDate가 있어도 DATA_COUNT(120)를 최신순으로 우선합니다.
         return `https://ecos.bok.or.kr/api/StatisticSearch/${apiKey}/json/kr/1/${DATA_COUNT}/${STAT_CODE}/${CYCLE_TYPE}/${sDateStr}/${endDate}/${itemCode}`;
     };
 
