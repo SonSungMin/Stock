@@ -266,6 +266,8 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
  * @returns {object} - { status: 'positive'|'neutral'|'negative', signal: '...', title: '...', analysis: '...' }
  */
 export function getSP500Outlook(analyzedIndicators) {
+    console.log("getSP500Outlook received indicators:", analyzedIndicators);
+    
     // 예측에 사용할 주요 지표 추출
     const pmi = analyzedIndicators.find(i => i.id === 'ism_pmi');
     const csi = analyzedIndicators.find(i => i.id === 'consumer_sentiment'); // 미국 CSI
