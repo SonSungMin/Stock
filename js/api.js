@@ -108,29 +108,25 @@ export async function fetchEcosIndicators() {
 /**
  * 💡 [수정됨]
  * 1. 사용자님이 제공해주신 올바른 통계표 코드('901Y067')로 변경합니다.
- * 2. 잘못된 가정이었던 '날짜 재시도' 로직을 제거하고, '오늘' 기준으로 조회합니다.
- * 3. 10년치(120개) 데이터를 요청하는 원래 로직으로 복원합니다.
+ * 2. API가 100개(약 8년치)를 반환하므로 DATA_COUNT를 '100'으로 설정합니다.
+ * 3. START_DATE는 '200001'로, END_DATE는 '현재'로 설정합니다.
+ * (API는 이래도 최근 100개만 반환합니다.)
  */
 export async function fetchEcosCycleData() {
     const apiKey = API_KEYS.ECOS;
     const proxy = PROXY_URL;
     
-    // 1. 날짜 설정 (10년치)
+    // 1. 날짜 설정 (사용자님 URL 기준)
     const today = new Date();
     const endDate = today.toISOString().slice(0, 7).replace('-', ''); // 예: 202510
-
-    // 10년 전 (120개월) 날짜 계산
-    let startDate = new Date(today);
-    startDate.setFullYear(startDate.getFullYear() - 10);
-    startDate.setMonth(startDate.getMonth() + 1); // 10년 전의 다음 달
-    const sDateStr = startDate.toISOString().slice(0, 7).replace('-', ''); // 예: 201511
+    const sDateStr = '200001'; // 💡 사용자님 URL 기준
 
     // 2. 통계표 코드 설정 (💡 수정된 지점)
-    const STAT_CODE = '901Y067'; // 💡 901Y001 -> 901Y067 (사용자님 확인 코드)
+    const STAT_CODE = '901Y067'; // 💡 사용자님 확인 코드
     const COINCIDENT_ITEM = '0001'; // 동행지수 순환변동치
     const LEADING_ITEM = '0002'; // 선행지수 순환변동치
     const CYCLE_TYPE = 'M'; // 월별
-    const DATA_COUNT = 120; // 10년치 월 데이터 (120개)
+    const DATA_COUNT = 100; // 💡 사용자님 URL 기준 (최근 100개)
 
     const createUrl = (itemCode) => {
         return `https://ecos.bok.or.kr/api/StatisticSearch/${apiKey}/json/kr/1/${DATA_COUNT}/${STAT_CODE}/${CYCLE_TYPE}/${sDateStr}/${endDate}/${itemCode}`;
@@ -139,7 +135,7 @@ export async function fetchEcosCycleData() {
     let coincidentData, leadingData;
 
     try {
-        console.log(`ECOS API 요청 (STAT_CODE: ${STAT_CODE}): ${sDateStr} 부터 ${endDate} 까지`);
+        console.log(`ECOS API 요청 (STAT_CODE: ${STAT_CODE}): ${sDateStr} 부터 ${endDate} 까지 (최근 ${DATA_COUNT}개)`);
 
         const [coincidentRes, leadingRes] = await Promise.all([
             fetch(`${proxy}${encodeURIComponent(createUrl(COINCIDENT_ITEM))}`),
