@@ -6,19 +6,19 @@ import {
     getMarketOutlook, 
     analyzeMarshallKTrend, 
     analyzeGdpConsumption, 
-    analyzeGdpGap 
+    analyzeGdpGap,
+    analyzeCycleIndicators // 💡 [추가]
 } from './js/analysis.js';
 import { 
     renderMarshallKChart, 
     renderGdpConsumptionChart, 
-    renderGdpGapChart 
+    renderGdpGapChart,
+    renderCycleChart // 💡 [추가]
 } from './js/charts.js';
 import {
     renderInitialPlaceholders,
     renderDashboard,
-    // renderEconomicCalendar, // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
-    // renderReleaseSchedule,  // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
-    setupEventListeners
+    setupEventListeners // 💡 오류 수정됨
 } from './js/ui.js';
 
 // ==================================================================
@@ -36,11 +36,12 @@ async function main() {
     const macroAnalysisResults = {
         marshallK: null,
         gdpGap: null,
-        gdpConsumption: null
+        gdpConsumption: null,
+        cycle: null // 💡 [추가]
     };
 
     // UI 기본 설정 초기화
-    setupEventListeners();
+    setupEventListeners(); // 💡 오류 수정됨
     renderInitialPlaceholders();
     // renderEconomicCalendar(); // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
     // renderReleaseSchedule();  // 💡 'js/ui.js'에 해당 함수가 export되어 있지 않아 주석 처리
@@ -53,13 +54,15 @@ async function main() {
             ecosData,
             marshallKData,
             gdpConsumptionData,
-            gdpGapData
+            gdpGapData,
+            cycleData // 💡 [추가]
         ] = await Promise.all([
             fetchFredIndicators(),
             fetchEcosIndicators(),
             renderMarshallKChart(),      // 차트를 그리고 분석에 필요한 데이터를 반환합니다.
             renderGdpConsumptionChart(), // 차트를 그리고 분석에 필요한 데이터를 반환합니다.
-            renderGdpGapChart()          // 차트를 그리고 분석에 필요한 데이터를 반환합니다.
+            renderGdpGapChart(),          // 차트를 그리고 분석에 필요한 데이터를 반환합니다.
+            renderCycleChart() // 💡 [추가]
         ]);
 
         // --- 2. 분석 실행 단계 ---
@@ -68,6 +71,7 @@ async function main() {
         if (marshallKData) analyzeMarshallKTrend(marshallKData, macroAnalysisResults);
         if (gdpConsumptionData) analyzeGdpConsumption(gdpConsumptionData.gdp, gdpConsumptionData.pce, macroAnalysisResults);
         if (gdpGapData) analyzeGdpGap(gdpGapData, macroAnalysisResults);
+        if (cycleData) analyzeCycleIndicators(cycleData, macroAnalysisResults); // 💡 [추가]
 
         const allIndicators = [...fredData, ...ecosData].filter(Boolean);
         const analyzedIndicators = analyzeIndicators(allIndicators);
