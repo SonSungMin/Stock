@@ -1,11 +1,12 @@
 // js/analysis.js
+import { indicatorDetails } from './indicators.js'; // 💡 추가 (이전에 누락되었을 수 있음)
 
 // ==================================================================
 // 데이터 분석 및 가공 함수
 // ==================================================================
 
 /**
- * 💡 [수정됨]
+ * [수정됨]
  * 신규 지표(ISM PMI, 소비자심리지수, 구리 가격) 분석 로직 추가
  */
 export function analyzeIndicators(indicators) {
@@ -61,18 +62,17 @@ export function analyzeIndicators(indicators) {
                 else { status = 'neutral'; icon = '〰️'; text = '과잉/부족 우려'; }
                 weight = 2; break;
             case 'sox_index':
-                // (임시 로직: 예시로 4000 이상이면 긍정으로 판단)
                 if (value >= 4000) { status = 'positive'; icon = '📈'; text = '상승 추세'; }
                 else { status = 'negative'; icon = '📉'; text = '하락/조정'; }
                 weight = 3; 
                 break;
                 
-            // --- 💡 [신규 추가] S&P 500 예측 관련 지표 분석 ---
+            // --- [신규 추가] S&P 500 예측 관련 지표 분석 ---
             case 'ism_pmi':
-                if (value >= 55) { status = 'positive'; icon = '🚀'; text = '강한 확장'; weight = 4; } // S&P 500에 중요
+                if (value >= 55) { status = 'positive'; icon = '🚀'; text = '강한 확장'; weight = 4; } 
                 else if (value >= 50) { status = 'positive'; icon = '📈'; text = '확장 국면'; weight = 3; }
-                else if (value >= 45) { status = 'negative'; icon = '⚠️'; text = '둔화/위축 우려'; weight = 4; } // 하락 신호 중요
-                else { status = 'negative'; icon = '🚨'; text = '경기 위축'; weight = 5; } // 매우 중요
+                else if (value >= 45) { status = 'negative'; icon = '⚠️'; text = '둔화/위축 우려'; weight = 4; } 
+                else { status = 'negative'; icon = '🚨'; text = '경기 위축'; weight = 5; } 
                 break;
             case 'consumer_sentiment': // 미국 미시간대 CSI
                 if (value >= 80) { status = 'positive'; icon = '😊'; text = '소비 심리 낙관'; weight = 3; }
@@ -80,28 +80,26 @@ export function analyzeIndicators(indicators) {
                 else { status = 'negative'; icon = '😟'; text = '소비 심리 비관'; weight = 3; }
                 break;
              case 'copper_price': // 구리 가격 (YoY)
-                 // YoY 기준, 0% 이상이면 긍정으로 단순 판단 (추후 개선 필요)
-                 // 만약 YoY 계산 실패로 레벨 값($/mt)이 들어온 경우, 분석 불가(neutral)
                  if (indicator.unit === '%') {
-                     if (value > 5) { status = 'positive'; icon = '📈'; text = '강한 상승'; weight = 3; } // 경기 회복 기대 강함
+                     if (value > 5) { status = 'positive'; icon = '📈'; text = '강한 상승'; weight = 3; } 
                      else if (value >= 0) { status = 'positive'; icon = '📈'; text = '상승 추세'; weight = 2; }
                      else if (value > -5) { status = 'neutral'; icon = '횡보'; text = '보합/소폭 하락'; weight = 2; }
-                     else { status = 'negative'; icon = '📉'; text = '하락 추세'; weight = 3; } // 경기 둔화 우려
+                     else { status = 'negative'; icon = '📉'; text = '하락 추세'; weight = 3; } 
                  } else {
-                     status = 'neutral'; icon = '❓'; text = '추세 분석 불가'; weight = 0; // YoY 계산 실패 시
+                     status = 'neutral'; icon = '❓'; text = '추세 분석 불가'; weight = 0; // 💡 YoY 계산 실패 시 가중치 0
                  }
                 break;
-            // 다른 한국 지표들 분석 로직 (기존과 동일) ...
+            // --- 한국 지표들 ---
             case 'kor_consumer_sentiment': // 한국 CSI
                 if (value >= 100) { status = 'positive'; icon = '😊'; text = '소비 심리 낙관'; }
                 else if (value >= 90) { status = 'neutral'; icon = '😐'; text = '소비 심리 중립'; }
                 else { status = 'negative'; icon = '😟'; text = '소비 심리 비관'; }
                 weight = 2;
                 break;
-            // ... (나머지 한국 지표들)
+            // ... (나머지 지표들)
         }
         return { ...indicator, status, icon, text, weight };
-    }).filter(Boolean); // null 값을 제거
+    }).filter(Boolean); 
 }
 
 /**
@@ -256,18 +254,15 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     };
 }
 
-import { indicatorDetails } from './indicators.js';
+
 // ==================================================================
-// 💡 [신규 추가] S&P 500 예측 함수
+// 💡 [수정됨] S&P 500 예측 함수
 // ==================================================================
 /**
  * 주요 선행 지표들을 바탕으로 S&P 500의 단기 전망을 예측합니다.
- * @param {object[]} analyzedIndicators - analyzeIndicators 함수로 분석된 지표 배열
- * @returns {object} - { status: 'positive'|'neutral'|'negative', signal: '...', title: '...', analysis: '...' }
+ * 구리 가격 YoY 계산 실패 시(weight=0) 처리를 수정합니다.
  */
 export function getSP500Outlook(analyzedIndicators) {
-    console.log("getSP500Outlook received indicators:", analyzedIndicators);
-    
     // 예측에 사용할 주요 지표 추출
     const pmi = analyzedIndicators.find(i => i.id === 'ism_pmi');
     const csi = analyzedIndicators.find(i => i.id === 'consumer_sentiment'); // 미국 CSI
@@ -276,6 +271,8 @@ export function getSP500Outlook(analyzedIndicators) {
 
     // 필수 지표 중 하나라도 없으면 예측 불가
     if (!pmi || !csi || !spread) {
+        // 💡 콘솔에 어떤 지표가 누락되었는지 로그 추가
+        console.warn("S&P 500 예측 필수 지표 부족:", { pmi, csi, spread });
         return { status: 'neutral', signal: '❓', title: '예측 데이터 부족', analysis: 'S&P 500 전망을 예측하기 위한 핵심 지표(ISM PMI, 소비심리, 장단기금리차) 데이터가 부족합니다.' };
     }
 
@@ -284,10 +281,10 @@ export function getSP500Outlook(analyzedIndicators) {
 
     // 1. ISM PMI (가중치 높음)
     if (pmi.status === 'positive') {
-        score += (pmi.value >= 55) ? 2 : 1; // 강한 확장이면 +2
+        score += (pmi.value >= 55) ? 2 : 1; 
         factors.push(`<span class="positive-text">ISM PMI ${pmi.text}</span>`);
     } else {
-        score -= (pmi.value < 45) ? 2 : 1; // 경기 위축이면 -2
+        score -= (pmi.value < 45) ? 2 : 1; 
         factors.push(`<span class="negative-text">ISM PMI ${pmi.text}</span>`);
     }
 
@@ -307,7 +304,7 @@ export function getSP500Outlook(analyzedIndicators) {
         score += 1;
         factors.push(`<span class="positive-text">장단기 금리차 ${spread.text}</span>`);
     } else if (spread.status === 'negative') {
-        score -= 2; // 침체 신호는 매우 중요
+        score -= 2; 
         factors.push(`<span class="negative-text">장단기 금리차 ${spread.text}</span>`);
     } else { // 'neutral' (주의 구간)
         score -= 1;
@@ -315,16 +312,20 @@ export function getSP500Outlook(analyzedIndicators) {
     }
 
     // 4. 구리 가격 (참고 지표)
-    if (copper) { // 구리 데이터가 있을 경우만
+    // 💡 [수정] copper 데이터가 존재하고, weight가 0보다 클 때만 점수 계산
+    if (copper && copper.weight > 0) { 
         if (copper.status === 'positive') {
-            score += (copper.value > 5) ? 1 : 0.5; // 강한 상승이면 +1
+            score += (copper.value > 5) ? 1 : 0.5; 
             factors.push(`<span class="positive-text">구리 가격 ${copper.text}</span>`);
         } else if (copper.status === 'negative') {
             score -= 1;
             factors.push(`<span class="negative-text">구리 가격 ${copper.text}</span>`);
-        } else {
-            factors.push(`구리 가격 ${copper.text}`);
+        } else { // neutral
+             factors.push(`구리 가격 ${copper.text}`);
         }
+    } else if (copper && copper.weight === 0) {
+        // YoY 계산 실패 등 분석 불가 상태
+        factors.push(`구리 가격 ${copper.text}`); // "추세 분석 불가"
     } else {
          factors.push("구리 가격 데이터 없음");
     }
