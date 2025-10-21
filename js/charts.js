@@ -171,8 +171,8 @@ export async function renderGdpGapChart() {
 
 /**
  * [수정됨]
- * S&P 500 데이터를 가져올 때 limit을 10000으로 대폭 늘려
- * 1957년부터의 전체 기간 데이터가 표시되도록 합니다.
+ * S&P 500 데이터 누락 문제를 해결하기 위해, 데이터 처리 루프를
+ * 0번째 요소부터 시작하고, YoY 계산은 i>=4 조건으로 분리합니다.
  */
 export async function renderGdpConsumptionChart() {
     const canvas = document.getElementById('gdp-consumption-chart');
@@ -180,12 +180,12 @@ export async function renderGdpConsumptionChart() {
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
-        // 💡 [수정] S&P 500 데이터 limit을 500 -> 10000으로 변경
+        // 모든 데이터를 'asc' (오름차순)으로 가져옵니다. limit=10000 유지.
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
-             fetchFredData('GDPC1', 10000, 'asc'), // limit 증가, asc
-             fetchFredData('PCEC', 10000, 'asc'), // limit 증가, asc
-             fetchFredData('USRECQ', 10000, 'asc'), // limit 증가, asc
-             fetchFredData('SP500', 10000, 'asc', 'q', 'eop') // 💡 limit=10000, asc
+             fetchFredData('GDPC1', 10000, 'asc'), // limit=10000, asc
+             fetchFredData('PCEC', 10000, 'asc'), // limit=10000, asc
+             fetchFredData('USRECQ', 10000, 'asc'), // limit=10000, asc
+             fetchFredData('SP500', 10000, 'asc', 'q', 'eop') // limit=10000, asc
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -198,18 +198,26 @@ export async function renderGdpConsumptionChart() {
         
         const uniqueDates = gdpObs.map(d => d.date); 
 
-        for (let i = 4; i < uniqueDates.length; i++) {
-            const currentDate = uniqueDates[i], previousDate = uniqueDates[i - 4];
+        // 💡 [오류 수정] 루프를 0부터 시작하여 모든 S&P 데이터를 포함합니다.
+        for (let i = 0; i < uniqueDates.length; i++) {
+            const currentDate = uniqueDates[i];
             
-            // 1. GDP 성장률 (YoY)
-            const currentGdp = gdpMap.get(currentDate), prevGdp = gdpMap.get(previousDate);
-            const gdpGrowth = (currentGdp && prevGdp) ? ((currentGdp / prevGdp) - 1) * 100 : null;
+            let gdpGrowth = null;
+            let pceGrowth = null;
 
-            // 2. PCE 성장률 (YoY)
-            const currentPce = pceMap.get(currentDate), prevPce = pceMap.get(previousDate);
-            const pceGrowth = (currentPce && prevPce) ? ((currentPce / prevPce) - 1) * 100 : null;
+            // YoY 계산은 i >= 4 일 때만 수행
+            if (i >= 4) {
+                const previousDate = uniqueDates[i - 4];
+                // 1. GDP 성장률 (YoY)
+                const currentGdp = gdpMap.get(currentDate), prevGdp = gdpMap.get(previousDate);
+                gdpGrowth = (currentGdp && prevGdp) ? ((currentGdp / prevGdp) - 1) * 100 : null;
 
-            // 3. S&P 500 지수 레벨
+                // 2. PCE 성장률 (YoY)
+                const currentPce = pceMap.get(currentDate), prevPce = pceMap.get(previousDate);
+                pceGrowth = (currentPce && prevPce) ? ((currentPce / prevPce) - 1) * 100 : null;
+            }
+
+            // 3. S&P 500 지수 레벨 (모든 i에 대해 가져옴)
             const currentSp500 = sp500Map.get(currentDate); 
             const sp500Level = (currentSp500 !== undefined && !isNaN(currentSp500)) ? currentSp500 : null; 
             
@@ -218,8 +226,8 @@ export async function renderGdpConsumptionChart() {
             
             chartData.push({
                 date: currentDate,
-                gdpGrowth: gdpGrowth,
-                pceGrowth: pceGrowth,
+                gdpGrowth: gdpGrowth, // i < 4 이면 null
+                pceGrowth: pceGrowth, // i < 4 이면 null
                 sp500Level: sp500Level, 
                 isRecession: isRecession
             });
