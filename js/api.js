@@ -1,7 +1,6 @@
 // js/api.js
 import { API_KEYS, PROXY_URL } from './config.js';
 import { indicatorDetails } from './indicators.js';
-import { fetchFredData, fetchEcosCycleData } from './api.js';
 
 // ==================================================================
 // 데이터 Fetch 함수들
