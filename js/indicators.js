@@ -30,18 +30,18 @@ export const releaseCycles = {
     corp_bond_spread: { periodicity: 'daily' },
     kospi: { periodicity: 'daily' },
     producer_price_index: { periodicity: 'monthly', offset: 1 },
-    ism_pmi: { periodicity: 'monthly', offset: 1 },
+    ism_pmi: { periodicity: 'monthly', offset: 1 }, // NAPM/MANEMP 둘 다 월별
     copper_price: { periodicity: 'monthly', offset: 1 }, // PCOPPUSDM은 월별 데이터
     kor_consumer_sentiment: { periodicity: 'monthly', offset: 0 } // 한국 CSI
 };
 
 // ==================================================================
 // 지표 상세 정보 (설명, 판단 기준, FRED/ECOS ID)
-// 💡 [수정됨] 장단기 금리차 ID 변경 (T10Y2Y)
+// 💡 [수정됨] ISM PMI ID 변경 (NAPM -> MANEMP 시도)
 // ==================================================================
 export const indicatorDetails = {
     // === FRED (미국/글로벌) 지표 ===
-    yield_spread: { title: '🇺🇸 장단기 금리차 (10Y-2Y)', seriesId: 'T10Y2Y', description: '미래 경기를 예측하는 핵심 선행 지표입니다. 10년 만기 국채 수익률에서 2년 만기 국채 수익률을 뺀 값입니다...', criteria: [ '✅ <b>정상 범위 (0.1%p 이상)</b>', '⚠️ <b>주의 구간 (-0.2%p ~ 0.1%p)</b>', '🚨 <b>침체 신호 (-0.2%p 미만)</b>' ] }, // 💡 ID 변경
+    yield_spread: { title: '🇺🇸 장단기 금리차 (10Y-2Y)', seriesId: 'T10Y2Y', description: '미래 경기를 예측하는 핵심 선행 지표입니다. 10년 만기 국채 수익률에서 2년 만기 국채 수익률을 뺀 값입니다...', criteria: [ '✅ <b>정상 범위 (0.1%p 이상)</b>', '⚠️ <b>주의 구간 (-0.2%p ~ 0.1%p)</b>', '🚨 <b>침체 신호 (-0.2%p 미만)</b>' ] },
     exchange_rate: { title: '🇰🇷 원/달러 환율', seriesId: 'DEXKOUS', description: '1달러를 사는 데 필요한 원화의 양입니다...', criteria: [ '💵 <b>원화 강세 (1300원 이하)</b>', '〰️ <b>변동성 확대 (1300원 ~ 1380원)</b>', '💸 <b>원화 약세 (1380원 초과)</b>' ] },
     vix: { title: '😱 VIX 지수 (공포 지수)', seriesId: 'VIXCLS', description: '시장의 불안감을 나타내는 지표입니다...', criteria: [ '😌 <b>시장 안정 (20 이하)</b>', '😟 <b>불안 심리 (20 ~ 30)</b>', '😱 <b>공포 심리 (30 초과)</b>' ] },
     dollar_index: { title: '💲 달러 인덱스', seriesId: 'DTWEXBGS', description: '주요 6개국 통화 대비 달러의 가치입니다...', criteria: [ '💲 <b>달러 약세 (100 이하)</b>', '💰 <b>달러 강세 (100 초과)</b>' ] },
@@ -54,9 +54,9 @@ export const indicatorDetails = {
     us_cpi: { title: '🇺🇸 소비자물가지수 (CPI)', seriesId: 'CPIAUCSL', description: '미국 소비자 물가 변동 지표입니다...', criteria: [ '😌 <b>물가 안정 (2.5% 이하 YoY)</b>', '😐 <b>인플레 둔화 (2.5% ~ 3.5% YoY)</b>', '🔥 <b>물가 압력 지속 (3.5% 초과 YoY)</b>' ] },
     philly_fed: { title: '🏭 필라델피아 연은 제조업 지수', seriesId: 'PHLMAN', description: '미국 제조업 경기의 선행 지표입니다...', criteria: [ '📈 <b>확장 국면 (10 이상)</b>', '😐 <b>보합세 (-5 ~ 10)</b>', '📉 <b>위축 국면 (-5 미만)</b>' ] },
     // S&P 500 예측 관련 지표들
-    ism_pmi: { title: '🏭 ISM 제조업 PMI', seriesId: 'NAPM', description: '미국 공급관리협회(ISM)에서 발표하는 제조업 구매관리자지수입니다...', criteria: [ '🚀 <b>강한 확장 (55 이상)</b>', '📈 <b>확장 국면 (50 ~ 55)</b>', '⚠️ <b>둔화/위축 우려 (45 ~ 50)</b>', '🚨 <b>경기 위축 (45 미만)</b>' ] }, // 💡 ID 확인 (NAPM)
-    consumer_sentiment: { title: '😊 미시간대 소비자심리지수', seriesId: 'UMCSENT', description: '미시간대학교에서 발표하는 소비자들의 경제 전망 및 소비 태도를 나타내는 지표입니다...', criteria: [ '😊 <b>소비 심리 낙관 (80 이상)</b>', '😐 <b>소비 심리 중립 (70 ~ 80)</b>', '😟 <b>소비 심리 비관 (70 미만)</b>' ] }, // 💡 ID 확인 (UMCSENT)
-    copper_price: { title: '닥터 코퍼 (구리 가격)', seriesId: 'PCOPPUSDM', description: '구리는 산업 전반에 사용되어 실물 경제의 건강 상태를 진단하는 데 유용합니다...', criteria: [ '📈 <b>상승 추세 (YoY > 0%)</b>', '횡보/하락 (YoY <= 0%)</b>' ] }, // 월별 데이터 (PCOPPUSDM)
+    ism_pmi: { title: '🏭 ISM 제조업 PMI', seriesId: 'MANEMP', description: '미국 공급관리협회(ISM)에서 발표하는 제조업 고용지수입니다. (PMI 대체 지표 시도)', criteria: [ '🚀 <b>강한 확장 (55 이상)</b>', '📈 <b>확장 국면 (50 ~ 55)</b>', '⚠️ <b>둔화/위축 우려 (45 ~ 50)</b>', '🚨 <b>경기 위축 (45 미만)</b>' ] }, // 💡 ID 변경: NAPM -> MANEMP
+    consumer_sentiment: { title: '😊 미시간대 소비자심리지수', seriesId: 'UMCSENT', description: '미시간대학교에서 발표하는 소비자들의 경제 전망 및 소비 태도를 나타내는 지표입니다...', criteria: [ '😊 <b>소비 심리 낙관 (80 이상)</b>', '😐 <b>소비 심리 중립 (70 ~ 80)</b>', '😟 <b>소비 심리 비관 (70 미만)</b>' ] },
+    copper_price: { title: '닥터 코퍼 (구리 가격)', seriesId: 'PCOPPUSDM', description: '구리는 산업 전반에 사용되어 실물 경제의 건강 상태를 진단하는 데 유용합니다...', criteria: [ '📈 <b>상승 추세 (YoY > 0%)</b>', '횡보/하락 (YoY <= 0%)</b>' ] }, 
 
     // === ECOS (한국) 지표 ===
     gdp_growth: { title: '🇰🇷 GDP 성장률', description: '한국의 경제 규모 성장률입니다...', criteria: [ '👍 <b>견조한 회복세 (0.7% 이상 QoQ)</b>', '😐 <b>완만한 성장 (0.3% ~ 0.7% QoQ)</b>', '👎 <b>성장 둔화 우려 (0.3% 미만 QoQ)</b>' ] },
