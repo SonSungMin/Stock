@@ -5,8 +5,20 @@ import { indicatorDetails } from './indicators.js';
 // ==================================================================
 // 데이터 Fetch 함수들
 // ==================================================================
-export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc') {
-    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=${sortOrder}&limit=${limit}`;
+
+/**
+ * 💡 [수정됨]
+ * frequency 파라미터를 추가하여 'q'(분기별), 'm'(월별) 등 주기를 지정할 수 있도록
+ * FRED API 호출 함수를 확장합니다.
+ */
+export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', frequency = null) {
+    let url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=${sortOrder}&limit=${limit}`;
+    
+    // 💡 frequency 파라미터가 있으면 URL에 추가
+    if (frequency) {
+        url += `&frequency=${frequency}`;
+    }
+    
     try {
         const res = await fetch(`${PROXY_URL}${encodeURIComponent(url)}`);
         if (!res.ok) throw new Error(`HTTP 오류: ${res.status}`);
@@ -106,7 +118,7 @@ export async function fetchEcosIndicators() {
 }
 
 /**
- * 💡 [수정됨]
+ * [수정됨]
  * 1. "2008년" 데이터가 나오던 오류 수정
  * 2. START_DATE를 '10년 전'으로 동적 계산 (잘못된 '200001' 고정값 제거)
  * 3. DATA_COUNT를 '120'개 (10년치)로 수정 (잘못된 '100' 고정값 제거)
