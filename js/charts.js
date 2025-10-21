@@ -170,10 +170,9 @@ export async function renderGdpGapChart() {
 }
 
 /**
- * 💡 [수정됨]
- * 1. S&P 500 데이터를 '성장률'이 아닌 '지수 레벨'로 표시합니다.
- * 2. 이를 위해 차트 오른쪽에 별도의 Y축(y1)을 추가하고, S&P 500 데이터셋을 이 축에 할당합니다.
- * 3. GDP/PCE 성장률은 기존 왼쪽 Y축(y)을 사용합니다.
+ * [수정됨]
+ * 1. S&P 500 데이터를 가져올 때 limit을 500으로 늘려 전체 기간이 표시되도록 합니다.
+ * 2. S&P 500 라인 색상을 빨간색으로 변경합니다.
  */
 export async function renderGdpConsumptionChart() {
     const canvas = document.getElementById('gdp-consumption-chart');
@@ -181,11 +180,12 @@ export async function renderGdpConsumptionChart() {
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
+        // 💡 [수정] S&P 500 데이터 limit을 220 -> 500으로 변경
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
              fetchFredData('GDPC1', 220, 'desc'),
              fetchFredData('PCEC', 220, 'desc'),
              fetchFredData('USRECQ', 220, 'desc'),
-             fetchFredData('SP500', 220, 'desc', 'q', 'eop') // 분기 말(eop) 값
+             fetchFredData('SP500', 500, 'desc', 'q', 'eop') // 💡 limit=500
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -209,8 +209,8 @@ export async function renderGdpConsumptionChart() {
             const currentPce = pceMap.get(currentDate), prevPce = pceMap.get(previousDate);
             const pceGrowth = (currentPce && prevPce) ? ((currentPce / prevPce) - 1) * 100 : null;
 
-            // 3. S&P 500 지수 레벨 (💡 성장률 대신 레벨 사용)
-            const currentSp500 = sp500Map.get(currentDate); // 현재 분기 말 값
+            // 3. S&P 500 지수 레벨
+            const currentSp500 = sp500Map.get(currentDate); 
             const sp500Level = (currentSp500 !== undefined && !isNaN(currentSp500)) ? currentSp500 : null; 
             
             // 4. 경기 침체
@@ -220,7 +220,7 @@ export async function renderGdpConsumptionChart() {
                 date: currentDate,
                 gdpGrowth: gdpGrowth,
                 pceGrowth: pceGrowth,
-                sp500Level: sp500Level, // 💡 sp500Growth -> sp500Level
+                sp500Level: sp500Level, 
                 isRecession: isRecession
             });
         }
@@ -238,14 +238,13 @@ export async function renderGdpConsumptionChart() {
                 labels,
                 datasets: [
                     { 
-                        // 💡 [수정] S&P 500 지수 (Level)
                         label: 'S&P 500 지수 (우측 축)', 
-                        data: chartData.map(d => d.sp500Level), // 💡 sp500Growth -> sp500Level
-                        borderColor: '#ffc107', 
+                        data: chartData.map(d => d.sp500Level), 
+                        borderColor: '#dc3545', // 💡 빨간색으로 변경
                         borderWidth: 2.5,
                         borderDash: [5, 5], 
                         pointRadius: 0,
-                        yAxisID: 'y1' // 💡 우측 Y축(y1) 사용
+                        yAxisID: 'y1' 
                     },
                     { 
                         label: '실질 GDP 성장률 (%)', 
@@ -253,7 +252,7 @@ export async function renderGdpConsumptionChart() {
                         borderColor: '#28a745', 
                         borderWidth: 2, 
                         pointRadius: 0,
-                        yAxisID: 'y' // 💡 좌측 Y축(y) 사용 (기본값)
+                        yAxisID: 'y' 
                     },
                     { 
                         label: '실질 PCE(소비) 성장률 (%)', 
@@ -261,7 +260,7 @@ export async function renderGdpConsumptionChart() {
                         borderColor: '#0056b3', 
                         borderWidth: 2, 
                         pointRadius: 0,
-                        yAxisID: 'y' // 💡 좌측 Y축(y) 사용 (기본값)
+                        yAxisID: 'y' 
                     }
                 ]
             },
@@ -269,7 +268,6 @@ export async function renderGdpConsumptionChart() {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
-                // 💡 [수정] Y축 2개 정의 (y: 성장률, y1: S&P 500 지수)
                 scales: {
                     x: {
                         ticks: {
@@ -283,16 +281,14 @@ export async function renderGdpConsumptionChart() {
                             maxRotation: 0
                         }
                     },
-                    // 좌측 Y축 (성장률)
                     y: { 
                         position: 'left',
                         title: { display: true, text: '성장률 (%)' } 
                     },
-                    // 우측 Y축 (S&P 500 지수)
                     y1: { 
                         position: 'right',
                         title: { display: true, text: 'S&P 500 지수' },
-                        grid: { drawOnChartArea: false } // 배경 그리드 숨김
+                        grid: { drawOnChartArea: false } 
                     }
                 },
                 plugins: {
