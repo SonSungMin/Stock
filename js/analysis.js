@@ -256,7 +256,7 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
     };
 }
 
-
+import { indicatorDetails } from './indicators.js';
 // ==================================================================
 // 💡 [신규 추가] S&P 500 예측 함수
 // ==================================================================
