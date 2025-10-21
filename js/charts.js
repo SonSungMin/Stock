@@ -8,7 +8,7 @@ let marshallKChart = null;
 let gdpConsumptionChart = null;
 let indicatorChart = null;
 let gdpGapChart = null;
-let cycleChart = null; // 💡 추가됨
+let cycleChart = null; 
 
 // 주요 경기 침체 기간과 명칭 정의 (Source of Truth)
 const recessionPeriods = {
@@ -120,7 +120,6 @@ export async function renderGdpGapChart() {
             isRecession: usrecMap.get(date) || false
         }));
 
-        // 💡 [수정] 음영과 레이블을 별도로 생성하여 결합
         const recessionBoxes = createRecessionBoxes(chartData);
         const recessionLabels = createRecessionLabels(chartData);
         const combinedAnnotations = [...recessionBoxes, ...recessionLabels];
@@ -157,7 +156,7 @@ export async function renderGdpGapChart() {
                     legend: { display: false },
                     annotation: {
                         annotations: combinedAnnotations,
-                        clip: false // 레이블이 잘리지 않도록 설정
+                        clip: false 
                     }
                 }
             }
@@ -211,7 +210,6 @@ export async function renderGdpConsumptionChart() {
         if (chartData.length === 0) throw new Error("GDP/소비 데이터 가공에 실패했습니다.");
         
         const labels = chartData.map(d => d.date);
-        // 💡 [수정] 음영과 레이블을 별도로 생성하여 결합
         const recessionBoxes = createRecessionBoxes(chartData);
         const recessionLabels = createRecessionLabels(chartData);
         const combinedAnnotations = [...recessionBoxes, ...recessionLabels];
@@ -248,7 +246,7 @@ export async function renderGdpConsumptionChart() {
                     legend: { position: 'top' },
                     annotation: { 
                         annotations: combinedAnnotations,
-                        clip: false // 레이블이 잘리지 않도록 설정
+                        clip: false 
                     }
                 }
             }
@@ -370,8 +368,9 @@ export async function showModalChart(indicatorId) {
 
 
 /**
- * 💡 [신규 추가됨]
+ * 💡 [수정됨]
  * ECOS 경기 순환 차트를 렌더링합니다.
+ * API가 오름차순으로 100개(약 8년) 데이터를 반환하므로 .reverse()를 제거합니다.
  */
 export async function renderCycleChart() {
     const canvas = document.getElementById('cycle-chart');
@@ -387,20 +386,19 @@ export async function renderCycleChart() {
         }
         
         // 2. 데이터 가공 (오름차순 정렬 및 매핑)
-        // API가 최근 100개만 반환 (오름차순으로 옴)
+        // 💡 [오류 수정] API가 이미 오름차순으로 반환하므로 .reverse() 제거
         const coincident = cycleData.coincident.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) }));
         const leading = cycleData.leading.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) }));
         
-        // API가 데이터를 내림차순(desc)으로 반환하므로 .reverse()로 오름차순(asc) 정렬
-        coincident.reverse();
-        leading.reverse();
+        // 💡 [오류 수정] .reverse() 호출 제거
+        // coincident.reverse(); 
+        // leading.reverse();
 
         const labels = coincident.map(d => `${d.date.substring(0,4)}-${d.date.substring(4,6)}`);
         const coincidentValues = coincident.map(d => d.value);
         
-        // leading 데이터를 coincident 길이에 맞게 매핑
         const leadingMap = new Map(leading.map(d => [d.date, d.value]));
-        const leadingValues = coincident.map(d => leadingMap.get(d.date) || null); // 날짜가 안 맞으면 null
+        const leadingValues = coincident.map(d => leadingMap.get(d.date) || null); 
 
         // 3. 차트 생성
         cycleChart = new Chart(ctx, {
@@ -411,7 +409,7 @@ export async function renderCycleChart() {
                     {
                         label: '선행지수 순환변동치 (미래)',
                         data: leadingValues,
-                        borderColor: '#dc3545', // 빨간색 (미래 예측)
+                        borderColor: '#dc3545', 
                         borderWidth: 2.5,
                         pointRadius: 0,
                         tension: 0.1
@@ -419,7 +417,7 @@ export async function renderCycleChart() {
                     {
                         label: '동행지수 순환변동치 (현재)',
                         data: coincidentValues,
-                        borderColor: '#0056b3', // 파란색 (현재 상태)
+                        borderColor: '#0056b3', 
                         borderWidth: 2,
                         pointRadius: 0,
                         tension: 0.1
