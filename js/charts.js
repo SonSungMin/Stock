@@ -47,13 +47,14 @@ function createRecessionBoxes(chartData) {
 }
 
 /**
- * 💡 [핵심 수정] 마샬케이 차트와 동일한 방식으로 경기 침체 '레이블' 어노테이션을 생성합니다.
+ * 마샬케이 차트와 동일한 방식으로 경기 침체 '레이블' 어노테이션을 생성합니다.
  * @param {object[]} chartData - 날짜 정보를 포함하는 차트 데이터
  * @returns {object[]} - Chart.js line/label 어노테이션 배열
  */
 function createRecessionLabels(chartData) {
     return Object.entries(recessionPeriods).map(([date, label]) => {
         const crisisDate = new Date(date);
+        // 💡 chartData의 date 형식이 'YYYY-MM-DD'이므로 new Date()로 파싱 가능
         const index = chartData.findIndex(d => new Date(d.date) >= crisisDate);
         if (index === -1) return null;
 
@@ -257,7 +258,7 @@ export async function renderGdpConsumptionChart() {
         console.error("소비/GDP 차트 렌더링 실패:", error);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.textAlign = 'center';
-        ctx.fillText("차트 데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
+        ctx.fillText("차트 로딩 실패", canvas.width / 2, canvas.height / 2);
         return null;
     }
 }
@@ -369,8 +370,7 @@ export async function showModalChart(indicatorId) {
 
 /**
  * 💡 [수정됨]
- * ECOS 경기 순환 차트를 렌더링합니다.
- * API가 10년치(120개) 데이터를 오름차순으로 반환하므로 .reverse()를 제거합니다.
+ * ECOS 경기 순환 차트에 '주요 경기 침체 레이블'을 추가합니다.
  */
 export async function renderCycleChart() {
     const canvas = document.getElementById('cycle-chart');
@@ -386,19 +386,45 @@ export async function renderCycleChart() {
         }
         
         // 2. 데이터 가공 (오름차순 정렬 및 매핑)
-        // 💡 [오류 수정] API가 이미 오름차순으로 반환하므로 .reverse() 제거
         const coincident = cycleData.coincident.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) }));
         const leading = cycleData.leading.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) }));
         
-        // 💡 [오류 수정] .reverse() 호출 제거
-        // coincident.reverse(); 
-        // leading.reverse();
+        // (API가 이미 오름차순으로 반환하므로 .reverse() 없음)
 
         const labels = coincident.map(d => `${d.date.substring(0,4)}-${d.date.substring(4,6)}`);
         const coincidentValues = coincident.map(d => d.value);
         
         const leadingMap = new Map(leading.map(d => [d.date, d.value]));
         const leadingValues = coincident.map(d => leadingMap.get(d.date) || null); 
+
+        // 💡 [신규 추가] 경기 침체 레이블 생성
+        // 1. 헬퍼 함수가 인식할 수 있도록 날짜 형식을 'YYYYMM' -> 'YYYY-MM-01'로 변경
+        const chartDataForLabels = coincident.map(d => ({ 
+            date: `${d.date.substring(0, 4)}-${d.date.substring(4, 6)}-01` 
+        }));
+        
+        // 2. 헬퍼 함수 호출
+        const recessionLabels = createRecessionLabels(chartDataForLabels);
+
+        // 3. 100 기준선 어노테이션 정의
+        const baselineAnnotation = {
+            type: 'line',
+            yMin: 100,
+            yMax: 100,
+            borderColor: 'rgba(0, 0, 0, 0.5)',
+            borderWidth: 1.5,
+            borderDash: [6, 6],
+            label: {
+                content: '기준선 (100)',
+                display: true,
+                position: 'start',
+                font: { size: 10 },
+                backgroundColor: 'rgba(0, 0, 0, 0.5)'
+            }
+        };
+
+        // 4. 기준선과 침체 레이블을 하나의 배열로 결합
+        const combinedAnnotations = [baselineAnnotation, ...recessionLabels];
 
         // 3. 차트 생성
         cycleChart = new Chart(ctx, {
@@ -430,12 +456,11 @@ export async function renderCycleChart() {
                 scales: {
                     x: {
                         ticks: {
-                             // 💡 [수정] 120개(10년) 데이터에 맞게 매년 1월 표시
+                             // 120개(10년) 데이터에 맞게 매년 1월 표시
                              callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
-                                // 매년 1월 데이터만 표시
                                 if (label.endsWith('-01')) { 
-                                    return label.substring(0, 4); // '2020'
+                                    return label.substring(0, 4); 
                                 }
                                 return null;
                             },
@@ -447,24 +472,10 @@ export async function renderCycleChart() {
                 },
                 plugins: {
                     legend: { position: 'top' },
+                    // 💡 [수정] 결합된 어노테이션 배열을 사용
                     annotation: {
-                        annotations: {
-                            baseline: {
-                                type: 'line',
-                                yMin: 100,
-                                yMax: 100,
-                                borderColor: 'rgba(0, 0, 0, 0.5)',
-                                borderWidth: 1.5,
-                                borderDash: [6, 6],
-                                label: {
-                                    content: '기준선 (100)',
-                                    display: true,
-                                    position: 'start',
-                                    font: { size: 10 },
-                                    backgroundColor: 'rgba(0, 0, 0, 0.5)'
-                                }
-                            }
-                        }
+                        annotations: combinedAnnotations,
+                        clip: false // 💡 레이블이 잘리지 않도록 추가
                     }
                 }
             }
