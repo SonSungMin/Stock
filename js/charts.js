@@ -8,6 +8,7 @@ let marshallKChart = null;
 let gdpConsumptionChart = null;
 let indicatorChart = null;
 let gdpGapChart = null;
+let cycleChart = null;
 
 // 주요 경기 침체 기간과 명칭 정의 (Source of Truth)
 const recessionPeriods = {
