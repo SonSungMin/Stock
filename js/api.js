@@ -42,7 +42,8 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
 
 /**
  * [수정됨]
- * 단일 값 가져올 때 limit=5 적용
+ * 💡 장단기 금리차 로직 변경 (T10Y2Y 직접 사용)
+ * 💡 단일 값 가져올 때 limit=5 적용
  */
 export async function fetchFredIndicators() {
     const fredIndicators = Object.entries(indicatorDetails).filter(([, details]) => details.seriesId);
@@ -54,26 +55,25 @@ export async function fetchFredIndicators() {
          let result = null; 
 
         try { 
-            // 1. 장단기 금리차
+            // 💡 [수정] 장단기 금리차 처리 로직 변경
             if (key === 'yield_spread') {
-                const [obs10Y, obs2Y] = await Promise.all([fetchFredData(details.seriesId[0], 1), fetchFredData(details.seriesId[1], 1)]); 
-                if (!obs10Y || !obs2Y || obs10Y[0].value === '.' || obs2Y[0].value === '.') {
-                     console.warn(`Yield spread data incomplete for key: ${key}`);
+                const obs = await fetchFredData(details.seriesId, 5, 'desc'); // T10Y2Y 최신 5개 가져오기
+                const latestValidObs = obs ? obs.find(o => o.value !== '.') : null;
+                if (!latestValidObs) {
+                     console.warn(`No valid data found for key: ${key}`);
                      return null;
                 }
-                const spread = parseFloat(obs10Y[0].value) - parseFloat(obs2Y[0].value);
-                result = { id: key, name: details.title, value: parseFloat(spread.toFixed(2)), unit: "%p", date: obs10Y[0].date.substring(5) };
+                const spread = parseFloat(latestValidObs.value);
+                result = { id: key, name: details.title, value: spread, unit: "%", date: latestValidObs.date.substring(5) }; // 단위 '%p' -> '%' (FRED 기준)
             } else { // 2. 그 외 일반 FRED 지표 (단일 시리즈 ID)
                 
                 const isPredictionIndicator = (key === 'ism_pmi' || key === 'consumer_sentiment');
                 // if (isPredictionIndicator) console.log(`Fetching data for prediction indicator: ${key}`);
 
-                // 💡 [수정] limit=1 -> limit=5 변경
-                const obs = await fetchFredData(details.seriesId, 5, 'desc'); // 최신 5개 데이터 가져오기 (desc)
+                const obs = await fetchFredData(details.seriesId, 5, 'desc'); // 최신 5개 데이터 가져오기
 
                  // if (isPredictionIndicator) console.log(`Raw obs for ${key}:`, obs);
 
-                // 💡 최신 유효한 값 찾기 ('.' 제외)
                 const latestValidObs = obs ? obs.find(o => o.value !== '.') : null;
 
                 if (!latestValidObs) {
@@ -81,10 +81,9 @@ export async function fetchFredIndicators() {
                     return null; 
                 }
                 
-                // 💡 최신 유효 값 사용
                 let value = parseFloat(latestValidObs.value);
                 let unit = '';
-                let date = latestValidObs.date.substring(5); // 기본 날짜 형식 (MM-DD)
+                let date = latestValidObs.date.substring(5); 
 
                  // if (isPredictionIndicator) console.log(`Parsed value for ${key}: ${value}`);
 
@@ -96,15 +95,15 @@ export async function fetchFredIndicators() {
                 }
                 else if (key === 'wti_price') { 
                     unit = '$/bbl'; 
-                    date = latestValidObs.date.substring(0, 7); // YYYY-MM
+                    date = latestValidObs.date.substring(0, 7); 
                 }
                 else if (key === 'auto_sales') { 
                     unit = 'M'; 
-                    date = latestValidObs.date.substring(0, 7); // YYYY-MM
+                    date = latestValidObs.date.substring(0, 7); 
                 }
                 // 미국 CPI (YoY 계산)
                 else if (key === 'us_cpi') {
-                    const obs_1y = await fetchFredData(details.seriesId, 13, 'desc'); // YoY 계산 위해 13개 desc로 가져옴
+                    const obs_1y = await fetchFredData(details.seriesId, 13, 'desc'); 
                     if (obs_1y && obs_1y.length > 12 && obs_1y[0].value !== '.' && obs_1y[12].value !== '.') {
                          const currentVal = parseFloat(obs_1y[0].value);
                          const prevVal = parseFloat(obs_1y[12].value);
