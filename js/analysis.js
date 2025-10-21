@@ -59,17 +59,9 @@ export function analyzeIndicators(indicators) {
     }).filter(Boolean); // null 값을 제거
 }
 
-// sonsungmin/stock/Stock-cceea318df4dbf2c4ea84f7679eb77e001061ade/js/analysis.js
-
 /**
  * 💡 [핵심 업그레이드]
  * 모든 단기/장기 지표를 종합하여 복합적인 시장 시나리오를 분석하고 구체적인 전망을 생성합니다.
- *
- * [수정된 내용]
- * 1. macroResults가 null이나 undefined로 전달될 경우를 대비하여, 빈 객체(safeMacroResults)로 초기화하는 방어 코드를 추가했습니다.
- * 2. macroCount가 0일 때 (즉, 분석된 거시 지표가 없을 때) 종합 점수(finalScore)가 0.4만 곱해지는 오류를 수정했습니다.
- * 이제 거시 지표가 없으면 단기 지표 점수(normalizedShortTerm)를 그대로 종합 점수로 사용합니다.
- * 3. [최신] 최종 점수를 분석 텍스트에서 분리하고, 반환 객체에 'score' 키로 추가합니다.
  */
 export function getMarketOutlook(analyzedIndicators, macroResults) {
     // 💡 [수정] macroResults가 null일 경우를 대비해 빈 객체로 안전하게 처리합니다.
@@ -112,6 +104,13 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
         if (safeMacroResults.gdpConsumption.status === 'positive') macroScore += 1;
         else if (safeMacroResults.gdpConsumption.status === 'negative') macroScore -= 1;
     }
+
+    // 💡 [추가] 한국 경기 순환 지표를 거시 점수에 반영
+    if (safeMacroResults.cycle) {
+        macroCount++;
+        if (safeMacroResults.cycle.status === 'positive') macroScore += 1;
+        else if (safeMacroResults.cycle.status === 'negative') macroScore -= 1;
+    }
     
     const normalizedMacro = macroCount > 0 ? (macroScore / macroCount) * 100 : 0;
 
@@ -147,6 +146,15 @@ export function getMarketOutlook(analyzedIndicators, macroResults) {
         if (indicator.status === 'positive') positiveDrivers.push(`유동성 환경(${indicator.outlook})`);
         else if (indicator.status === 'negative') negativeDrivers.push(`유동성 환경(${indicator.outlook})`);
         else neutralFactors.push(`유동성 환경(${indicator.outlook})`);
+    }
+
+    // 💡 [추가] 한국 경기 순환 요인을 드라이버에 추가
+    if (safeMacroResults.cycle) {
+        const indicator = safeMacroResults.cycle;
+        const name = '🇰🇷韓 경기순환';
+        if (indicator.status === 'positive') positiveDrivers.push(`${name}(${indicator.outlook})`);
+        else if (indicator.status === 'negative') negativeDrivers.push(`${name}(${indicator.outlook})`);
+        else neutralFactors.push(`${name}(${indicator.outlook})`);
     }
 
     // 주요 단기 지표 요약 추가 (가중치 4 이상만)
@@ -262,6 +270,9 @@ export function getInvestmentSuggestions(marketOutlook) {
     }
 }
 
+/**
+ * 💡 [수정됨] 마샬케이(유동성)와 금리의 방향성을 조합하여 4가지 국면으로 분석합니다.
+ */
 export function analyzeMarshallKTrend(chartData, resultsObject) {
     const analysisDiv = document.getElementById('marshall-analysis');
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
@@ -461,6 +472,9 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
     resultsObject.gdpConsumption = result;
 }
 
+/**
+ * 💡 [수정됨] GDP 갭의 레벨과 모멘텀(방향성)을 조합하여 분석을 세분화합니다.
+ */
 export function analyzeGdpGap(gdpGapData, resultsObject) {
     const analysisDiv = document.getElementById('gdp-gap-analysis');
     let result = { status: 'neutral', outlook: '😐 중립적 국면', summary: '', analysis: '' };
@@ -521,6 +535,7 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
 }
 
 /**
+ * 💡 [신규 추가]
  * 🇰🇷 한국 경기순환지표(선행/동행)를 분석합니다.
  * @param {object} cycleData - { coincident: [...], leading: [...] }
  * @param {object} resultsObject - 종합 분석 결과 저장 객체
