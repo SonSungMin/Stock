@@ -8,15 +8,19 @@ import { indicatorDetails } from './indicators.js';
 
 /**
  * 💡 [수정됨]
- * frequency 파라미터를 추가하여 'q'(분기별), 'm'(월별) 등 주기를 지정할 수 있도록
- * FRED API 호출 함수를 확장합니다.
+ * S&P 500의 '분기 말(eop)' 값을 가져오기 위해
+ * 'aggregation_method' 파라미터를 추가합니다.
  */
-export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', frequency = null) {
+export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', frequency = null, aggregation_method = null) {
     let url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=${sortOrder}&limit=${limit}`;
     
     // 💡 frequency 파라미터가 있으면 URL에 추가
     if (frequency) {
         url += `&frequency=${frequency}`;
+    }
+    // 💡 aggregation_method 파라미터가 있으면 URL에 추가
+    if (aggregation_method) {
+        url += `&aggregation_method=${aggregation_method}`;
     }
     
     try {
