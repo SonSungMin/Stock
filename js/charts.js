@@ -370,7 +370,7 @@ export async function showModalChart(indicatorId) {
 /**
  * 💡 [수정됨]
  * ECOS 경기 순환 차트를 렌더링합니다.
- * API가 오름차순으로 100개(약 8년) 데이터를 반환하므로 .reverse()를 제거합니다.
+ * API가 10년치(120개) 데이터를 오름차순으로 반환하므로 .reverse()를 제거합니다.
  */
 export async function renderCycleChart() {
     const canvas = document.getElementById('cycle-chart');
@@ -379,7 +379,7 @@ export async function renderCycleChart() {
     if (cycleChart) cycleChart.destroy();
 
     try {
-        // 1. API로부터 데이터 가져오기 (api.js가 100개를 반환)
+        // 1. API로부터 데이터 가져오기 (api.js가 120개를 반환)
         const cycleData = await fetchEcosCycleData();
         if (!cycleData || !cycleData.coincident || !cycleData.leading) {
              throw new Error("경기 순환 데이터가 없습니다.");
@@ -430,13 +430,12 @@ export async function renderCycleChart() {
                 scales: {
                     x: {
                         ticks: {
-                             // 💡 [수정] 100개(약 8년) 데이터에 맞게 2년마다 표시
+                             // 💡 [수정] 120개(10년) 데이터에 맞게 매년 1월 표시
                              callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
-                                const year = parseInt(label.substring(0, 4));
-                                // 2년 주기로 1월 데이터만 표시
-                                if (year % 2 === 0 && label.endsWith('-01')) { 
-                                    return year; 
+                                // 매년 1월 데이터만 표시
+                                if (label.endsWith('-01')) { 
+                                    return label.substring(0, 4); // '2020'
                                 }
                                 return null;
                             },
