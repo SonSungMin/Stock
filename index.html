@@ -29,20 +29,35 @@
             </div>
 
         <div class="accordion">
-                <button class="accordion-header">🇰🇷 한국 경기 순환 분석 (선행/동행지수)</button>
-                <div class="accordion-panel" style="display: block;">
-                     <h3 class="section-title" style="font-size: 1.4em; margin-top: 0;">경기순환지수 추이 (10년)</h3>
-                    <div id="cycle-analysis" class="analysis-content" style="padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px;">
-                        <p class="loading-text">차트 분석 중...</p>
-                    </div>
-                    <div class="stock-chart-container" style="height: 450px;">
-                        <canvas id="cycle-chart"></canvas>
-                    </div>
-                    <p style="font-size: 0.8em; color: #6c757d; text-align: right; margin-top: 5px;">
-                        주: 선행지수(미래 경기 예측)와 동행지수(현재 경기 상태)의 100 기준선(점선) 교차 및 방향성이 중요합니다.
+            <button class="accordion-header">📊 시장 종합 전망</button>
+            <div class="accordion-panel" style="display: block;">
+                <div id="outlook-section"><p class="loading-text">지표 분석 중...</p></div>
+
+                <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <h3 style="margin-top:0; font-size: 1.2em; color: #0056b3;">🎯 종합 시장 전망 분석</h3>
+                    <p style="font-size: 0.9em; margin-bottom: 15px;">
+                        모든 지표를 통합 분석한 결과와 점수(-100 ~ +100)를 게이지 형태로 시각화하여 현재 시장 상태를 보여줍니다.
+                        분석에는 다음 지표들이 사용됩니다:
                     </p>
+                    <ul style="font-size: 0.85em; columns: 2; column-gap: 20px;">
+                        <li><b>단기 지표 (40%):</b> CPI, NFP, 장단기금리차, VIX, 수출, 환율 등</li>
+                        <li><b>거시 지표 (60%):</b> 마샬케이, GDP갭, 美 경기사이클, 韓 경기순환</li>
+                    </ul>
                 </div>
-            </div>        
+                <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">📊 섹터별 전망</h3>
+                <p style="font-size: 0.9em; margin-top: -15px; margin-bottom: 15px; color: #6c757d;">
+                    종합 분석 결과를 바탕으로 주요 섹터(반도체, 에너지, 경기소비재, 금리민감주)에 대한 간략한 전망을 제공합니다.
+                </p>
+                <div id="sector-outlook-grid" class="sector-outlook-grid"></div>
+
+                <h3 class="section-title" style="font-size: 1.4em; margin-top: 25px;">💼 자산군별 투자 의견</h3>
+                 <p style="font-size: 0.9em; margin-top: -15px; margin-bottom: 15px; color: #6c757d;">
+                    현재 시장 국면에 따라 주식, 채권, 달러, 원자재 등 주요 자산군별 투자 비중 조정에 대한 의견을 제안합니다.
+                </p>
+                <div id="investment-suggestions-grid" class="sector-outlook-grid"></div>
+                 <p class="disclaimer">※ 본 분석은 제공된 경제 지표를 기반으로 한 단순 전망이며, 투자 추천이 아닙니다. 모든 투자의 책임은 본인에게 있습니다.</p>
+                 <p class="disclaimer" style="margin-top: 5px;">※ 모든 차트는 API가 제공하는 역사적 전체 데이터를 표시합니다.</p>
+            </div>
         </div>
 
         <div class="accordion">
@@ -95,13 +110,28 @@
                     <canvas id="gdp-consumption-chart"></canvas>
                 </div>
                  <p style="font-size: 0.8em; color: #6c757d; text-align: right; margin-top: 5px;">
-                    주: 녹색 선은 실질 GDP 성장률, 파란색 선은 실질 개인소비지출(PCE) 성장률, 붉은 영역은 경기 침체 기간입니다.
+                    주: 녹색 선은 실질 GDP 성장률, 파란색 선은 실질 개인소비지출(PCE) 성장률, 붉은 영역은 경기 침체 기간입니다. 빨간 점선은 S&P 500 지수(우측 축)입니다.
                 </p>
             </div>
         </div>
-    </div>
-    
-    <div id="modal" class="modal">
+
+        <div class="accordion">
+            <button class="accordion-header">🇰🇷 한국 경기 순환 분석 (선행/동행지수)</button>
+            <div class="accordion-panel" style="display: block;">
+                 <h3 class="section-title" style="font-size: 1.4em; margin-top: 0;">경기순환지수 추이 (10년)</h3>
+                <div id="cycle-analysis" class="analysis-content" style="padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px;">
+                    <p class="loading-text">차트 분석 중...</p>
+                </div>
+                <div class="stock-chart-container" style="height: 450px;">
+                    <canvas id="cycle-chart"></canvas>
+                </div>
+                <p style="font-size: 0.8em; color: #6c757d; text-align: right; margin-top: 5px;">
+                    주: 선행지수(미래 경기 예측)와 동행지수(현재 경기 상태)의 100 기준선(점선) 교차 및 방향성이 중요합니다. 붉은 레이블은 주요 미국 경기 침체 시기를 나타냅니다.
+                </p>
+            </div>
+        </div>
+        
+    </div> <div id="modal" class="modal">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
             <h2 id="modal-title"></h2>
