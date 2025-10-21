@@ -1,6 +1,8 @@
 // js/charts.js
 import { fetchFredData, fetchEcosCycleData } from './api.js';
 import { hpfilter } from './analysis_tools.js';
+// 💡 indicatorDetails import 추가 (showModalChart에서 사용)
+import { indicatorDetails } from './indicators.js'; 
 
 let stockPriceChart = null;
 let stockFinanceChart = null;
@@ -173,7 +175,7 @@ export async function renderGdpGapChart() {
 }
 
 /**
- * 💡 [수정됨]
+ * [수정됨]
  * 1. S&P 500 데이터를 '분기 평균(avg)'이 아닌 '분기 말(eop)' 값으로 가져옵니다.
  * 2. .every() 로직 대신 'null'을 삽입하여 데이터가 누락되어도
  * 차트가 잘리지 않도록 수정합니다.
@@ -184,12 +186,11 @@ export async function renderGdpConsumptionChart() {
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
-        // 💡 [수정] 'eop' (End of Period) 옵션을 추가합니다.
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
              fetchFredData('GDPC1', 220, 'desc'),
              fetchFredData('PCEC', 220, 'desc'),
              fetchFredData('USRECQ', 220, 'desc'),
-             fetchFredData('SP500', 220, 'desc', 'q', 'eop') // 💡 'eop' 추가
+             fetchFredData('SP500', 220, 'desc', 'q', 'eop') // 'eop' 추가
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -385,7 +386,10 @@ export async function renderMarshallKChart() {
     }
 }
 
-
+/**
+ * 💡 [수정됨]
+ * 정규 표현식 오류를 수정합니다. (\u{F1FF} -> \u{1F1FF})
+ */
 export async function showModalChart(indicatorId) {
     const details = indicatorDetails[indicatorId];
     if (!details || !details.seriesId) return;
@@ -400,7 +404,22 @@ export async function showModalChart(indicatorId) {
             const historicalData = obs.map(d => ({date: d.date, value: parseFloat(d.value)})).reverse();
             if (historicalData.length > 0) {
                 chartCanvas.style.display = 'block';
-                indicatorChart = new Chart(ctx, { type: 'line', data: { labels: historicalData.map(d => d.date), datasets: [{ label: details.title.replace(/[\u{1F1E6}-\u{F1FF}]/gu, '').trim(), data: historicalData.map(d => d.value), borderColor: '#0056b3', borderWidth: 2, pointRadius: 1 }] }, options: { responsive: true, maintainAspectRatio: false } });
+                // 💡 [오류 수정] 정규 표현식 수정
+                const cleanLabel = details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
+                indicatorChart = new Chart(ctx, { 
+                    type: 'line', 
+                    data: { 
+                        labels: historicalData.map(d => d.date), 
+                        datasets: [{ 
+                            label: cleanLabel, 
+                            data: historicalData.map(d => d.value), 
+                            borderColor: '#0056b3', 
+                            borderWidth: 2, 
+                            pointRadius: 1 
+                        }] 
+                    }, 
+                    options: { responsive: true, maintainAspectRatio: false } 
+                });
             }
         }
     } catch(error) {
