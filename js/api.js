@@ -107,86 +107,84 @@ export async function fetchEcosIndicators() {
 
 /**
  * 💡 [수정됨]
- * ECOS API에서 10년치(120개월) 경기순환지표 데이터를 가져옵니다.
- * "해당하는 데이터가 없습니다" 오류를 피하기 위해, '오늘'이 아닌 '2달 전'을
- * 기준으로 endDate를 설정하여 데이터 발표 시차를 반영합니다.
+ * ECOS API는 미래 날짜 조회 시 "데이터 없음"을 반환합니다.
+ * 사용자님의 지적대로, 데이터가 발견될 때까지 'endDate'를
+ * 1달씩 뒤로 이동하며 최대 6회(6개월)까지 재시도합니다.
  */
 export async function fetchEcosCycleData() {
     const apiKey = API_KEYS.ECOS;
     const proxy = PROXY_URL;
     
-    // 💡 [오류 수정 지점]
-    // ECOS 데이터는 1~2달 늦게 발표됩니다.
-    // '오늘'이 아닌 '2달 전'을 기준으로 endDate를 설정해야
-    // "해당하는 데이터가 없습니다" 오류를 피할 수 있습니다.
-    const today = new Date();
-    today.setDate(1); // 날짜 계산 오류 방지를 위해 1일로 설정
-    today.setMonth(today.getMonth() - 2); // 2달 전으로 설정 (데이터 발표 여유 확보)
-
-    const endDate = today.toISOString().slice(0, 7).replace('-', ''); // 예: 202508
-    
-    // startDate는 endDate로부터 10년 전
-    today.setFullYear(today.getFullYear() - 10);
-    const startDate = today.toISOString().slice(0, 7).replace('-', ''); // 예: 201508
-
     const STAT_CODE = '901Y001'; // 경기순환지표
     const COINCIDENT_ITEM = '0001'; // 동행지수 순환변동치
     const LEADING_ITEM = '0002'; // 선행지수 순환변동치
     const CYCLE_TYPE = 'M'; // 월별
-    const DATA_COUNT = 120; // 10년치 월 데이터
+    const DATA_COUNT = 120; // 10년치 월 데이터 (120개)
 
-    const createUrl = (itemCode) => {
-        return `https://ecos.bok.or.kr/api/StatisticSearch/${apiKey}/json/kr/1/${DATA_COUNT}/${STAT_CODE}/${CYCLE_TYPE}/${startDate}/${endDate}/${itemCode}`;
+    const createUrl = (itemCode, sDate, eDate) => {
+        return `https://ecos.bok.or.kr/api/StatisticSearch/${apiKey}/json/kr/1/${DATA_COUNT}/${STAT_CODE}/${CYCLE_TYPE}/${sDate}/${eDate}/${itemCode}`;
     };
 
-    try {
-        // 💡 콘솔에 실제 요청 URL을 남겨 디버깅을 돕습니다.
-        console.log("ECOS API 요청 시작 (선행/동행):", startDate, "to", endDate);
+    let currentDate = new Date();
+    currentDate.setDate(1); // 날짜 계산 오류 방지를 위해 1일로 설정
 
-        const [coincidentRes, leadingRes] = await Promise.all([
-            fetch(`${proxy}${encodeURIComponent(createUrl(COINCIDENT_ITEM))}`),
-            fetch(`${proxy}${encodeURIComponent(createUrl(LEADING_ITEM))}`)
-        ]);
-
-        if (!coincidentRes.ok || !leadingRes.ok) throw new Error("ECOS 경기순환지표 API 네트워크 응답 오류");
-
-        const coincidentData = await coincidentRes.json();
-        const leadingData = await leadingRes.json();
+    // 최대 6개월(6회)까지 과거로 이동하며 데이터 조회 시도
+    for (let i = 0; i < 6; i++) {
         
-        // 1. 동행지수 데이터 확인
-        if (!coincidentData.StatisticSearch || !coincidentData.StatisticSearch.row) {
-            let errorMsg = "동행지수 데이터 형식이 올바르지 않습니다.";
-            if (coincidentData.RESULT) errorMsg = coincidentData.RESULT.MESSAGE;
-            if (coincidentData.INFO) errorMsg = coincidentData.INFO.MESSAGE;
-            // 💡 콘솔에 API가 반환한 실제 응답을 남깁니다.
-            console.error("ECOS 동행지수 API 실패 응답:", coincidentData);
-            throw new Error(errorMsg); // "해당하는 데이터가 없습니다."
+        if (i > 0) {
+            // 0번째 시도(i=0)는 현재 날짜, 이후 1달씩 뒤로 이동
+            currentDate.setMonth(currentDate.getMonth() - 1);
         }
 
-        // 2. 선행지수 데이터 확인
-        if (!leadingData.StatisticSearch || !leadingData.StatisticSearch.row) {
-            let errorMsg = "선행지수 데이터 형식이 올바르지 않습니다.";
-            if (leadingData.RESULT) errorMsg = leadingData.RESULT.MESSAGE;
-            if (leadingData.INFO) errorMsg = leadingData.INFO.MESSAGE;
-            // 💡 콘솔에 API가 반환한 실제 응답을 남깁니다.
-            console.error("ECOS 선행지수 API 실패 응답:", leadingData);
-            throw new Error(errorMsg); // "해당하는 데이터가 없습니다."
+        const endDate = currentDate.toISOString().slice(0, 7).replace('-', ''); // 예: 202510
+
+        // 10년 전 (120개월) 날짜 계산
+        let startDate = new Date(currentDate);
+        startDate.setFullYear(startDate.getFullYear() - 10);
+        // ECOS API는 120개 요청 시 startDate가 10년-1달이어야 함 (예: 201511 ~ 202510 = 120개)
+        startDate.setMonth(startDate.getMonth() + 1); 
+        const sDateStr = startDate.toISOString().slice(0, 7).replace('-', ''); // 예: 201511
+
+        console.log(`ECOS API 시도 (${i + 1}/6): ${sDateStr} 부터 ${endDate} 까지`);
+
+        try {
+            const [coincidentRes, leadingRes] = await Promise.all([
+                fetch(`${proxy}${encodeURIComponent(createUrl(COINCIDENT_ITEM, sDateStr, endDate))}`),
+                fetch(`${proxy}${encodeURIComponent(createUrl(LEADING_ITEM, sDateStr, endDate))}`)
+            ]);
+
+            if (!coincidentRes.ok || !leadingRes.ok) throw new Error("API 네트워크 응답 오류");
+
+            const coincidentData = await coincidentRes.json();
+            const leadingData = await leadingRes.json();
+
+            // 데이터가 있는지 확인 (row가 존재하고, 비어있지 않은지)
+            const hasCoincident = coincidentData.StatisticSearch && coincidentData.StatisticSearch.row && coincidentData.StatisticSearch.row.length > 0;
+            const hasLeading = leadingData.StatisticSearch && leadingData.StatisticSearch.row && leadingData.StatisticSearch.row.length > 0;
+
+            if (hasCoincident && hasLeading) {
+                // 💡 성공: 데이터를 찾았으므로 즉시 반환
+                console.log(`ECOS API 성공: ${endDate} 기준 최신 데이터 발견.`);
+                return {
+                    coincident: coincidentData.StatisticSearch.row,
+                    leading: leadingData.StatisticSearch.row
+                };
+            }
+
+            // 데이터가 없음 (API가 "해당하는 자료가 없습니다" 등 반환)
+            // 콘솔에 로그만 남기고 다음 루프(i++)로 재시도
+            if (coincidentData.RESULT) console.warn(`ECOS 동행지수 응답 (${endDate}): ${coincidentData.RESULT.MESSAGE}`);
+            else if (leadingData.RESULT) console.warn(`ECOS 선행지수 응답 (${endDate}): ${leadingData.RESULT.MESSAGE}`);
+            else console.warn(`ECOS API (${endDate}): 데이터 없음. 1달 전 데이터로 재시도...`);
+
+        } catch (netError) {
+            // 네트워크 오류 등 심각한 오류 발생 시 재시도 중단
+            console.error("ECOS API 네트워크 오류:", netError.message);
+            return null;
         }
+    } // end for loop
 
-        // 3. 데이터가 비어있는지 확인
-        if (coincidentData.StatisticSearch.row.length === 0 || leadingData.StatisticSearch.row.length === 0) {
-            throw new Error("API에서 반환된 경기 순환 데이터가 비어있습니다.");
-        }
-
-        // 모든 검증 통과
-        return {
-            coincident: coincidentData.StatisticSearch.row,
-            leading: leadingData.StatisticSearch.row
-        };
-
-    } catch (error) {
-        // 여기서 잡힌 에러는 위에서 throw한 명시적인 에러 메시지가 됩니다.
-        console.error("ECOS 경기순환지표 데이터 로딩 실패:", error.message);
-        return null; 
-    }
+    // 6회 시도 모두 실패
+    console.error("ECOS 경기순환지표 데이터 로딩 실패: 6개월간의 시도 끝에 데이터를 찾을 수 없습니다.");
+    return null;
 }
