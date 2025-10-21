@@ -7,9 +7,7 @@ import { indicatorDetails } from './indicators.js';
 // ==================================================================
 
 /**
- * [수정됨]
- * S&P 500의 '분기 말(eop)' 값을 가져오기 위해
- * 'aggregation_method' 파라미터를 추가합니다.
+ * FRED API 호출 기본 함수
  */
 export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', frequency = null, aggregation_method = null) {
     let url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=${sortOrder}&limit=${limit}`;
@@ -41,9 +39,20 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
 }
 
 /**
- * [수정됨]
- * 💡 장단기 금리차 로직 변경 (T10Y2Y 직접 사용)
- * 💡 단일 값 가져올 때 limit=5 적용
+ * 💡 [신규 추가] 최근 6개월 S&P 500 일별 데이터 가져오기
+ */
+export async function fetchRecentSP500Data() {
+    const seriesId = 'SP500';
+    const limit = 180; // 약 6개월치 일별 데이터
+    const sortOrder = 'asc'; // 오름차순으로 가져옴
+    
+    // fetchFredData 함수 재사용 (frequency, aggregation_method 불필요)
+    return fetchFredData(seriesId, limit, sortOrder); 
+}
+
+
+/**
+ * 주요 FRED 지표들의 최신 값 가져오기
  */
 export async function fetchFredIndicators() {
     const fredIndicators = Object.entries(indicatorDetails).filter(([, details]) => details.seriesId);
@@ -55,25 +64,19 @@ export async function fetchFredIndicators() {
          let result = null; 
 
         try { 
-            // 💡 [수정] 장단기 금리차 처리 로직 변경
+            // 1. 장단기 금리차 (T10Y2Y)
             if (key === 'yield_spread') {
-                const obs = await fetchFredData(details.seriesId, 5, 'desc'); // T10Y2Y 최신 5개 가져오기
+                const obs = await fetchFredData(details.seriesId, 5, 'desc'); 
                 const latestValidObs = obs ? obs.find(o => o.value !== '.') : null;
                 if (!latestValidObs) {
                      console.warn(`No valid data found for key: ${key}`);
                      return null;
                 }
                 const spread = parseFloat(latestValidObs.value);
-                result = { id: key, name: details.title, value: spread, unit: "%", date: latestValidObs.date.substring(5) }; // 단위 '%p' -> '%' (FRED 기준)
+                result = { id: key, name: details.title, value: spread, unit: "%", date: latestValidObs.date.substring(5) }; 
             } else { // 2. 그 외 일반 FRED 지표 (단일 시리즈 ID)
                 
-                const isPredictionIndicator = (key === 'ism_pmi' || key === 'consumer_sentiment');
-                // if (isPredictionIndicator) console.log(`Fetching data for prediction indicator: ${key}`);
-
-                const obs = await fetchFredData(details.seriesId, 5, 'desc'); // 최신 5개 데이터 가져오기
-
-                 // if (isPredictionIndicator) console.log(`Raw obs for ${key}:`, obs);
-
+                const obs = await fetchFredData(details.seriesId, 5, 'desc'); 
                 const latestValidObs = obs ? obs.find(o => o.value !== '.') : null;
 
                 if (!latestValidObs) {
@@ -84,8 +87,6 @@ export async function fetchFredIndicators() {
                 let value = parseFloat(latestValidObs.value);
                 let unit = '';
                 let date = latestValidObs.date.substring(5); 
-
-                 // if (isPredictionIndicator) console.log(`Parsed value for ${key}: ${value}`);
 
                 // 3. 지표별 특수 처리
                 if (key === 'nfp') { 
@@ -101,7 +102,6 @@ export async function fetchFredIndicators() {
                     unit = 'M'; 
                     date = latestValidObs.date.substring(0, 7); 
                 }
-                // 미국 CPI (YoY 계산)
                 else if (key === 'us_cpi') {
                     const obs_1y = await fetchFredData(details.seriesId, 13, 'desc'); 
                     if (obs_1y && obs_1y.length > 12 && obs_1y[0].value !== '.' && obs_1y[12].value !== '.') {
@@ -120,20 +120,15 @@ export async function fetchFredIndicators() {
                         return null; 
                     }
                 }
-                // ISM PMI (지수 레벨)
-                else if (key === 'ism_pmi') {
+                else if (key === 'ism_pmi') { // NAPM ID 사용 중
                     unit = ''; 
                     date = latestValidObs.date.substring(0, 7); 
-                     // console.log(`Final object for ${key}:`, { id: key, name: details.title, value, unit, date });
                 }
-                // 미시간대 소비자심리지수 (지수 레벨)
-                else if (key === 'consumer_sentiment') {
+                else if (key === 'consumer_sentiment') { // UMCSENT ID 사용 중
                      unit = ''; 
                      date = latestValidObs.date.substring(0, 7); 
-                      // console.log(`Final object for ${key}:`, { id: key, name: details.title, value, unit, date });
                 }
-                 // 구리 가격 (YoY 계산)
-                else if (key === 'copper_price') {
+                 else if (key === 'copper_price') { // PCOPPUSDM ID 사용 중
                      const obs_1y = await fetchFredData(details.seriesId, 13, 'desc'); 
                     if (obs_1y && obs_1y.length > 12 && obs_1y[0].value !== '.' && obs_1y[12].value !== '.') {
                          const currentVal = parseFloat(obs_1y[0].value);
@@ -155,6 +150,9 @@ export async function fetchFredIndicators() {
                          date = latestValidObs.date.substring(0, 7);
                          console.warn(`Insufficient data for YoY calculation for key: ${key}, showing latest value.`);
                     }
+                } else {
+                     // 다른 지표들은 기본 처리 (최신 값, MM-DD 날짜) 유지
+                     // 예: exchange_rate, vix, dollar_index, sox_index, philly_fed 등
                 }
                 
                  if (!isNaN(value)) { 
@@ -259,8 +257,6 @@ export async function fetchEcosCycleData() {
 
     try {
         console.log(`ECOS API 요청 (STAT_CODE: ${STAT_CODE}): ${sDateStr} 부터 ${endDate} 까지 (최근 ${DATA_COUNT}개)`);
-        // console.log(` - 선행지수(I16A) URL: ${createUrl(LEADING_ITEM)}`);
-        // console.log(` - 동행지수(I16B) URL: ${createUrl(COINCIDENT_ITEM)}`);
 
         const [coincidentRes, leadingRes] = await Promise.all([
             fetch(`${proxy}${encodeURIComponent(createUrl(COINCIDENT_ITEM))}`),
