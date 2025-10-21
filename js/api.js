@@ -7,18 +7,16 @@ import { indicatorDetails } from './indicators.js';
 // ==================================================================
 
 /**
- * 💡 [수정됨]
- * S&P 500의 '분기 말(eop)' 값을 가져오기 위해
- * 'aggregation_method' 파라미터를 추가합니다.
+ * [수정됨]
+ * frequency 파라미터를 추가하여 'q'(분기별), 'm'(월별) 등 주기를 지정할 수 있도록
+ * FRED API 호출 함수를 확장합니다.
  */
 export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', frequency = null, aggregation_method = null) {
     let url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=${sortOrder}&limit=${limit}`;
     
-    // 💡 frequency 파라미터가 있으면 URL에 추가
     if (frequency) {
         url += `&frequency=${frequency}`;
     }
-    // 💡 aggregation_method 파라미터가 있으면 URL에 추가
     if (aggregation_method) {
         url += `&aggregation_method=${aggregation_method}`;
     }
@@ -34,10 +32,16 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
     }
 }
 
+/**
+ * 💡 [수정됨]
+ * S&P 500 예측 관련 신규 지표(ISM PMI, 소비자심리지수, 구리 가격) 데이터를 가져오는 로직 추가.
+ * 구리 가격(월별)은 YoY 변화율을 계산.
+ */
 export async function fetchFredIndicators() {
     const fredIndicators = Object.entries(indicatorDetails).filter(([, details]) => details.seriesId);
     
     const promises = fredIndicators.map(async ([key, details]) => {
+        // 1. 장단기 금리차
         if (key === 'yield_spread') {
             const [obs10Y, obs2Y] = await Promise.all([fetchFredData(details.seriesId[0]), fetchFredData(details.seriesId[1])]);
             if (!obs10Y || !obs2Y || obs10Y[0].value === '.' || obs2Y[0].value === '.') return null;
@@ -45,26 +49,66 @@ export async function fetchFredIndicators() {
             return { id: key, name: details.title, value: parseFloat(spread.toFixed(2)), unit: "%p", date: obs10Y[0].date.substring(5) };
         }
 
+        // 2. 그 외 일반 FRED 지표 (단일 시리즈 ID)
         const obs = await fetchFredData(details.seriesId);
         if (!obs || !obs[0] || obs[0].value === '.') return null;
 
         let value = parseFloat(obs[0].value);
         let unit = '';
+        let date = obs[0].date.substring(5); // 기본 날짜 형식 (MM-DD)
 
-        if (key === 'nfp') { value = parseFloat((value / 1000).toFixed(1)); unit = '만명'; }
-        else if (key === 'wti_price') { unit = '$/bbl'; }
-        else if (key === 'auto_sales') { unit = 'M'; }
+        // 3. 지표별 특수 처리
+        if (key === 'nfp') { 
+            value = parseFloat((value / 1000).toFixed(1)); 
+            unit = '만명'; 
+        }
+        else if (key === 'wti_price') { 
+            unit = '$/bbl'; 
+        }
+        else if (key === 'auto_sales') { 
+            unit = 'M'; 
+        }
+        // 미국 CPI (YoY 계산)
         else if (key === 'us_cpi') {
-            const obs_1y = await fetchFredData(details.seriesId, 13);
+            const obs_1y = await fetchFredData(details.seriesId, 13); // 13개월 데이터 가져오기
             if (obs_1y && obs_1y.length > 12) {
                  value = parseFloat(((parseFloat(obs_1y[0].value) - parseFloat(obs_1y[12].value)) / parseFloat(obs_1y[12].value) * 100).toFixed(1));
+                 date = obs_1y[0].date.substring(0, 7); // YYYY-MM 형식
             } else {
-                return null;
+                return null; // YoY 계산 불가
             }
             unit = '%';
         }
+        // 💡 [추가] ISM PMI (지수 레벨)
+        else if (key === 'ism_pmi') {
+            unit = ''; // 단위 없음
+            date = obs[0].date.substring(0, 7); // YYYY-MM 형식
+        }
+        // 💡 [추가] 미시간대 소비자심리지수 (지수 레벨)
+        else if (key === 'consumer_sentiment') {
+             unit = ''; // 단위 없음
+             date = obs[0].date.substring(0, 7); // YYYY-MM 형식
+        }
+         // 💡 [추가] 구리 가격 (YoY 계산)
+        else if (key === 'copper_price') {
+             const obs_1y = await fetchFredData(details.seriesId, 13); // 13개월 데이터 가져오기
+            if (obs_1y && obs_1y.length > 12) {
+                 // 월별 데이터이므로 CPI와 동일하게 YoY 계산
+                 value = parseFloat(((parseFloat(obs_1y[0].value) - parseFloat(obs_1y[12].value)) / parseFloat(obs_1y[12].value) * 100).toFixed(1));
+                 date = obs_1y[0].date.substring(0, 7); // YYYY-MM 형식
+            } else {
+                 // YoY 계산 불가 시, 최신 레벨 값이라도 표시 (단위는 $/mt)
+                 value = parseFloat(obs[0].value); 
+                 unit = '$/mt';
+                 date = obs[0].date.substring(0, 7);
+                 console.warn("Copper price YoY calculation failed, showing latest value.");
+                 // 또는 return null; 처리도 가능
+            }
+             // YoY 계산 성공 시 단위는 %
+            if(unit !== '$/mt') unit = '%';
+        }
         
-        return { id: key, name: details.title, value, unit, date: obs[0].date.substring(5) };
+        return { id: key, name: details.title, value, unit, date };
     });
     return Promise.all(promises);
 }
@@ -91,7 +135,8 @@ export async function fetchEcosIndicators() {
             export_growth: { keywords: ['수출', '총액', '증감률'] },
             unemployment: { keywords: ['실업률'] },
             industrial_production: { keywords: ['산업생산지수'] },
-            consumer_sentiment: { keywords: ['소비자동향조사', '소비자심리지수'] },
+            // consumer_sentiment는 이제 미국 지표 ID로 사용됨
+            kor_consumer_sentiment: { keywords: ['소비자동향조사', '소비자심리지수'] }, // 💡 ID 변경됨
             base_rate: { keywords: ['기준금리'] },
             cpi: { keywords: ['소비자물가지수', '총지수', '증감률'] },
             kospi: { keywords: ['KOSPI'] },
@@ -104,7 +149,8 @@ export async function fetchEcosIndicators() {
         const found = {};
         allStats.forEach(stat => {
             for (const [key, value] of Object.entries(mapping)) {
-                if (!found[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
+                // 💡 indicatorDetails[key]가 존재하는지 확인 (ID 변경으로 인해)
+                if (!found[key] && indicatorDetails[key] && value.keywords.every(kw => stat.KEYSTAT_NAME.includes(kw))) {
                     if (stat.TIME && stat.DATA_VALUE && stat.TIME.length >= 8) {
                         found[key] = {
                             id: key, name: indicatorDetails[key].title, value: parseFloat(stat.DATA_VALUE),
@@ -158,8 +204,8 @@ export async function fetchEcosCycleData() {
 
     try {
         console.log(`ECOS API 요청 (STAT_CODE: ${STAT_CODE}): ${sDateStr} 부터 ${endDate} 까지 (최근 ${DATA_COUNT}개)`);
-        console.log(` - 선행지수(I16A) URL: ${createUrl(LEADING_ITEM)}`);
-        console.log(` - 동행지수(I16B) URL: ${createUrl(COINCIDENT_ITEM)}`);
+        // console.log(` - 선행지수(I16A) URL: ${createUrl(LEADING_ITEM)}`);
+        // console.log(` - 동행지수(I16B) URL: ${createUrl(COINCIDENT_ITEM)}`);
 
         const [coincidentRes, leadingRes] = await Promise.all([
             fetch(`${proxy}${encodeURIComponent(createUrl(COINCIDENT_ITEM))}`),
