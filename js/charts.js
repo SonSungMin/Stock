@@ -74,16 +74,19 @@ export async function renderGdpGapChart() {
     const ctx = canvas.getContext('2d');
     if (gdpGapChart) gdpGapChart.destroy();
     try {
-        // [오류 수정] limit: 300 -> 10000 (모든 데이터 로드)
-        const [gdpObs, usrecObs] = await Promise.all([
+        // [수정] S&P 500 데이터(sp500Obs) 추가
+        const [gdpObs, usrecObs, sp500Obs] = await Promise.all([
             fetchFredData('GDPC1', 10000, 'asc'), // 오름차순 유지
-            fetchFredData('USRECQ', 10000, 'asc') // 오름차순 유지
+            fetchFredData('USRECQ', 10000, 'asc'), // 오름차순 유지
+            fetchFredData('SP500', 10000, 'asc', 'q', 'eop') // S&P 500 (분기말, 오름차순)
         ]);
         if (!gdpObs || !usrecObs) throw new Error("실질 GDP 또는 경기 침체 데이터를 가져오지 못했습니다.");
 
         const gdpData = gdpObs.map(d => parseFloat(d.value));
         const labels = gdpObs.map(d => d.date);
         const usrecMap = new Map(usrecObs.map(d => [d.date, d.value === '1']));
+        // [수정] sp500Map 생성
+        const sp500Map = sp500Obs ? new Map(sp500Obs.map(d => [d.date, parseFloat(d.value)])) : new Map();
 
         const trendData = hpfilter(gdpData, 1600);
         const gdpGapDataValues = gdpData.map((actual, i) => trendData[i] !== 0 ? ((actual / trendData[i]) - 1) * 100 : 0);
@@ -91,7 +94,8 @@ export async function renderGdpGapChart() {
         const chartData = labels.map((date, index) => ({
             date: date,
             value: gdpGapDataValues[index],
-            isRecession: usrecMap.get(date) || false
+            isRecession: usrecMap.get(date) || false,
+            sp500Level: sp500Map.get(date) || null // [수정] S&P 500 레벨 추가
         }));
 
         const recessionBoxes = createRecessionBoxes(chartData);
@@ -102,11 +106,25 @@ export async function renderGdpGapChart() {
             type: 'bar',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'GDP 갭 (%)',
-                    data: gdpGapDataValues,
-                    backgroundColor: gdpGapDataValues.map(v => v >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(0, 86, 179, 0.7)')
-                }]
+                datasets: [
+                    {
+                        label: 'GDP 갭 (%)',
+                        data: chartData.map(d => d.value),
+                        backgroundColor: chartData.map(d => d.value >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(0, 86, 179, 0.7)'),
+                        yAxisID: 'y'
+                    },
+                    // [수정] S&P 500 꺾은선 그래프 데이터셋 추가
+                    {
+                        label: 'S&P 500 지수 (우측 축)',
+                        data: chartData.map(d => d.sp500Level),
+                        borderColor: '#dc3545',
+                        borderWidth: 2.5,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        yAxisID: 'y1',
+                        type: 'line' // 혼합 차트를 위해 타입 지정
+                    }
+                ]
             },
             options: {
                 responsive: true,
@@ -117,7 +135,6 @@ export async function renderGdpGapChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                // [수정] 5년 -> 10년 단위로 변경 (데이터가 많아졌으므로)
                                 if (year % 10 === 0 && label.substring(5, 10) === '01-01') { return year; }
                                 return null;
                             },
@@ -125,10 +142,19 @@ export async function renderGdpGapChart() {
                             maxRotation: 0
                         }
                     },
-                    y: { title: { display: true, text: 'GDP 갭 (%)' } }
+                    y: { 
+                        position: 'left',
+                        title: { display: true, text: 'GDP 갭 (%)' } 
+                    },
+                    // [수정] S&P 500을 위한 y1축(우측) 추가
+                    y1: {
+                        position: 'right',
+                        title: { display: true, text: 'S&P 500 지수' },
+                        grid: { drawOnChartArea: false }
+                    }
                 },
                 plugins: {
-                    legend: { display: false },
+                    legend: { display: true, position: 'top' }, // [수정] 범례 표시
                     annotation: {
                         annotations: combinedAnnotations,
                         clip: false 
@@ -260,7 +286,6 @@ export async function renderGdpConsumptionChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                // [수정] 5년 -> 10년 단위로 변경
                                 if (year % 10 === 0 && label.substring(5, 10) === '01-01') { return year; }
                                 return null;
                             },
@@ -275,7 +300,9 @@ export async function renderGdpConsumptionChart() {
                     y1: { 
                         position: 'right',
                         title: { display: true, text: 'S&P 500 지수' },
-                        grid: { drawOnChartArea: false } 
+                        grid: { drawOnChartArea: false },
+                        min: 0,    // [수정] 최소값 0 설정
+                        max: 8000  // [수정] 최대값 8000 설정
                     }
                 },
                 plugins: {
@@ -305,11 +332,11 @@ export async function renderMarshallKChart() {
     const ctx = canvas.getContext('2d');
     if (marshallKChart) marshallKChart.destroy();
     try {
-        // [오류 수정] limit 증가 (기존에 10000으로 되어있었으나, 확인 차원에서 명시)
+        // [수정] 모든 데이터를 'asc' (오름차순)으로 가져옵니다. limit 증가.
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-             fetchFredData('GDP', 10000, 'asc'), // limit=10000, asc
-             fetchFredData('M2SL', 10000, 'asc'), // limit=10000, asc
-             fetchFredData('DGS10', 10000, 'asc') // limit=10000, asc
+             fetchFredData('GDP', 10000, 'asc'), // limit 증가, asc
+             fetchFredData('M2SL', 10000, 'asc'), // limit 증가, asc (월별 데이터 더 많음)
+             fetchFredData('DGS10', 10000, 'asc') // limit 증가, asc (일별 데이터 더 많음)
         ]);
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         
@@ -379,7 +406,6 @@ export async function renderMarshallKChart() {
                         ticks: {
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
-                                // [수정] 5년 -> 10년 단위로 변경
                                 if (data && data.year % 10 === 0 && data.label.endsWith('Q1')) { return data.year; }
                                 return null;
                             },
