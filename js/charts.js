@@ -80,8 +80,8 @@ function createPresidentialLabels(chartData) {
 
         const isDemocrat = label.includes('(D)');
         const color = isDemocrat ? 'rgba(0, 86, 179, 0.7)' : 'rgba(220, 53, 69, 0.7)'; // 민주당(좌) 파랑, 공화당(우) 빨강
-        // 레이블 겹침 방지를 위해 y위치 조정 (날짜 기준 홀/짝)
-        const yAdjust = (parseInt(date.substring(0, 4)) % 2 === 0) ? 60 : 110; // [수정] 위기 레이블(10)보다 아래로 y위치 조정 
+        // [수정] Y위치 고정: 위기(10), 공화당(50), 민주당(90)
+        const yAdjust = isDemocrat ? 90 : 50; 
 
         return { 
             type: 'line', 
