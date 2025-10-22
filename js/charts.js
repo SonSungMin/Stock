@@ -22,6 +22,23 @@ const recessionPeriods = {
     '2020-02-01': '팬데믹'
 };
 
+// [신규 추가] 미국 대통령 취임일 (우파: R, 좌파: D)
+const presidentialInaugurations = {
+    '1957-01-20': 'Eisenhower (R)', // S&P 500 데이터 시작점 이후
+    '1961-01-20': 'Kennedy (D)',
+    '1963-11-22': 'Johnson (D)', // 승계
+    '1969-01-20': 'Nixon (R)',
+    '1974-08-09': 'Ford (R)', // 승계
+    '1977-01-20': 'Carter (D)',
+    '1981-01-20': 'Reagan (R)',
+    '1989-01-20': 'Bush Sr. (R)',
+    '1993-01-20': 'Clinton (D)',
+    '2001-01-20': 'Bush Jr. (R)',
+    '2009-01-20': 'Obama (D)',
+    '2017-01-20': 'Trump (R)',
+    '2021-01-20': 'Biden (D)'
+};
+
 /**
  * 경기 침체 기간에 대한 회색 음영(box) 어노테이션을 생성합니다.
  */
@@ -47,6 +64,42 @@ function createRecessionLabels(chartData) {
         const index = chartData.findIndex(d => new Date(d.date) >= crisisDate);
         if (index === -1) return null;
         return { type: 'line', scaleID: 'x', value: index, borderColor: 'rgba(220, 53, 69, 0.7)', borderWidth: 1.5, borderDash: [6, 6], label: { content: label, display: true, position: 'start', yAdjust: 10, font: { size: 11, weight: 'bold' }, color: 'white', backgroundColor: 'rgba(220, 53, 69, 0.7)' } };
+    }).filter(Boolean);
+}
+
+/**
+ * [신규 추가]
+ * 대통령 취임일 '레이블' 어노테이션을 생성합니다.
+ */
+function createPresidentialLabels(chartData) {
+    return Object.entries(presidentialInaugurations).map(([date, label]) => {
+        const eventDate = new Date(date);
+        // chartData는 { date: 'YYYY-MM-DD', ... } 객체의 배열
+        const index = chartData.findIndex(d => new Date(d.date) >= eventDate);
+        if (index === -1) return null;
+
+        const isDemocrat = label.includes('(D)');
+        const color = isDemocrat ? 'rgba(0, 86, 179, 0.7)' : 'rgba(220, 53, 69, 0.7)'; // 민주당(좌) 파랑, 공화당(우) 빨강
+        // 레이블 겹침 방지를 위해 y위치 조정 (날짜 기준 홀/짝)
+        const yAdjust = (parseInt(date.substring(0, 4)) % 2 === 0) ? 30 : 120; 
+
+        return { 
+            type: 'line', 
+            scaleID: 'x', 
+            value: index, 
+            borderColor: color, 
+            borderWidth: 1, 
+            borderDash: [4, 4], 
+            label: { 
+                content: label, 
+                display: true, 
+                position: 'start', 
+                yAdjust: yAdjust, 
+                font: { size: 10, weight: 'bold' }, 
+                color: 'white', 
+                backgroundColor: color
+            } 
+        };
     }).filter(Boolean);
 }
 
@@ -90,7 +143,7 @@ export async function renderGdpGapChart() {
         const trendData = hpfilter(gdpData, 1600);
         const gdpGapDataValues = gdpData.map((actual, i) => trendData[i] !== 0 ? ((actual / trendData[i]) - 1) * 100 : 0);
         
-        const chartData = labels.map((date, index) => ({
+        const chartData = labels.map((index, date) => ({
             date: date,
             value: gdpGapDataValues[index],
             isRecession: usrecMap.get(date) || false,
@@ -609,10 +662,15 @@ export function renderSP500TrendChart(sp500Data) {
         return;
     }
 
-    // api.js의 fetchRecentSP500Data가 'desc'로 가져오므로, .reverse()로 'asc' 변환
-    const validData = sp500Data.filter(d => d.value !== '.').reverse();
+    // [수정] api.js에서 'asc'로 가져오므로 .reverse() 제거
+    const validData = sp500Data.filter(d => d.value !== '.');
     const labels = validData.map(d => d.date);
     const prices = validData.map(d => parseFloat(d.value));
+
+    // [수정] 어노테이션 생성
+    const recessionLabels = createRecessionLabels(validData);
+    const presidentLabels = createPresidentialLabels(validData);
+    const combinedAnnotations = [...recessionLabels, ...presidentLabels];
 
     sp500TrendChart = new Chart(ctx, {
         type: 'line',
@@ -622,7 +680,7 @@ export function renderSP500TrendChart(sp500Data) {
                 label: 'S&P 500 지수',
                 data: prices,
                 borderColor: '#dc3545', 
-                borderWidth: 2,
+                borderWidth: 1.5, // [수정] 선 굵기
                 pointRadius: 0, 
                 tension: 0.1
             }]
@@ -633,16 +691,17 @@ export function renderSP500TrendChart(sp500Data) {
             scales: {
                 x: {
                     ticks: {
+                        // [수정] 전체 기간용 틱 콜백
                         callback: function(value, index, ticks) {
                             const label = this.getLabelForValue(value); 
                             if (!label) return null; 
                             
-                            const currentYear = label.substring(0, 4);
-                            const prevLabel = this.getLabelForValue(value - 1);
-                            const prevYear = (typeof prevLabel === 'string') ? prevLabel.substring(0, 4) : null;
-
-                            if (index === 0 || (currentYear !== prevYear)) {
-                                return currentYear; 
+                            const year = label.substring(0, 4);
+                            const month = label.substring(5, 7);
+                            
+                            // 2년마다 1월 레이블 표시
+                            if (parseInt(year) % 2 === 0 && month === '01') {
+                                return year; 
                             }
                             return null; 
                         },
@@ -655,7 +714,12 @@ export function renderSP500TrendChart(sp500Data) {
                 }
             },
             plugins: {
-                legend: { display: false } 
+                legend: { display: false },
+                // [신규 추가] 어노테이션 플러그인
+                annotation: {
+                    annotations: combinedAnnotations,
+                    clip: false
+                }
             }
         }
     });
