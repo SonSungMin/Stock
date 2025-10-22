@@ -105,7 +105,7 @@ async function main() {
  * S&P 500 예측 결과, 근거 지표 테이블, 최근 추세 차트를 렌더링합니다.
  * @param {object} sp500Outlook - getSP500Outlook 결과
  * @param {object[]} analyzedIndicators - 모든 분석된 지표 데이터
- * @param {object[]|null} recentSP500Data - 최근 6개월 S&P 500 데이터 (api.js)
+ * @param {object[]|null} recentSP500Data - 최근 3년 S&P 500 데이터 (api.js)
  */
 function renderSP500Prediction(sp500Outlook, analyzedIndicators, recentSP500Data) {
     const section = document.getElementById('sp500-prediction-section');
@@ -142,6 +142,7 @@ function renderSP500Prediction(sp500Outlook, analyzedIndicators, recentSP500Data
         const row = tableBody.insertRow();
         const cellName = row.insertCell();
         const cellValue = row.insertCell();
+        const cellDate = row.insertCell(); // [신규 추가]
         const cellStatus = row.insertCell();
 
         cellName.style.padding = '8px';
@@ -149,6 +150,14 @@ function renderSP500Prediction(sp500Outlook, analyzedIndicators, recentSP500Data
         cellValue.style.padding = '8px';
         cellValue.style.border = '1px solid #dee2e6';
         cellValue.style.textAlign = 'right';
+        
+        // [신규 추가] 날짜 셀 스타일
+        cellDate.style.padding = '8px';
+        cellDate.style.border = '1px solid #dee2e6';
+        cellDate.style.textAlign = 'left';
+        cellDate.style.fontSize = '0.9em';
+        cellDate.style.color = '#6c757d';
+
         cellStatus.style.padding = '8px';
         cellStatus.style.border = '1px solid #dee2e6';
         cellStatus.style.textAlign = 'center';
@@ -157,6 +166,7 @@ function renderSP500Prediction(sp500Outlook, analyzedIndicators, recentSP500Data
             factorsFoundCount++;
             cellName.textContent = indicator.name.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
             cellValue.textContent = `${indicator.value.toLocaleString()}${indicator.unit || ''}`;
+            cellDate.textContent = indicator.date || 'N/A'; // [신규 추가]
             cellStatus.innerHTML = `<span class="status-icon ${indicator.status}-icon">${indicator.icon}</span> ${indicator.text}`;
              if (indicator.status === 'positive') row.style.backgroundColor = '#d4edda4d';
              else if (indicator.status === 'negative') row.style.backgroundColor = '#f8d7da4d';
@@ -165,6 +175,7 @@ function renderSP500Prediction(sp500Outlook, analyzedIndicators, recentSP500Data
             const details = indicatorDetails[id];
             cellName.textContent = details ? details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim() : id;
             cellValue.textContent = 'N/A';
+            cellDate.textContent = 'N/A'; // [신규 추가]
             cellStatus.innerHTML = `<span class="status-icon neutral-icon">❓</span> 데이터 없음`;
             row.style.color = '#6c757d';
         }
@@ -172,10 +183,10 @@ function renderSP500Prediction(sp500Outlook, analyzedIndicators, recentSP500Data
 
     // 테이블 메시지 처리
      if (factorsFoundCount === 0 && analyzedIndicators.length > 0) {
-         tableBody.innerHTML = '<tr><td colspan="3" class="loading-text" style="padding: 10px;">예측 근거 지표 데이터를 불러오지 못했습니다.</td></tr>';
+         tableBody.innerHTML = '<tr><td colspan="4" class="loading-text" style="padding: 10px;">예측 근거 지표 데이터를 불러오지 못했습니다.</td></tr>';
     } else if (analyzedIndicators.length === 0 && factorsFoundCount === 0) {
         // analyzedIndicators 자체가 비어있으면 (초기 로딩 실패)
-         tableBody.innerHTML = '<tr><td colspan="3" class="loading-text" style="padding: 10px;">전체 지표 로딩 실패</td></tr>';
+         tableBody.innerHTML = '<tr><td colspan="4" class="loading-text" style="padding: 10px;">전체 지표 로딩 실패</td></tr>';
     }
 
 
