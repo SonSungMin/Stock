@@ -74,18 +74,16 @@ export async function renderGdpGapChart() {
     const ctx = canvas.getContext('2d');
     if (gdpGapChart) gdpGapChart.destroy();
     try {
-        // [수정] S&P 500 데이터(sp500Obs) 추가
         const [gdpObs, usrecObs, sp500Obs] = await Promise.all([
-            fetchFredData('GDPC1', 10000, 'asc'), // 오름차순 유지
-            fetchFredData('USRECQ', 10000, 'asc'), // 오름차순 유지
-            fetchFredData('SP500', 10000, 'asc', 'q', 'eop') // S&P 500 (분기말, 오름차순)
+            fetchFredData('GDPC1', 10000, 'asc'), // [수정] limit 10000
+            fetchFredData('USRECQ', 10000, 'asc'), // [수정] limit 10000
+            fetchFredData('SP500', 10000, 'asc', 'q', 'eop') 
         ]);
         if (!gdpObs || !usrecObs) throw new Error("실질 GDP 또는 경기 침체 데이터를 가져오지 못했습니다.");
 
         const gdpData = gdpObs.map(d => parseFloat(d.value));
         const labels = gdpObs.map(d => d.date);
         const usrecMap = new Map(usrecObs.map(d => [d.date, d.value === '1']));
-        // [수정] sp500Map 생성
         const sp500Map = sp500Obs ? new Map(sp500Obs.map(d => [d.date, parseFloat(d.value)])) : new Map();
 
         const trendData = hpfilter(gdpData, 1600);
@@ -95,7 +93,7 @@ export async function renderGdpGapChart() {
             date: date,
             value: gdpGapDataValues[index],
             isRecession: usrecMap.get(date) || false,
-            sp500Level: sp500Map.get(date) || null // [수정] S&P 500 레벨 추가
+            sp500Level: sp500Map.get(date) || null 
         }));
 
         const recessionBoxes = createRecessionBoxes(chartData);
@@ -113,7 +111,6 @@ export async function renderGdpGapChart() {
                         backgroundColor: chartData.map(d => d.value >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(0, 86, 179, 0.7)'),
                         yAxisID: 'y'
                     },
-                    // [수정] S&P 500 꺾은선 그래프 데이터셋 추가
                     {
                         label: 'S&P 500 지수 (우측 축)',
                         data: chartData.map(d => d.sp500Level),
@@ -122,7 +119,7 @@ export async function renderGdpGapChart() {
                         borderDash: [5, 5],
                         pointRadius: 0,
                         yAxisID: 'y1',
-                        type: 'line' // 혼합 차트를 위해 타입 지정
+                        type: 'line' 
                     }
                 ]
             },
@@ -136,9 +133,7 @@ export async function renderGdpGapChart() {
                                 const label = this.getLabelForValue(value);
                                 if (!label) return null;
                                 const year = parseInt(label.substring(0, 4));
-                                
-                                // [오류 수정] 10년 -> 5년 단위로 변경
-                                // + Q1이 아닌 '01-01' (1월 1일) 데이터인지 확인
+                                // 5년 단위 + 1월 1일 데이터
                                 if (year % 5 === 0 && label.substring(5, 10) === '01-01') { 
                                     return year; 
                                 }
@@ -152,7 +147,6 @@ export async function renderGdpGapChart() {
                         position: 'left',
                         title: { display: true, text: 'GDP 갭 (%)' } 
                     },
-                    // [수정] S&P 500을 위한 y1축(우측) 추가
                     y1: {
                         position: 'right',
                         title: { display: true, text: 'S&P 500 지수' },
@@ -160,7 +154,7 @@ export async function renderGdpGapChart() {
                     }
                 },
                 plugins: {
-                    legend: { display: true, position: 'top' }, // [수정] 범례 표시
+                    legend: { display: true, position: 'top' }, 
                     annotation: {
                         annotations: combinedAnnotations,
                         clip: false 
@@ -179,23 +173,17 @@ export async function renderGdpGapChart() {
     }
 }
 
-/**
- * [수정됨]
- * S&P 500 데이터 누락 문제를 해결하기 위해, 데이터 처리 루프를
- * 0번째 요소부터 시작하고, YoY 계산은 i>=4 조건으로 분리합니다.
- */
 export async function renderGdpConsumptionChart() {
     const canvas = document.getElementById('gdp-consumption-chart');
     if (!canvas) return null;
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
-        // 모든 데이터를 'asc' (오름차순)으로 가져옵니다. limit=10000 유지.
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
-             fetchFredData('GDPC1', 10000, 'asc'), // limit=10000, asc
-             fetchFredData('PCEC', 10000, 'asc'), // limit=10000, asc
-             fetchFredData('USRECQ', 10000, 'asc'), // limit=10000, asc
-             fetchFredData('SP500', 10000, 'asc', 'q', 'eop') // limit=10000, asc
+             fetchFredData('GDPC1', 10000, 'asc'), 
+             fetchFredData('PCEC', 10000, 'asc'), 
+             fetchFredData('USRECQ', 10000, 'asc'), 
+             fetchFredData('SP500', 10000, 'asc', 'q', 'eop') 
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -208,36 +196,30 @@ export async function renderGdpConsumptionChart() {
         
         const uniqueDates = gdpObs.map(d => d.date); 
 
-        // 루프를 0부터 시작하여 모든 S&P 데이터를 포함합니다.
         for (let i = 0; i < uniqueDates.length; i++) {
             const currentDate = uniqueDates[i];
             
             let gdpGrowth = null;
             let pceGrowth = null;
 
-            // YoY 계산은 i >= 4 일 때만 수행
             if (i >= 4) {
                 const previousDate = uniqueDates[i - 4];
-                // 1. GDP 성장률 (YoY)
                 const currentGdp = gdpMap.get(currentDate), prevGdp = gdpMap.get(previousDate);
                 gdpGrowth = (currentGdp && prevGdp) ? ((currentGdp / prevGdp) - 1) * 100 : null;
 
-                // 2. PCE 성장률 (YoY)
                 const currentPce = pceMap.get(currentDate), prevPce = pceMap.get(previousDate);
                 pceGrowth = (currentPce && prevPce) ? ((currentPce / prevPce) - 1) * 100 : null;
             }
 
-            // 3. S&P 500 지수 레벨 (모든 i에 대해 가져옴)
             const currentSp500 = sp500Map.get(currentDate); 
             const sp500Level = (currentSp500 !== undefined && !isNaN(currentSp500)) ? currentSp500 : null; 
             
-            // 4. 경기 침체
             const isRecession = usrecMap.get(currentDate) || false;
             
             chartData.push({
                 date: currentDate,
-                gdpGrowth: gdpGrowth, // i < 4 이면 null
-                pceGrowth: pceGrowth, // i < 4 이면 null
+                gdpGrowth: gdpGrowth, 
+                pceGrowth: pceGrowth, 
                 sp500Level: sp500Level, 
                 isRecession: isRecession
             });
@@ -258,7 +240,7 @@ export async function renderGdpConsumptionChart() {
                     { 
                         label: 'S&P 500 지수 (우측 축)', 
                         data: chartData.map(d => d.sp500Level), 
-                        borderColor: '#dc3545', // 빨간색 유지
+                        borderColor: '#dc3545', 
                         borderWidth: 2.5,
                         borderDash: [5, 5], 
                         pointRadius: 0,
@@ -293,7 +275,7 @@ export async function renderGdpConsumptionChart() {
                                 const label = this.getLabelForValue(value);
                                 if (!label) return null;
                                 const year = parseInt(label.substring(0, 4));
-                                // [오류 수정] 10년 -> 5년 단위로 변경
+                                // 5년 단위 + 1월 1일 데이터
                                 if (year % 5 === 0 && label.substring(5, 10) === '01-01') { 
                                     return year; 
                                 }
@@ -311,8 +293,8 @@ export async function renderGdpConsumptionChart() {
                         position: 'right',
                         title: { display: true, text: 'S&P 500 지수' },
                         grid: { drawOnChartArea: false },
-                        min: 0,    // [수정] 최소값 0 설정
-                        max: 8000  // [수정] 최대값 8000 설정
+                        min: 0,    
+                        max: 8000  
                     }
                 },
                 plugins: {
@@ -342,11 +324,10 @@ export async function renderMarshallKChart() {
     const ctx = canvas.getContext('2d');
     if (marshallKChart) marshallKChart.destroy();
     try {
-        // [수정] 모든 데이터를 'asc' (오름차순)으로 가져옵니다. limit 증가.
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-             fetchFredData('GDP', 10000, 'asc'), // limit 증가, asc
-             fetchFredData('M2SL', 10000, 'asc'), // limit 증가, asc (월별 데이터 더 많음)
-             fetchFredData('DGS10', 10000, 'asc') // limit 증가, asc (일별 데이터 더 많음)
+             fetchFredData('GDP', 10000, 'asc'), // [수정] limit 10000
+             fetchFredData('M2SL', 10000, 'asc'), // [수정] limit 10000
+             fetchFredData('DGS10', 10000, 'asc') // [수정] limit 10000
         ]);
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         
@@ -414,24 +395,17 @@ export async function renderMarshallKChart() {
                 scales: {
                     x: {
                         ticks: {
-                            // [오류 수정] 10년 -> 5년 단위로 변경 + Q1이 아닌 '연도'가 바뀔 때 표시
+                            // [오류 수정] 클로드 제안대로 5년 단위 + Q1 레이블 확인
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
-                                if (!data) return null; // Guard clause
-
-                                const year = data.year; // Get year (e.g., 2024)
-
-                                // Get the previous data point's year
-                                const prevData = chartData[index - 1];
-                                const prevYear = prevData ? prevData.year : null; // e.g., 2023
-
-                                // Show the label if:
-                                // 1. It's the very first data point (index 0) AND a multiple of 5
-                                // 2. The year has changed (e.g., 2023 -> 2024) AND the new year is a multiple of 5
-                                if ((index === 0 && year % 5 === 0) || (year !== prevYear && year % 5 === 0)) {
-                                    return year; // Returns "2025"
+                                if (!data) return null; // 데이터 보호
+                                
+                                // 5년 단위(예: 2020, 2025) 이면서
+                                // 1분기('Q1') 데이터일 때만 연도 표시
+                                if (data.year % 5 === 0 && data.label.endsWith('Q1')) {
+                                    return data.year; // "2020"
                                 }
-                                return null; // Don't show a label
+                                return null;
                             },
                             autoSkip: false,
                             maxRotation: 0
@@ -471,12 +445,10 @@ export async function showModalChart(indicatorId) {
     chartCanvas.style.display = 'none';
     try {
         const series = Array.isArray(details.seriesId) ? details.seriesId[0] : details.seriesId;
-        // 오름차순('asc')으로 가져와서 reverse() 필요 없도록 수정
         const obs = await fetchFredData(series, 100, 'asc'); 
         if (obs) {
-            // 오름차순이므로 reverse() 제거
             const historicalData = obs.map(d => ({date: d.date, value: parseFloat(d.value)})); 
-            if (historicalData.length > 0 && historicalData.some(d => d.value !== null && !isNaN(d.value))) { // 유효한 데이터가 있는지 확인
+            if (historicalData.length > 0 && historicalData.some(d => d.value !== null && !isNaN(d.value))) { 
                 chartCanvas.style.display = 'block';
                 const cleanLabel = details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
                 indicatorChart = new Chart(ctx, { 
@@ -513,13 +485,11 @@ export async function renderCycleChart() {
     if (cycleChart) cycleChart.destroy();
 
     try {
-        // 1. API로부터 데이터 가져오기 (api.js가 120개를 반환, 오름차순)
         const cycleData = await fetchEcosCycleData();
         if (!cycleData || !cycleData.coincident || !cycleData.leading) {
              throw new Error("경기 순환 데이터가 없습니다.");
         }
         
-        // 2. 데이터 가공 (API가 이미 오름차순)
         const coincident = cycleData.coincident.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) }));
         const leading = cycleData.leading.map(d => ({ date: d.TIME, value: parseFloat(d.DATA_VALUE) }));
         
@@ -529,13 +499,11 @@ export async function renderCycleChart() {
         const leadingMap = new Map(leading.map(d => [d.date, d.value]));
         const leadingValues = coincident.map(d => leadingMap.get(d.date) || null); 
 
-        // [신규 추가] 경기 침체 레이블 생성
         const chartDataForLabels = coincident.map(d => ({ 
             date: `${d.date.substring(0, 4)}-${d.date.substring(4, 6)}-01` 
         }));
         const recessionLabels = createRecessionLabels(chartDataForLabels);
 
-        // 100 기준선 어노테이션 정의
         const baselineAnnotation = {
             type: 'line',
             yMin: 100,
@@ -554,7 +522,6 @@ export async function renderCycleChart() {
 
         const combinedAnnotations = [baselineAnnotation, ...recessionLabels];
 
-        // 3. 차트 생성
         cycleChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -584,7 +551,6 @@ export async function renderCycleChart() {
                 scales: {
                     x: {
                         ticks: {
-                             // 120개(10년) 데이터에 맞게 매년 1월 표시
                              callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 if (label.endsWith('-01')) { 
@@ -608,7 +574,6 @@ export async function renderCycleChart() {
             }
         });
         
-        // 4. 분석 함수를 위해 가공된 데이터 반환
         return { coincident, leading };
 
     } catch(error) {
@@ -640,8 +605,6 @@ export function renderSP500TrendChart(sp500Data) {
         return;
     }
 
-    // 데이터 가공 ( '.' 값 제외 및 시간순으로 뒤집기)
-    // api.js가 desc(최신순)으로 가져오므로, 차트를 위해 asc(오름차순)으로 reverse()
     const validData = sp500Data.filter(d => d.value !== '.').reverse();
     const labels = validData.map(d => d.date);
     const prices = validData.map(d => parseFloat(d.value));
@@ -653,9 +616,9 @@ export function renderSP500TrendChart(sp500Data) {
             datasets: [{
                 label: 'S&P 500 지수',
                 data: prices,
-                borderColor: '#dc3545', // 빨간색
+                borderColor: '#dc3545', 
                 borderWidth: 2,
-                pointRadius: 0, // 점 숨기기
+                pointRadius: 0, 
                 tension: 0.1
             }]
         },
@@ -665,35 +628,29 @@ export function renderSP500TrendChart(sp500Data) {
             scales: {
                 x: {
                     ticks: {
-                        // [수정] 연도별로 첫 날짜만 표시 (YYYY 형식)
                         callback: function(value, index, ticks) {
-                            const label = this.getLabelForValue(value); // 예: "2024-10-22"
-                            if (!label) return null; // 현재 레이블이 없으면 null
+                            const label = this.getLabelForValue(value); 
+                            if (!label) return null; 
                             
                             const currentYear = label.substring(0, 4);
-                            
-                            // 이전 데이터의 레이블 확인
                             const prevLabel = this.getLabelForValue(value - 1);
-                            
-                            // [오류 수정] prevLabel이 문자열일 때만 substring을 호출하도록 수정
                             const prevYear = (typeof prevLabel === 'string') ? prevLabel.substring(0, 4) : null;
 
-                            // 첫 번째 데이터(index 0)이거나 연도가 바뀔 때만 연도 표시
                             if (index === 0 || (currentYear !== prevYear)) {
-                                return currentYear; // 예: "2024"
+                                return currentYear; 
                             }
-                            return null; // 그 외에는 레이블 숨김
+                            return null; 
                         },
                         autoSkip: false,
                         maxRotation: 0
                     }
                 },
                 y: {
-                    title: { display: false } // Y축 제목 숨김
+                    title: { display: false } 
                 }
             },
             plugins: {
-                legend: { display: false } // 범례 숨김
+                legend: { display: false } 
             }
         }
     });
