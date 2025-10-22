@@ -703,9 +703,11 @@ export function renderSP500TrendChart(sp500Data) {
                             
                             const year = label.substring(0, 4);
                             
-                            // 이전 레이블과 연도가 같은 경우 표시 안함 (연도별 1회만 표시)
+                            // [오류 수정] value가 0일 때 prevLabel이 null/undefined가 될 수 있음
+                            // prevLabel이 string 타입인지 확인 후 substring() 호출
                             const prevLabel = this.getLabelForValue(value - 1);
-                            const prevYear = prevLabel ? prevLabel.substring(0, 4) : null;
+                            const prevYear = (typeof prevLabel === 'string') ? prevLabel.substring(0, 4) : null;
+                            
                             if (year === prevYear) {
                                 return null;
                             }
