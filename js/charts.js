@@ -610,14 +610,21 @@ export function renderSP500TrendChart(sp500Data) {
             scales: {
                 x: {
                     ticks: {
-                        // 월별로 첫 날짜만 표시 (MM/DD 형식)
+                        // [수정] 연도별로 첫 날짜만 표시 (YYYY 형식)
                         callback: function(value, index, ticks) {
-                            const label = this.getLabelForValue(value);
-                            // 첫 데이터이거나 월이 바뀔 때만 표시
-                            if (index === 0 || label.substring(5, 7) !== this.getLabelForValue(value - 1)?.substring(5, 7)) {
-                                return label.substring(5); // MM-DD
+                            const label = this.getLabelForValue(value); // 예: "2024-10-22"
+                            if (!label) return null;
+                            const currentYear = label.substring(0, 4);
+                            
+                            // 이전 데이터의 연도 확인
+                            const prevLabel = this.getLabelForValue(value - 1);
+                            const prevYear = prevLabel ? prevLabel.substring(0, 4) : null;
+
+                            // 첫 번째 데이터이거나 연도가 바뀔 때만 연도 표시
+                            if (index === 0 || (currentYear !== prevYear)) {
+                                return currentYear; // 예: "2024"
                             }
-                            return null; 
+                            return null;
                         },
                         autoSkip: false,
                         maxRotation: 0
