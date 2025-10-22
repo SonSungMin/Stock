@@ -74,10 +74,11 @@ export async function renderGdpGapChart() {
     const ctx = canvas.getContext('2d');
     if (gdpGapChart) gdpGapChart.destroy();
     try {
+        // [오류 수정] limit: 5000, sortOrder: 'asc' (시간순)
         const [gdpObs, usrecObs, sp500Obs] = await Promise.all([
-            fetchFredData('GDPC1', 10000, 'asc'), 
-            fetchFredData('USRECQ', 10000, 'asc'), 
-            fetchFredData('SP500', 10000, 'asc', 'q', 'eop') 
+            fetchFredData('GDPC1', 5000, 'asc'), 
+            fetchFredData('USRECQ', 5000, 'asc'), 
+            fetchFredData('SP500', 5000, 'asc', 'q', 'eop') 
         ]);
         if (!gdpObs || !usrecObs) throw new Error("실질 GDP 또는 경기 침체 데이터를 가져오지 못했습니다.");
 
@@ -179,11 +180,12 @@ export async function renderGdpConsumptionChart() {
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
+        // [오류 수정] limit: 5000, sortOrder: 'asc' (시간순)
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
-             fetchFredData('GDPC1', 10000, 'asc'), 
-             fetchFredData('PCEC', 10000, 'asc'), 
-             fetchFredData('USRECQ', 10000, 'asc'), 
-             fetchFredData('SP500', 10000, 'asc', 'q', 'eop') 
+             fetchFredData('GDPC1', 5000, 'asc'), 
+             fetchFredData('PCEC', 5000, 'asc'), 
+             fetchFredData('USRECQ', 5000, 'asc'), 
+             fetchFredData('SP500', 5000, 'asc', 'q', 'eop') 
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -323,10 +325,11 @@ export async function renderMarshallKChart() {
     const ctx = canvas.getContext('2d');
     if (marshallKChart) marshallKChart.destroy();
     try {
+        // [오류 수정] limit: 5000, sortOrder: 'asc' (시간순)
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-             fetchFredData('GDP', 10000, 'asc'), 
-             fetchFredData('M2SL', 10000, 'asc'), 
-             fetchFredData('DGS10', 10000, 'asc') 
+             fetchFredData('GDP', 5000, 'asc'), 
+             fetchFredData('M2SL', 5000, 'asc'), 
+             fetchFredData('DGS10', 5000, 'asc') 
         ]);
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         
@@ -394,17 +397,14 @@ export async function renderMarshallKChart() {
                 scales: {
                     x: {
                         ticks: {
-                            // [오류 수정] 5년 단위 + Q1 레이블 확인 (사용자/클로드 제안)
+                            // [오류 수정] 5년 단위 + Q1 레이블 확인
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
-                                if (!data) return null; // 데이터 보호
+                                if (!data) return null; 
                                 const year = data.year;
                                 
-                                // "2024 Q1" -> 1
                                 const quarter = parseInt(data.label.split(' Q')[1]); 
 
-                                // 5년 단위(예: 2020, 2025) 이면서
-                                // 1분기(quarter === 1) 데이터일 때만 연도 표시
                                 if (year % 5 === 0 && quarter === 1) {
                                     return year;
                                 }
@@ -608,6 +608,7 @@ export function renderSP500TrendChart(sp500Data) {
         return;
     }
 
+    // api.js의 fetchRecentSP500Data가 'desc'로 가져오므로, .reverse()로 'asc' 변환
     const validData = sp500Data.filter(d => d.value !== '.').reverse();
     const labels = validData.map(d => d.date);
     const prices = validData.map(d => parseFloat(d.value));
