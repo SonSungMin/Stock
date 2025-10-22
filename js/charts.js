@@ -12,31 +12,31 @@ let gdpGapChart = null;
 let cycleChart = null;
 let sp500TrendChart = null; // S&P 500 추세 차트 변수
 
-// 주요 경기 침체 기간과 명칭 정의 (Source of Truth)
+// [수정] 주요 경기 침체 기간과 명칭 정의 (년도 추가)
 const recessionPeriods = {
-    '1973-11-01': '오일 쇼크',
-    '1980-01-01': '더블 딥 침체',
-    '1990-07-01': '걸프전 침체',
-    '2001-03-01': 'IT 버블',
-    '2007-12-01': '금융위기',
-    '2020-02-01': '팬데믹'
+    '1973-11-01': '(1973) 오일 쇼크',
+    '1980-01-01': '(1980) 더블 딥 침체',
+    '1990-07-01': '(1990) 걸프전 침체',
+    '2001-03-01': '(2001) IT 버블',
+    '2007-12-01': '(2007) 금융위기',
+    '2020-02-01': '(2020) 팬데믹'
 };
 
-// [신규 추가] 미국 대통령 취임일 (우파: R, 좌파: D)
+// [수정] 미국 대통령 취임일 (우파: R, 좌파: D) (년도 추가)
 const presidentialInaugurations = {
-    '1957-01-20': 'Eisenhower (R)', // S&P 500 데이터 시작점 이후
-    '1961-01-20': 'Kennedy (D)',
-    '1963-11-22': 'Johnson (D)', // 승계
-    '1969-01-20': 'Nixon (R)',
-    '1974-08-09': 'Ford (R)', // 승계
-    '1977-01-20': 'Carter (D)',
-    '1981-01-20': 'Reagan (R)',
-    '1989-01-20': 'Bush Sr. (R)',
-    '1993-01-20': 'Clinton (D)',
-    '2001-01-20': 'Bush Jr. (R)',
-    '2009-01-20': 'Obama (D)',
-    '2017-01-20': 'Trump (R)',
-    '2021-01-20': 'Biden (D)'
+    '1957-01-20': '(1957) Eisenhower (R)', // S&P 500 데이터 시작점 이후
+    '1961-01-20': '(1961) Kennedy (D)',
+    '1963-11-22': '(1963) Johnson (D)', // 승계
+    '1969-01-20': '(1969) Nixon (R)',
+    '1974-08-09': '(1974) Ford (R)', // 승계
+    '1977-01-20': '(1977) Carter (D)',
+    '1981-01-20': '(1981) Reagan (R)',
+    '1989-01-20': '(1989) Bush Sr. (R)',
+    '1993-01-20': '(1993) Clinton (D)',
+    '2001-01-20': '(2001) Bush Jr. (R)',
+    '2009-01-20': '(2009) Obama (D)',
+    '2017-01-20': '(2017) Trump (R)',
+    '2021-01-20': '(2021) Biden (D)'
 };
 
 /**
@@ -81,15 +81,15 @@ function createPresidentialLabels(chartData) {
         const isDemocrat = label.includes('(D)');
         const color = isDemocrat ? 'rgba(0, 86, 179, 0.7)' : 'rgba(220, 53, 69, 0.7)'; // 민주당(좌) 파랑, 공화당(우) 빨강
         // 레이블 겹침 방지를 위해 y위치 조정 (날짜 기준 홀/짝)
-        const yAdjust = (parseInt(date.substring(0, 4)) % 2 === 0) ? 30 : 120; 
+        const yAdjust = (parseInt(date.substring(0, 4)) % 2 === 0) ? 60 : 110; // [수정] 위기 레이블(10)보다 아래로 y위치 조정 
 
         return { 
             type: 'line', 
             scaleID: 'x', 
             value: index, 
             borderColor: color, 
-            borderWidth: 1, 
-            borderDash: [4, 4], 
+            borderWidth: 1.5, 
+            borderDash: [6, 6], // [수정] 경제 위기 라인과 동일한 스타일 
             label: { 
                 content: label, 
                 display: true, 
@@ -143,7 +143,7 @@ export async function renderGdpGapChart() {
         const trendData = hpfilter(gdpData, 1600);
         const gdpGapDataValues = gdpData.map((actual, i) => trendData[i] !== 0 ? ((actual / trendData[i]) - 1) * 100 : 0);
         
-        const chartData = labels.map((index, date) => ({
+        const chartData = labels.map((date, index) => ({
             date: date,
             value: gdpGapDataValues[index],
             isRecession: usrecMap.get(date) || false,
@@ -699,8 +699,8 @@ export function renderSP500TrendChart(sp500Data) {
                             const year = label.substring(0, 4);
                             const month = label.substring(5, 7);
                             
-                            // 2년마다 1월 레이블 표시
-                            if (parseInt(year) % 2 === 0 && month === '01') {
+                            // [수정] 2년 -> 5년 단위로 변경
+                            if (parseInt(year) % 5 === 0 && month === '01') {
                                 return year; 
                             }
                             return null; 
