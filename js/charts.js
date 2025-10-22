@@ -586,8 +586,8 @@ export function renderSP500TrendChart(sp500Data) {
         return;
     }
 
-    // 데이터 가공 ( '.' 값 제외 )
-    const validData = sp500Data.filter(d => d.value !== '.');
+    // 데이터 가공 ( '.' 값 제외 및 시간순으로 뒤집기)
+    const validData = sp500Data.filter(d => d.value !== '.').reverse();
     const labels = validData.map(d => d.date);
     const prices = validData.map(d => parseFloat(d.value));
 
