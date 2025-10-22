@@ -74,9 +74,10 @@ export async function renderGdpGapChart() {
     const ctx = canvas.getContext('2d');
     if (gdpGapChart) gdpGapChart.destroy();
     try {
+        // [오류 수정] limit: 300 -> 10000 (모든 데이터 로드)
         const [gdpObs, usrecObs] = await Promise.all([
-            fetchFredData('GDPC1', 300, 'asc'), // 오름차순 유지
-            fetchFredData('USRECQ', 300, 'asc') // 오름차순 유지
+            fetchFredData('GDPC1', 10000, 'asc'), // 오름차순 유지
+            fetchFredData('USRECQ', 10000, 'asc') // 오름차순 유지
         ]);
         if (!gdpObs || !usrecObs) throw new Error("실질 GDP 또는 경기 침체 데이터를 가져오지 못했습니다.");
 
@@ -116,7 +117,8 @@ export async function renderGdpGapChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { return year; }
+                                // [수정] 5년 -> 10년 단위로 변경 (데이터가 많아졌으므로)
+                                if (year % 10 === 0 && label.substring(5, 10) === '01-01') { return year; }
                                 return null;
                             },
                             autoSkip: false,
@@ -258,7 +260,8 @@ export async function renderGdpConsumptionChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { return year; }
+                                // [수정] 5년 -> 10년 단위로 변경
+                                if (year % 10 === 0 && label.substring(5, 10) === '01-01') { return year; }
                                 return null;
                             },
                             autoSkip: false,
@@ -302,11 +305,11 @@ export async function renderMarshallKChart() {
     const ctx = canvas.getContext('2d');
     if (marshallKChart) marshallKChart.destroy();
     try {
-        // [수정] 모든 데이터를 'asc' (오름차순)으로 가져옵니다. limit 증가.
+        // [오류 수정] limit 증가 (기존에 10000으로 되어있었으나, 확인 차원에서 명시)
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-             fetchFredData('GDP', 10000, 'asc'), // limit 증가, asc
-             fetchFredData('M2SL', 10000, 'asc'), // limit 증가, asc (월별 데이터 더 많음)
-             fetchFredData('DGS10', 10000, 'asc') // limit 증가, asc (일별 데이터 더 많음)
+             fetchFredData('GDP', 10000, 'asc'), // limit=10000, asc
+             fetchFredData('M2SL', 10000, 'asc'), // limit=10000, asc
+             fetchFredData('DGS10', 10000, 'asc') // limit=10000, asc
         ]);
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         
@@ -376,7 +379,8 @@ export async function renderMarshallKChart() {
                         ticks: {
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
-                                if (data && data.year % 5 === 0 && data.label.endsWith('Q1')) { return data.year; }
+                                // [수정] 5년 -> 10년 단위로 변경
+                                if (data && data.year % 10 === 0 && data.label.endsWith('Q1')) { return data.year; }
                                 return null;
                             },
                             autoSkip: false,
