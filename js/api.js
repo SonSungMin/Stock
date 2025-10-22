@@ -44,7 +44,7 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
 export async function fetchRecentSP500Data() {
     const seriesId = 'SP500';
     const limit = 756; // 3년치 데이터 (252일 * 3)
-    const sortOrder = 'asc'; // 오름차순으로 가져옴
+    const sortOrder = 'desc'; // 오름차순으로 가져옴
     
     // fetchFredData 함수 재사용 (frequency, aggregation_method 불필요)
     return fetchFredData(seriesId, limit, sortOrder); 
