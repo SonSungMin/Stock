@@ -135,7 +135,8 @@ export async function renderGdpGapChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                if (year % 10 === 0 && label.substring(5, 10) === '01-01') { return year; }
+                                // [오류 수정] 10년 -> 5년 단위로 변경
+                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { return year; }
                                 return null;
                             },
                             autoSkip: false,
@@ -286,7 +287,8 @@ export async function renderGdpConsumptionChart() {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
                                 const year = parseInt(label.substring(0, 4));
-                                if (year % 10 === 0 && label.substring(5, 10) === '01-01') { return year; }
+                                // [오류 수정] 10년 -> 5년 단위로 변경
+                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { return year; }
                                 return null;
                             },
                             autoSkip: false,
@@ -406,7 +408,8 @@ export async function renderMarshallKChart() {
                         ticks: {
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
-                                if (data && data.year % 10 === 0 && data.label.endsWith('Q1')) { return data.year; }
+                                // [오류 수정] 10년 -> 5년 단위로 변경
+                                if (data && data.year % 5 === 0 && data.label.endsWith('Q1')) { return data.year; }
                                 return null;
                             },
                             autoSkip: false,
