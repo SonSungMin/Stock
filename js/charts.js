@@ -74,11 +74,11 @@ export async function renderGdpGapChart() {
     const ctx = canvas.getContext('2d');
     if (gdpGapChart) gdpGapChart.destroy();
     try {
-        // [오류 수정] limit: 5000, sortOrder: 'asc' (시간순)
+        // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
         const [gdpObs, usrecObs, sp500Obs] = await Promise.all([
-            fetchFredData('GDPC1', 5000, 'asc'), 
-            fetchFredData('USRECQ', 5000, 'asc'), 
-            fetchFredData('SP500', 5000, 'asc', 'q', 'eop') 
+            fetchFredData('GDPC1', 10000, 'asc'), 
+            fetchFredData('USRECQ', 10000, 'asc'), 
+            fetchFredData('SP500', 10000, 'asc', 'q', 'eop') 
         ]);
         if (!gdpObs || !usrecObs) throw new Error("실질 GDP 또는 경기 침체 데이터를 가져오지 못했습니다.");
 
@@ -180,12 +180,12 @@ export async function renderGdpConsumptionChart() {
     const ctx = canvas.getContext('2d');
     if (gdpConsumptionChart) gdpConsumptionChart.destroy();
     try {
-        // [오류 수정] limit: 5000, sortOrder: 'asc' (시간순)
+        // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
-             fetchFredData('GDPC1', 5000, 'asc'), 
-             fetchFredData('PCEC', 5000, 'asc'), 
-             fetchFredData('USRECQ', 5000, 'asc'), 
-             fetchFredData('SP500', 5000, 'asc', 'q', 'eop') 
+             fetchFredData('GDPC1', 10000, 'asc'), 
+             fetchFredData('PCEC', 10000, 'asc'), 
+             fetchFredData('USRECQ', 10000, 'asc'), 
+             fetchFredData('SP500', 10000, 'asc', 'q', 'eop') 
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -325,11 +325,11 @@ export async function renderMarshallKChart() {
     const ctx = canvas.getContext('2d');
     if (marshallKChart) marshallKChart.destroy();
     try {
-        // [오류 수정] limit: 5000, sortOrder: 'asc' (시간순)
+        // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-             fetchFredData('GDP', 5000, 'asc'), 
-             fetchFredData('M2SL', 5000, 'asc'), 
-             fetchFredData('DGS10', 5000, 'asc') 
+             fetchFredData('GDP', 10000, 'asc'), 
+             fetchFredData('M2SL', 10000, 'asc'), 
+             fetchFredData('DGS10', 10000, 'asc') 
         ]);
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         
@@ -349,6 +349,7 @@ export async function renderMarshallKChart() {
         });
         
         const chartData = [];
+        // [오류 수정] .reverse() 제거. 'asc'로 가져왔으므로 순서대로 처리
         gdpSeries.forEach(gdpPoint => {
              if (gdpPoint.value === '.') return; 
             
@@ -397,7 +398,7 @@ export async function renderMarshallKChart() {
                 scales: {
                     x: {
                         ticks: {
-                            // [오류 수정] 5년 단위 + Q1 레이블 확인
+                            // [오류 수정] 5년 단위 + Q1 레이블 확인 (사용자/클로드 제안)
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
                                 if (!data) return null; 
