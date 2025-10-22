@@ -567,7 +567,7 @@ export async function renderCycleChart() {
 }
 
 /**
- * [신규 추가] S&P 500 최근 6개월 추세 차트 렌더링 함수
+ * [신규 추가] S&P 500 최근 3년 추세 차트 렌더링 함수
  */
 export function renderSP500TrendChart(sp500Data) {
     const canvas = document.getElementById('sp500-trend-chart');
@@ -587,6 +587,7 @@ export function renderSP500TrendChart(sp500Data) {
     }
 
     // 데이터 가공 ( '.' 값 제외 및 시간순으로 뒤집기)
+    // api.js가 desc(최신순)으로 가져오므로, 차트를 위해 asc(오름차순)으로 reverse()
     const validData = sp500Data.filter(d => d.value !== '.').reverse();
     const labels = validData.map(d => d.date);
     const prices = validData.map(d => parseFloat(d.value));
@@ -613,18 +614,21 @@ export function renderSP500TrendChart(sp500Data) {
                         // [수정] 연도별로 첫 날짜만 표시 (YYYY 형식)
                         callback: function(value, index, ticks) {
                             const label = this.getLabelForValue(value); // 예: "2024-10-22"
-                            if (!label) return null;
+                            if (!label) return null; // 현재 레이블이 없으면 null
+                            
                             const currentYear = label.substring(0, 4);
                             
-                            // 이전 데이터의 연도 확인
+                            // 이전 데이터의 레이블 확인
                             const prevLabel = this.getLabelForValue(value - 1);
-                            const prevYear = prevLabel ? prevLabel.substring(0, 4) : null;
+                            
+                            // [오류 수정] prevLabel이 문자열일 때만 substring을 호출하도록 수정
+                            const prevYear = (typeof prevLabel === 'string') ? prevLabel.substring(0, 4) : null;
 
-                            // 첫 번째 데이터이거나 연도가 바뀔 때만 연도 표시
+                            // 첫 번째 데이터(index 0)이거나 연도가 바뀔 때만 연도 표시
                             if (index === 0 || (currentYear !== prevYear)) {
                                 return currentYear; // 예: "2024"
                             }
-                            return null;
+                            return null; // 그 외에는 레이블 숨김
                         },
                         autoSkip: false,
                         maxRotation: 0
