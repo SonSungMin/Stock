@@ -134,9 +134,14 @@ export async function renderGdpGapChart() {
                         ticks: {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
+                                if (!label) return null;
                                 const year = parseInt(label.substring(0, 4));
+                                
                                 // [오류 수정] 10년 -> 5년 단위로 변경
-                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { return year; }
+                                // + Q1이 아닌 '01-01' (1월 1일) 데이터인지 확인
+                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { 
+                                    return year; 
+                                }
                                 return null;
                             },
                             autoSkip: false,
@@ -286,9 +291,12 @@ export async function renderGdpConsumptionChart() {
                         ticks: {
                             callback: function(value, index, ticks) {
                                 const label = this.getLabelForValue(value);
+                                if (!label) return null;
                                 const year = parseInt(label.substring(0, 4));
                                 // [오류 수정] 10년 -> 5년 단위로 변경
-                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { return year; }
+                                if (year % 5 === 0 && label.substring(5, 10) === '01-01') { 
+                                    return year; 
+                                }
                                 return null;
                             },
                             autoSkip: false,
@@ -406,11 +414,24 @@ export async function renderMarshallKChart() {
                 scales: {
                     x: {
                         ticks: {
+                            // [오류 수정] 10년 -> 5년 단위로 변경 + Q1이 아닌 '연도'가 바뀔 때 표시
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
-                                // [오류 수정] 10년 -> 5년 단위로 변경
-                                if (data && data.year % 5 === 0 && data.label.endsWith('Q1')) { return data.year; }
-                                return null;
+                                if (!data) return null; // Guard clause
+
+                                const year = data.year; // Get year (e.g., 2024)
+
+                                // Get the previous data point's year
+                                const prevData = chartData[index - 1];
+                                const prevYear = prevData ? prevData.year : null; // e.g., 2023
+
+                                // Show the label if:
+                                // 1. It's the very first data point (index 0) AND a multiple of 5
+                                // 2. The year has changed (e.g., 2023 -> 2024) AND the new year is a multiple of 5
+                                if ((index === 0 && year % 5 === 0) || (year !== prevYear && year % 5 === 0)) {
+                                    return year; // Returns "2025"
+                                }
+                                return null; // Don't show a label
                             },
                             autoSkip: false,
                             maxRotation: 0
