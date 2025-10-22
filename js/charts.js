@@ -394,14 +394,17 @@ export async function renderMarshallKChart() {
                 scales: {
                     x: {
                         ticks: {
+                            // [오류 수정] 5년 단위 + Q1 레이블 확인 (사용자/클로드 제안)
                             callback: function(value, index, ticks) {
                                 const data = chartData[index];
-                                if (!data) return null;
-
+                                if (!data) return null; // 데이터 보호
                                 const year = data.year;
-                                const quarter = parseInt(data.label.split(' Q')[1]);
+                                
+                                // "2024 Q1" -> 1
+                                const quarter = parseInt(data.label.split(' Q')[1]); 
 
-                                // 5년 단위로 Q1에서만 연도 표시
+                                // 5년 단위(예: 2020, 2025) 이면서
+                                // 1분기(quarter === 1) 데이터일 때만 연도 표시
                                 if (year % 5 === 0 && quarter === 1) {
                                     return year;
                                 }
