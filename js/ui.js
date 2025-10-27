@@ -69,6 +69,7 @@ export function renderDashboard(analyzedIndicators, marketOutlook) {
 
     renderSectorOutlook(analyzedIndicators);
     renderInvestmentSuggestions(marketOutlook || { status: 'neutral' });
+    renderEventCalendars(); // 💡 [추가] 캘린더/일정 렌더링
 
     indicatorGrid.innerHTML = '';
     
@@ -276,4 +277,125 @@ function showModal(indicatorId) {
     showModalChart(indicatorId); 
     
     if (modal) modal.style.display = 'block';
+}
+
+/**
+ * 💡 [신규 추가]
+ * '다가오는 주요 이벤트'와 '월별 발표일' 섹션을 렌더링합니다.
+ */
+function renderEventCalendars() {
+    const economicCalendarGrid = document.getElementById('economic-calendar-grid');
+    const releaseScheduleGrid = document.getElementById('release-schedule-grid');
+
+    if (!economicCalendarGrid || !releaseScheduleGrid) {
+        console.warn('Calendar grids not found');
+        return;
+    }
+
+    // 1. '월별 발표일' 렌더링
+    try {
+        const scheduleHtml = Object.entries(releaseSchedules).map(([key, schedule]) => {
+            const details = indicatorDetails[key];
+            if (!details) return '';
+            
+            // Tilde(~)가 붙은 날짜 처리
+            const listItems = schedule.dates.map(d => {
+                const isApprox = d.startsWith('~');
+                const dateText = isApprox ? d.substring(1) : d;
+                const approxText = isApprox ? ' (발표일 변동 가능)' : '';
+                return `<li>${dateText}${approxText}</li>`;
+            }).join('');
+
+            return `
+                <div class="release-schedule-card">
+                    <h4 class="release-schedule-title">${details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim()}</h4>
+                    <ul class="release-schedule-list">
+                        ${listItems}
+                    </ul>
+                </div>
+            `;
+        }).join('');
+        
+        if (scheduleHtml.length > 0) {
+            releaseScheduleGrid.innerHTML = scheduleHtml;
+        } else {
+            releaseScheduleGrid.innerHTML = '<p class="loading-text">월별 발표 일정이 없습니다.</p>';
+        }
+    } catch (e) {
+        console.error("Error rendering release schedule grid:", e);
+        releaseScheduleGrid.innerHTML = '<p class="loading-text" style="color: #dc3545;">월별 일정 렌더링 오류</p>';
+    }
+
+    // 2. '다가오는 주요 이벤트' 렌더링
+    try {
+        const allEvents = [];
+        const today = new Date();
+        // indicator.js의 날짜가 2025년 기준이므로, 비교 기준일도 2025년으로 설정합니다.
+        const todayInScheduleYear = new Date(2025, today.getMonth(), today.getDate());
+
+        Object.entries(releaseSchedules).forEach(([key, schedule]) => {
+            const details = indicatorDetails[key];
+            if (details) {
+                schedule.dates.forEach(dateStr => {
+                    // Tilde(~) 제거
+                    const cleanDateStr = dateStr.startsWith('~') ? dateStr.substring(1) : dateStr;
+                    try {
+                        const eventDate = new Date(`2025-${cleanDateStr}`);
+                        if (isNaN(eventDate.getTime())) { // Invalid date check
+                             console.warn(`Invalid date string: 2025-${cleanDateStr} for key ${key}`);
+                             return; 
+                        }
+                        
+                        if (eventDate >= todayInScheduleYear) {
+                            allEvents.push({
+                                date: eventDate,
+                                dateString: `2025-${cleanDateStr}`,
+                                name: details.title.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim(),
+                                importance: (key === 'us_cpi' || key === 'nfp') ? '높음' : '보통'
+                            });
+                        }
+                    } catch (dateError) {
+                         console.error(`Error parsing date 2025-${cleanDateStr}:`, dateError);
+                    }
+                });
+            }
+        });
+
+        // 날짜순으로 정렬
+        allEvents.sort((a, b) => a.date - b.date);
+
+        // 상위 10개 이벤트만 추출
+        const upcomingEvents = allEvents.slice(0, 10);
+
+        // 날짜별로 그룹화
+        const eventsByDate = upcomingEvents.reduce((acc, event) => {
+            const dateKey = event.dateString.substring(5); // "MM-DD"
+            if (!acc[dateKey]) {
+                acc[dateKey] = [];
+            }
+            acc[dateKey].push(event);
+            return acc;
+        }, {});
+
+        if (Object.keys(eventsByDate).length > 0) {
+            economicCalendarGrid.innerHTML = Object.entries(eventsByDate).map(([dateKey, events]) => `
+                <div class="calendar-card">
+                    <h4 class="calendar-date">📅 2025년 ${dateKey}</h4>
+                    ${events.map(event => `
+                        <div class="calendar-event">
+                            <p class="calendar-event-title">${event.name}</p>
+                            <span class="calendar-event-importance" style="color: ${event.importance === '높음' ? '#dc3545' : '#6c757d'};">
+                                중요도: ${event.importance}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        } else {
+            economicCalendarGrid.innerHTML = '<p class="loading-text">다가오는 주요 이벤트가 없습니다.</p>';
+        }
+    } catch (e) {
+         console.error("Error rendering economic calendar grid:", e);
+         economicCalendarGrid.innerHTML = '<p class="loading-text" style="color: #dc3545;">이벤트 캘린더 렌더링 오류</p>';
+    }
 }
