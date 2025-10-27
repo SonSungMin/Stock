@@ -1,90 +1,303 @@
-📋 세입자 입주 시 (계약 체결)
-1. 계약 전 준비
-
-집 상태 점검 (도배, 장판, 수리 필요 여부)
-등기부등본 준비 (세입자에게 보여줄 수도 있음)
-임대차계약서 양식 준비
-
-2. 계약 체결 시
-
-계약서 작성: 보증금, 월세, 계약기간, 특약사항 명시
-계약금 수령: 보통 보증금의 10% (계약 당일)
-신분증 사본 받아두기 (나중에 필요할 수 있음)
-
-3. 잔금일 (입주일)
-
-잔금 수령: 나머지 보증금 받기
-열쇠 전달
-집 상태 함께 확인: 사진 찍어두면 좋음 (퇴거 시 분쟁 예방)
-확정일자: 세입자가 전입신고 + 확정일자 받도록 안내
-
-세입자 보호를 위해 필요 (이건 세입자가 알아서 함)
-
-
-
-4. 입주 후
-
-수도세: 집주인 명의면 세입자에게 정기적으로 청구
-전기/가스: 세입자가 본인 명의로 변경해서 직접 납부
-
-
-📋 계약 기간 중
-집주인이 할 일
-
-월세 수령: 매월 정해진 날짜에 받기
-수도세 정산: 분기별 또는 격월로 청구
-건물 유지/보수:
-
-큰 수리(보일러 고장, 누수 등)는 집주인 부담
-작은 것(전구 교체 등)은 세입자가 처리
-
-
-세입자와 원만한 관계 유지
-
-계약 갱신 시점 (만료 6개월~2개월 전)
-
-재계약 여부 논의
-전월세 조정 협의 (필요 시)
-
-
-📋 세입자 퇴거 시 (계약 만료)
-1. 퇴거 1~2주 전
-
-이사 날짜 확인
-"공과금(전기/가스) 사용중지는 직접 신청하셔야 해요" 안내
-수도 검침일 확인 (마지막 수도세 정산 위해)
-
-2. 퇴거 당일 (명도일)
-
-집 상태 점검 (세입자와 함께)
-
-벽지, 장판, 문, 창문 상태
-파손/훼손 여부 확인
-일반적인 생활 마모는 감안
-
-
-열쇠 반환 받기 (현관, 대문, 우편함 등)
-집이 완전히 비워졌는지 확인
-
-3. 정산하기
-
-월세 일할 계산:
-
-계약 만료일 전 이사 → 남은 일수만큼 차감
-아직 안 냈으면 실제 거주일수만큼만 받기
-
-
-수도세 최종 정산
-관리비/공과금 미납 확인
-
-4. 보증금 반환
-
-정산 완료 후 당일 반환이 원칙
-계좌이체로 송금 (증거 남음)
-영수증이나 이체확인증 캡처해두기
-
-5. 퇴거 후
-
-전입신고 전출 확인 (자동 처리되지만 혹시 모르니 체크)
-전기/가스 명의 다시 집주인으로 변경 (새 세입자 올 때까지)
-필요시 청소, 도배, 장판 등 수리
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>단독주택 임대 가이드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.3em;
+            margin: 20px 0 10px 0;
+            padding-left: 15px;
+            border-left: 3px solid #764ba2;
+        }
+        
+        .section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .section ul li {
+            padding: 10px 0 10px 30px;
+            position: relative;
+        }
+        
+        .section ul li:before {
+            content: "▸";
+            position: absolute;
+            left: 10px;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .warning h3 {
+            color: #856404;
+            border: none;
+            padding: 0;
+            margin-bottom: 10px;
+        }
+        
+        .tip {
+            background: #d1ecf1;
+            border-left: 5px solid #17a2b8;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .tip h3 {
+            color: #0c5460;
+            border: none;
+            padding: 0;
+            margin-bottom: 10px;
+        }
+        
+        .icon {
+            font-size: 1.2em;
+        }
+        
+        strong {
+            color: #667eea;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            header {
+                padding: 30px 20px;
+            }
+            
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 단독주택 임대 가이드</h1>
+            <p>세입자 입주부터 퇴거까지 완벽 정리</p>
+        </header>
+        
+        <div class="content">
+            <div class="section">
+                <h2><span class="icon">📝</span> 세입자 입주 시 (계약 체결)</h2>
+                
+                <h3>1. 계약 전 준비</h3>
+                <ul>
+                    <li>집 상태 점검 (도배, 장판, 수리 필요 여부)</li>
+                    <li>등기부등본 준비 (세입자에게 보여줄 수도 있음)</li>
+                    <li>임대차계약서 양식 준비</li>
+                </ul>
+                
+                <h3>2. 계약 체결 시</h3>
+                <ul>
+                    <li><strong>계약서 작성</strong>: 보증금, 월세, 계약기간, 특약사항 명시</li>
+                    <li><strong>계약금 수령</strong>: 보통 보증금의 10% (계약 당일)</li>
+                    <li><strong>신분증 사본</strong> 받아두기 (나중에 필요할 수 있음)</li>
+                </ul>
+                
+                <h3>3. 잔금일 (입주일)</h3>
+                <ul>
+                    <li><strong>잔금 수령</strong>: 나머지 보증금 받기</li>
+                    <li><strong>열쇠 전달</strong></li>
+                    <li><strong>집 상태 함께 확인</strong>: 사진 찍어두면 좋음 (퇴거 시 분쟁 예방)</li>
+                    <li><strong>확정일자</strong>: 세입자가 전입신고 + 확정일자 받도록 안내 (세입자가 알아서 함)</li>
+                </ul>
+                
+                <h3>4. 입주 후</h3>
+                <ul>
+                    <li><strong>수도세</strong>: 집주인 명의면 세입자에게 정기적으로 청구</li>
+                    <li><strong>전기/가스</strong>: 세입자가 본인 명의로 변경해서 직접 납부</li>
+                </ul>
+            </div>
+            
+            <div class="section">
+                <h2><span class="icon">🏡</span> 계약 기간 중</h2>
+                
+                <h3>집주인이 할 일</h3>
+                <ul>
+                    <li><strong>월세 수령</strong>: 매월 정해진 날짜에 받기</li>
+                    <li><strong>수도세 정산</strong>: 분기별 또는 격월로 청구</li>
+                    <li><strong>건물 유지/보수</strong>:
+                        <ul style="margin-top: 10px;">
+                            <li>큰 수리(보일러 고장, 누수 등)는 집주인 부담</li>
+                            <li>작은 것(전구 교체 등)은 세입자가 처리</li>
+                        </ul>
+                    </li>
+                    <li><strong>세입자와 원만한 관계 유지</strong></li>
+                </ul>
+                
+                <h3>계약 갱신 시점 (만료 6개월~2개월 전)</h3>
+                <ul>
+                    <li>재계약 여부 논의</li>
+                    <li>전월세 조정 협의 (필요 시)</li>
+                </ul>
+            </div>
+            
+            <div class="section">
+                <h2><span class="icon">📦</span> 세입자 퇴거 시 (계약 만료)</h2>
+                
+                <h3>1. 퇴거 1~2주 전</h3>
+                <ul>
+                    <li><strong>이사 날짜 확인</strong></li>
+                    <li>"공과금(전기/가스) 사용중지는 직접 신청하셔야 해요" 안내</li>
+                    <li>수도 검침일 확인 (마지막 수도세 정산 위해)</li>
+                </ul>
+                
+                <h3>2. 퇴거 당일 (명도일)</h3>
+                <ul>
+                    <li><strong>집 상태 점검</strong> (세입자와 함께)
+                        <ul style="margin-top: 10px;">
+                            <li>벽지, 장판, 문, 창문 상태</li>
+                            <li>파손/훼손 여부 확인</li>
+                            <li>일반적인 생활 마모는 감안</li>
+                        </ul>
+                    </li>
+                    <li><strong>열쇠 반환</strong> 받기 (현관, 대문, 우편함 등)</li>
+                    <li><strong>집이 완전히 비워졌는지</strong> 확인</li>
+                </ul>
+                
+                <h3>3. 정산하기</h3>
+                <ul>
+                    <li><strong>월세 일할 계산</strong>:
+                        <ul style="margin-top: 10px;">
+                            <li>계약 만료일 전 이사 → 남은 일수만큼 차감</li>
+                            <li>아직 안 냈으면 실제 거주일수만큼만 받기</li>
+                        </ul>
+                    </li>
+                    <li><strong>수도세 최종 정산</strong></li>
+                    <li><strong>관리비/공과금 미납 확인</strong></li>
+                </ul>
+                
+                <h3>4. 보증금 반환</h3>
+                <ul>
+                    <li><strong>정산 완료 후 당일 반환</strong>이 원칙</li>
+                    <li>계좌이체로 송금 (증거 남음)</li>
+                    <li>영수증이나 이체확인증 캡처해두기</li>
+                </ul>
+                
+                <h3>5. 퇴거 후</h3>
+                <ul>
+                    <li><strong>전입신고 전출 확인</strong> (자동 처리되지만 혹시 모르니 체크)</li>
+                    <li><strong>전기/가스 명의</strong> 다시 집주인으로 변경 (새 세입자 올 때까지)</li>
+                    <li>필요시 청소, 도배, 장판 등 수리</li>
+                </ul>
+            </div>
+            
+            <div class="warning">
+                <h3>⚠️ 주의사항</h3>
+                
+                <h3>보증금 반환 지연 시</h3>
+                <ul>
+                    <li>정당한 사유 없이 지연하면 <strong>지연이자</strong>(연 12%) 물어야 함</li>
+                    <li>웬만하면 당일 반환하는 게 좋습니다</li>
+                </ul>
+                
+                <h3>파손 처리</h3>
+                <ul>
+                    <li><strong>자연 마모</strong>: 정상적인 사용으로 인한 닳음은 집주인 부담</li>
+                    <li><strong>고의 파손</strong>: 명백한 훼손은 수리비 청구 가능</li>
+                    <li>애매하면 보통 집주인이 감수하는 게 분쟁 예방</li>
+                </ul>
+                
+                <h3>계약서 보관</h3>
+                <ul>
+                    <li>계약서는 최소 5년 보관</li>
+                    <li>보증금 반환 증거(이체내역)도 보관</li>
+                </ul>
+            </div>
+            
+            <div class="tip">
+                <h3>💡 유용한 팁</h3>
+                <ul>
+                    <li><strong>세입자와 소통 잘하기</strong>: 문제 생기면 빨리 해결해주면 좋은 관계 유지</li>
+                    <li><strong>사진 찍어두기</strong>: 입주 시/퇴거 시 집 상태 사진 남겨두면 분쟁 예방</li>
+                    <li><strong>계약서 꼼꼼히</strong>: 특약사항(수리 범위, 반려동물 등) 명확히 적기</li>
+                    <li><strong>세금</strong>: 월세 수입은 종합소득세 신고 대상 (5월에 신고)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
