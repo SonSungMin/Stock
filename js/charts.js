@@ -129,9 +129,9 @@ export async function renderGdpGapChart() {
     try {
         // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
         const [gdpObs, usrecObs, sp500Obs] = await Promise.all([
-            fetchFredData('GDPC1', 10000, 'asc'), 
-            fetchFredData('USRECQ', 10000, 'asc'), 
-            fetchFredData('SP500', 10000, 'asc', 'q', 'eop') 
+            fetchFredData('GDPC1', 10000, 'asc', null, null, null), 
+            fetchFredData('USRECQ', 10000, 'asc', null, null, null), 
+            fetchFredData('SP500', 10000, 'asc', 'q', 'eop', null) 
         ]);
         if (!gdpObs || !usrecObs) throw new Error("실질 GDP 또는 경기 침체 데이터를 가져오지 못했습니다.");
 
@@ -235,10 +235,10 @@ export async function renderGdpConsumptionChart() {
     try {
         // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
-             fetchFredData('GDPC1', 10000, 'asc'), 
-             fetchFredData('PCEC', 10000, 'asc'), 
-             fetchFredData('USRECQ', 10000, 'asc'), 
-             fetchFredData('SP500', 10000, 'asc', 'q', 'eop') 
+             fetchFredData('GDPC1', 10000, 'asc', null, null, null), 
+             fetchFredData('PCEC', 10000, 'asc', null, null, null), 
+             fetchFredData('USRECQ', 10000, 'asc', null, null, null), 
+             fetchFredData('SP500', 10000, 'asc', 'q', 'eop', null) 
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
@@ -380,9 +380,9 @@ export async function renderMarshallKChart() {
     try {
         // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-             fetchFredData('GDP', 10000, 'asc'), 
-             fetchFredData('M2SL', 10000, 'asc'), 
-             fetchFredData('DGS10', 10000, 'asc') 
+             fetchFredData('GDP', 10000, 'asc', null, null, null), 
+             fetchFredData('M2SL', 10000, 'asc', null, null, null), 
+             fetchFredData('DGS10', 10000, 'asc', null, null, null) 
         ]);
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         
@@ -502,7 +502,7 @@ export async function showModalChart(indicatorId) {
     chartCanvas.style.display = 'none';
     try {
         const series = Array.isArray(details.seriesId) ? details.seriesId[0] : details.seriesId;
-        const obs = await fetchFredData(series, 100, 'asc'); 
+        const obs = await fetchFredData(series, 100, 'asc', null, null, null); 
         if (obs) {
             const historicalData = obs.map(d => ({date: d.date, value: parseFloat(d.value)})); 
             if (historicalData.length > 0 && historicalData.some(d => d.value !== null && !isNaN(d.value))) { 
