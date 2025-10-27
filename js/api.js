@@ -9,7 +9,7 @@ import { indicatorDetails } from './indicators.js';
 /**
  * FRED API 호출 기본 함수
  */
-export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', frequency = null, aggregation_method = null) {
+export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', frequency = null, aggregation_method = null, observation_start = null) {
     let url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${API_KEYS.FRED}&file_type=json&sort_order=${sortOrder}&limit=${limit}`;
     
     if (frequency) {
@@ -17,6 +17,9 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
     }
     if (aggregation_method) {
         url += `&aggregation_method=${aggregation_method}`;
+    }
+    if (observation_start) {
+        url += `&observation_start=${observation_start}`;
     }
     
     try {
@@ -45,9 +48,10 @@ export async function fetchRecentSP500Data() {
     const seriesId = 'SP500';
     const limit = 20000; // [수정] 전체 데이터 (약 70년치)
     const sortOrder = 'asc'; // [수정] 오름차순으로 가져옴
+    const observation_start = '1957-01-01'; // [💡 수정] 시작 날짜 명시
     
     // fetchFredData 함수 재사용 (frequency, aggregation_method 불필요)
-    return fetchFredData(seriesId, limit, sortOrder); 
+    return fetchFredData(seriesId, limit, sortOrder, null, null, observation_start); 
 }
 
 
@@ -66,7 +70,7 @@ export async function fetchFredIndicators() {
         try { 
             // 1. 장단기 금리차 (T10Y2Y)
             if (key === 'yield_spread') {
-                const obs = await fetchFredData(details.seriesId, 5, 'desc'); 
+                const obs = await fetchFredData(details.seriesId, 5, 'desc', null, null, null); 
                 const latestValidObs = obs ? obs.find(o => o.value !== '.') : null;
                 if (!latestValidObs) {
                      console.warn(`No valid data found for key: ${key}`);
@@ -76,7 +80,7 @@ export async function fetchFredIndicators() {
                 result = { id: key, name: details.title, value: spread, unit: "%", date: latestValidObs.date.substring(5) }; 
             } else { // 2. 그 외 일반 FRED 지표 (단일 시리즈 ID)
                 
-                const obs = await fetchFredData(details.seriesId, 5, 'desc'); 
+                const obs = await fetchFredData(details.seriesId, 5, 'desc', null, null, null); 
                 const latestValidObs = obs ? obs.find(o => o.value !== '.') : null;
 
                 if (!latestValidObs) {
@@ -103,7 +107,7 @@ export async function fetchFredIndicators() {
                     date = latestValidObs.date.substring(0, 7); 
                 }
                 else if (key === 'us_cpi') {
-                    const obs_1y = await fetchFredData(details.seriesId, 13, 'desc'); 
+                    const obs_1y = await fetchFredData(details.seriesId, 13, 'desc', null, null, null); 
                     if (obs_1y && obs_1y.length > 12 && obs_1y[0].value !== '.' && obs_1y[12].value !== '.') {
                          const currentVal = parseFloat(obs_1y[0].value);
                          const prevVal = parseFloat(obs_1y[12].value);
@@ -129,7 +133,7 @@ export async function fetchFredIndicators() {
                      date = latestValidObs.date.substring(0, 7); 
                 }
                  else if (key === 'copper_price') { // PCOPPUSDM ID 사용 중
-                     const obs_1y = await fetchFredData(details.seriesId, 13, 'desc'); 
+                     const obs_1y = await fetchFredData(details.seriesId, 13, 'desc', null, null, null); 
                     if (obs_1y && obs_1y.length > 12 && obs_1y[0].value !== '.' && obs_1y[12].value !== '.') {
                          const currentVal = parseFloat(obs_1y[0].value);
                          const prevVal = parseFloat(obs_1y[12].value);
