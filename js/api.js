@@ -46,11 +46,10 @@ export async function fetchRecentSP500Data() {
     const seriesId = 'SP500';
     const limit = 100000; // 충분히 큰 값
     const sortOrder = 'asc';
-    const observation_start = '1957-01-01'; // 시작 날짜 명시
+    const observation_start = '2000-01-01'; // [수정] 시작 날짜 변경
     
     return fetchFredData(seriesId, limit, sortOrder, null, null, observation_start); 
 }
-
 
 /**
  * 주요 FRED 지표들의 최신 값 가져오기
