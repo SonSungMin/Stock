@@ -717,19 +717,15 @@ export function renderSP500TrendChart(sp500Data) {
                     ticks: {
                         callback: function(value, index, ticks) {
                             const label = this.getLabelForValue(value);
-                            if (!label) return null; 
+                            if (!label) return null;
                             
                             const year = label.substring(0, 4);
                             const prevLabel = this.getLabelForValue(value - 1);
                             const prevYear = (typeof prevLabel === 'string') ? prevLabel.substring(0, 4) : null;
-                            
-                            if (year === prevYear) {
-                                return null;
-                            }
 
-                            // 매년 1월 1일 또는 이벤트 연도 표시
-                            if (label.substring(5, 10) === '01-01' || eventYears.has(year)) {
-                                return year; 
+                            // 💡 [수정] 이전 눈금과 연도가 다르면 항상 연도를 표시하도록 단순화
+                            if (year !== prevYear) {
+                                return year;
                             }
                             return null;
                         },
