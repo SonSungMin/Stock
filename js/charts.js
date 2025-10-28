@@ -238,7 +238,7 @@ export async function renderGdpConsumptionChart() {
              fetchFredData('GDPC1', 10000, 'asc', null, null, null), 
              fetchFredData('PCEC', 10000, 'asc', null, null, null), 
              fetchFredData('USRECQ', 10000, 'asc', null, null, null), 
-             fetchFredData('SP500', 10000, 'asc', 'q', 'eop', null) 
+             fetchFredData('SP500', 10000, 'asc', 'q', 'eop', '2000-01-01') // [수정] 시작 날짜 추가
         ]);
 
         if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
