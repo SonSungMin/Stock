@@ -129,9 +129,9 @@ export async function renderGdpGapChart() {
     try {
         // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
         const [gdpObs, usrecObs, sp500Obs] = await Promise.all([
-            fetchFredData('GDPC1', 10000, 'asc', null, null, null), 
-            fetchFredData('USRECQ', 10000, 'asc', null, null, null), 
-            fetchFredData('SP500', 10000, 'asc', 'q', 'eop', '2000-01-01') // [수정] 시작 날짜 추가
+            fetchFredData('GDPC1', 10000, 'asc', null, null, '2000-01-01'), // [수정]
+            fetchFredData('USRECQ', 10000, 'asc', null, null, '2000-01-01'), // [수정]
+            fetchFredData('SP500', 10000, 'asc', 'q', 'eop', '2000-01-01') 
         ]);
 
         console.log("--- [Debug] GDP 갭 차트용 S&P 500 (분기별) 데이터 ---");
@@ -244,7 +244,7 @@ export async function renderGdpConsumptionChart() {
     try {
         // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
         const [gdpObs, pceObs, usrecObs, sp500Obs] = await Promise.all([
-             fetchFredData('GDPC1', 10000, 'asc', null, null, null), 
+             fetchFredData('GDPC1', 10000, 'asc', null, null, '2000-01-01'), // [수정]
              fetchFredData('PCEC', 10000, 'asc', null, null, null), 
              fetchFredData('USRECQ', 10000, 'asc', null, null, null), 
              fetchFredData('SP500', 10000, 'asc', 'q', 'eop', '2000-01-01') // [수정] 시작 날짜 추가
