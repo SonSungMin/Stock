@@ -42,15 +42,14 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
 }
 
 /**
- * 💡 [신규 추가] 최근 6개월 S&P 500 일별 데이터 가져오기
+ * 💡 [수정] 전체 기간(1957~) S&P 500 일별 데이터 가져오기
  */
 export async function fetchRecentSP500Data() {
     const seriesId = 'SP500';
-    const limit = 20000; // [수정] 전체 데이터 (약 70년치)
-    const sortOrder = 'asc'; // [수정] 오름차순으로 가져옴
-    const observation_start = '1957-01-01'; // [💡 수정] 시작 날짜 명시
+    const limit = 100000; // [수정] 충분히 큰 값 (약 70년 = 약 18,000개 영업일)
+    const sortOrder = 'asc';
+    const observation_start = '1957-01-01'; // [수정] 시작 날짜 명시
     
-    // fetchFredData 함수 재사용 (frequency, aggregation_method 불필요)
     return fetchFredData(seriesId, limit, sortOrder, null, null, observation_start); 
 }
 
@@ -181,7 +180,6 @@ export async function fetchFredIndicators() {
         .map(result => result.value);
 }
 
-// ... (fetchEcosIndicators, fetchEcosCycleData 함수는 기존과 동일) ...
 export async function fetchEcosIndicators() {
     const ecosApiUrl = `https://ecos.bok.or.kr/api/KeyStatisticList/${API_KEYS.ECOS}/json/kr/1/100`;
     try {
