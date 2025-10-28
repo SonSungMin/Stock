@@ -643,7 +643,7 @@ export async function renderCycleChart() {
 }
 
 /**
- * [신규 추가] S&P 500 최근 3년 추세 차트 렌더링 함수
+ * S&P 500 추세 차트 렌더링 (2000년 이후)
  */
 export function renderSP500TrendChart(sp500Data) {
     const canvas = document.getElementById('sp500-trend-chart');
@@ -662,20 +662,39 @@ export function renderSP500TrendChart(sp500Data) {
         return;
     }
 
-    // [수정] api.js에서 'asc'로 가져오므로 .reverse() 불필요
-    const validData = sp500Data.filter(d => d.value !== '.');
+    // [수정] 2000년 1월 1일 이후 데이터만 필터링
+    const validData = sp500Data.filter(d => {
+        if (d.value === '.') return false;
+        const date = new Date(d.date);
+        return date >= new Date('2000-01-01');
+    });
+    
+    if (validData.length === 0) {
+        console.warn("No S&P 500 data available after 2000.");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillText("2000년 이후 데이터 없음", canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
     const labels = validData.map(d => d.date);
     const prices = validData.map(d => parseFloat(d.value));
 
-    // [수정] 어노테이션 생성
+    // [수정] 2000년 이후 어노테이션만 생성
     const recessionLabels = createRecessionLabels(validData);
     const presidentLabels = createPresidentialLabels(validData);
     const combinedAnnotations = [...recessionLabels, ...presidentLabels];
 
-    // [수정] X축 레이블에 5년 + 이벤트 연도를 모두 표시하기 위한 Set 생성
+    // [수정] 2000년 이후 이벤트 연도만 추출
     const eventYears = new Set();
-    Object.keys(recessionPeriods).forEach(date => eventYears.add(date.substring(0, 4)));
-    Object.keys(presidentialInaugurations).forEach(date => eventYears.add(date.substring(0, 4)));
+    Object.keys(recessionPeriods).forEach(date => {
+        const year = date.substring(0, 4);
+        if (parseInt(year) >= 2000) eventYears.add(year);
+    });
+    Object.keys(presidentialInaugurations).forEach(date => {
+        const year = date.substring(0, 4);
+        if (parseInt(year) >= 2000) eventYears.add(year);
+    });
 
     sp500TrendChart = new Chart(ctx, {
         type: 'line',
@@ -685,7 +704,7 @@ export function renderSP500TrendChart(sp500Data) {
                 label: 'S&P 500 지수',
                 data: prices,
                 borderColor: '#dc3545', 
-                borderWidth: 1.5, // [수정] 선 굵기
+                borderWidth: 1.5,
                 pointRadius: 0, 
                 tension: 0.1
             }]
@@ -696,15 +715,11 @@ export function renderSP500TrendChart(sp500Data) {
             scales: {
                 x: {
                     ticks: {
-                        // [수정] X축 틱 로직: 5년 단위 + 모든 이벤트 연도 표시
                         callback: function(value, index, ticks) {
-                            const label = this.getLabelForValue(value); // 'YYYY-MM-DD'
+                            const label = this.getLabelForValue(value);
                             if (!label) return null; 
                             
                             const year = label.substring(0, 4);
-                            
-                            // [오류 수정] value가 0일 때 prevLabel이 null/undefined가 될 수 있음
-                            // prevLabel이 string 타입인지 확인 후 substring() 호출
                             const prevLabel = this.getLabelForValue(value - 1);
                             const prevYear = (typeof prevLabel === 'string') ? prevLabel.substring(0, 4) : null;
                             
@@ -712,15 +727,14 @@ export function renderSP500TrendChart(sp500Data) {
                                 return null;
                             }
 
-                            // 5년 단위이거나, 이벤트가 발생한 연도이면 표시
-                            if (parseInt(year) % 5 === 0 || eventYears.has(year)) {
+                            // 매년 1월 1일 또는 이벤트 연도 표시
+                            if (label.substring(5, 10) === '01-01' || eventYears.has(year)) {
                                 return year; 
                             }
                             return null;
                         },
                         autoSkip: false,
-                        maxRotation: 0,
-                        //autoSkipPadding: 10 // 겹침 방지 패딩
+                        maxRotation: 0
                     }
                 },
                 y: {
@@ -729,7 +743,6 @@ export function renderSP500TrendChart(sp500Data) {
             },
             plugins: {
                 legend: { display: false },
-                // [신규 추가] 어노테이션 플러그인
                 annotation: {
                     annotations: combinedAnnotations,
                     clip: false
