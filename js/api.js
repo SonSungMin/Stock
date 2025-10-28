@@ -23,11 +23,9 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
     }
     
     try {
-        // console.log(`Requesting FRED: ${url}`); 
         const res = await fetch(`${PROXY_URL}${encodeURIComponent(url)}`);
         if (!res.ok) throw new Error(`HTTP 오류: ${res.status} for ${seriesId}`);
         const data = await res.json();
-        // console.log(`Response for ${seriesId}:`, data);
         
         if (!data.observations || data.observations.length === 0) {
              console.warn(`FRED returned empty observations for ${seriesId}`);
@@ -42,13 +40,13 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
 }
 
 /**
- * 💡 [수정] 전체 기간(1957~) S&P 500 일별 데이터 가져오기
+ * S&P 500 전체 기간 일별 데이터 가져오기 (2000년 이후 필터링은 차트에서 처리)
  */
 export async function fetchRecentSP500Data() {
     const seriesId = 'SP500';
-    const limit = 100000; // [수정] 충분히 큰 값 (약 70년 = 약 18,000개 영업일)
+    const limit = 100000;
     const sortOrder = 'asc';
-    const observation_start = '1957-01-01'; // [수정] 시작 날짜 명시
+    const observation_start = '1957-01-01';
     
     return fetchFredData(seriesId, limit, sortOrder, null, null, observation_start); 
 }
@@ -62,8 +60,6 @@ export async function fetchFredIndicators() {
     
     const promises = fredIndicators.map(async ([key, details]) => {
         
-         // console.log(`Processing indicator key: ${key}`);
-         
          let result = null; 
 
         try { 
@@ -95,7 +91,7 @@ export async function fetchFredIndicators() {
                 if (key === 'nfp') { 
                     value = parseFloat((value / 1000).toFixed(1)); 
                     unit = '만명'; 
-                    date = latestValidObs.date.substring(0, 7); // YYYY-MM
+                    date = latestValidObs.date.substring(0, 7);
                 }
                 else if (key === 'wti_price') { 
                     unit = '$/bbl'; 
@@ -123,15 +119,15 @@ export async function fetchFredIndicators() {
                         return null; 
                     }
                 }
-                else if (key === 'ism_pmi') { // NAPM ID 사용 중
+                else if (key === 'ism_pmi') {
                     unit = ''; 
                     date = latestValidObs.date.substring(0, 7); 
                 }
-                else if (key === 'consumer_sentiment') { // UMCSENT ID 사용 중
+                else if (key === 'consumer_sentiment') {
                      unit = ''; 
                      date = latestValidObs.date.substring(0, 7); 
                 }
-                 else if (key === 'copper_price') { // PCOPPUSDM ID 사용 중
+                 else if (key === 'copper_price') {
                      const obs_1y = await fetchFredData(details.seriesId, 13, 'desc', null, null, null); 
                     if (obs_1y && obs_1y.length > 12 && obs_1y[0].value !== '.' && obs_1y[12].value !== '.') {
                          const currentVal = parseFloat(obs_1y[0].value);
@@ -153,9 +149,6 @@ export async function fetchFredIndicators() {
                          date = latestValidObs.date.substring(0, 7);
                          console.warn(`Insufficient data for YoY calculation for key: ${key}, showing latest value.`);
                     }
-                } else {
-                     // 다른 지표들은 기본 처리 (최신 값, MM-DD 날짜) 유지
-                     // 예: exchange_rate, vix, dollar_index, sox_index, philly_fed 등
                 }
                 
                  if (!isNaN(value)) { 
@@ -202,7 +195,7 @@ export async function fetchEcosIndicators() {
             export_growth: { keywords: ['수출', '총액', '증감률'] },
             unemployment: { keywords: ['실업률'] },
             industrial_production: { keywords: ['산업생산지수'] },
-            kor_consumer_sentiment: { keywords: ['소비자동향조사', '소비자심리지수'] }, // ID 변경됨
+            kor_consumer_sentiment: { keywords: ['소비자동향조사', '소비자심리지수'] },
             base_rate: { keywords: ['기준금리'] },
             cpi: { keywords: ['소비자물가지수', '총지수', '증감률'] },
             kospi: { keywords: ['KOSPI'] },
@@ -236,7 +229,6 @@ export async function fetchEcosCycleData() {
     const apiKey = API_KEYS.ECOS;
     const proxy = PROXY_URL;
     
-    // 1. 날짜 설정 (최근 10년치)
     const today = new Date();
     const endDate = today.toISOString().slice(0, 7).replace('-', ''); 
     let startDate = new Date(today);
@@ -244,7 +236,6 @@ export async function fetchEcosCycleData() {
     startDate.setMonth(startDate.getMonth() + 1); 
     const sDateStr = startDate.toISOString().slice(0, 7).replace('-', ''); 
 
-    // 2. 통계표 및 항목 코드 설정
     const STAT_CODE = '901Y067'; 
     const COINCIDENT_ITEM = 'I16B'; 
     const LEADING_ITEM = 'I16A'; 
@@ -275,7 +266,6 @@ export async function fetchEcosCycleData() {
         return null; 
     }
 
-    // 3. 데이터 검증
     try {
         if (!coincidentData.StatisticSearch || !coincidentData.StatisticSearch.row || coincidentData.StatisticSearch.row.length === 0) {
             let errorMsg = "동행지수(I16B) 데이터가 없습니다.";
