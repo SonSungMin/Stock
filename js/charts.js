@@ -378,11 +378,11 @@ export async function renderMarshallKChart() {
     const ctx = canvas.getContext('2d');
     if (marshallKChart) marshallKChart.destroy();
     try {
-        // [오류 수정] limit: 10000, sortOrder: 'asc' (시간순)
+        // [수정] observation_start 추가로 1947년부터 모든 데이터 가져오기
         const [gdpSeries, m2Series, rateSeries] = await Promise.all([
-             fetchFredData('GDP', 10000, 'asc', null, null, null), 
-             fetchFredData('M2SL', 10000, 'asc', null, null, null), 
-             fetchFredData('DGS10', 10000, 'asc', null, null, null) 
+             fetchFredData('GDP', 100000, 'asc', null, null, '1947-01-01'), 
+             fetchFredData('M2SL', 100000, 'asc', null, null, '1947-01-01'), 
+             fetchFredData('DGS10', 100000, 'asc', null, null, '1962-01-01') 
         ]);
         if (!gdpSeries || !m2Series || !rateSeries) throw new Error("API로부터 데이터를 가져오지 못했습니다.");
         
@@ -655,14 +655,14 @@ export function renderSP500TrendChart(sp500Data) {
     if (sp500TrendChart) sp500TrendChart.destroy();
 
     if (!sp500Data || sp500Data.length === 0) {
-        console.warn("No recent S&P 500 data available for trend chart.");
+        console.warn("No S&P 500 data available for trend chart.");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.textAlign = 'center';
         ctx.fillText("S&P 500 데이터 로딩 실패", canvas.width / 2, canvas.height / 2);
         return;
     }
 
-    // [수정] api.js에서 'asc'로 가져오므로 .reverse() 제거
+    // [수정] api.js에서 'asc'로 가져오므로 .reverse() 불필요
     const validData = sp500Data.filter(d => d.value !== '.');
     const labels = validData.map(d => d.date);
     const prices = validData.map(d => parseFloat(d.value));
