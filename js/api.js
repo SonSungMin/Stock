@@ -44,9 +44,9 @@ export async function fetchFredData(seriesId, limit = 1, sortOrder = 'desc', fre
  */
 export async function fetchRecentSP500Data() {
     const seriesId = 'SP500';
-    const limit = 100000;
+    const limit = 100000; // 충분히 큰 값
     const sortOrder = 'asc';
-    const observation_start = '1957-01-01';
+    const observation_start = '1957-01-01'; // 시작 날짜 명시
     
     return fetchFredData(seriesId, limit, sortOrder, null, null, observation_start); 
 }
