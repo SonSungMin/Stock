@@ -133,7 +133,16 @@ export async function renderGdpGapChart() {
             fetchFredData('USRECQ', 10000, 'asc', null, null, null), 
             fetchFredData('SP500', 10000, 'asc', 'q', 'eop', '2000-01-01') // [수정] 시작 날짜 추가
         ]);
-        if (!gdpObs || !usrecObs) throw new Error("실질 GDP 또는 경기 침체 데이터를 가져오지 못했습니다.");
+
+        console.log("--- [Debug] GDP 갭 차트용 S&P 500 (분기별) 데이터 ---");
+        if (sp500Obs && sp500Obs.length > 0) {
+            console.log(`[OK] 총 ${sp500Obs.length}개의 분기별 데이터가 로드되었습니다.`);
+            console.log("첫 번째 데이터 (시작 분기):", sp500Obs[0]);
+        } else {
+            console.error("[Error] GDP 갭 차트용 S&P 500 데이터를 받지 못했습니다.", sp500Obs);
+        }
+        
+        //if (!gdpObs || !usrecObs) throw new Error("실질 GDP 또는 경기 침체 데이터를 가져오지 못했습니다.");
 
         const gdpData = gdpObs.map(d => parseFloat(d.value));
         const labels = gdpObs.map(d => d.date);
@@ -241,7 +250,13 @@ export async function renderGdpConsumptionChart() {
              fetchFredData('SP500', 10000, 'asc', 'q', 'eop', '2000-01-01') // [수정] 시작 날짜 추가
         ]);
 
-        if (!gdpObs || !pceObs || !usrecObs) throw new Error("필수 FRED 데이터를 가져오지 못했습니다.");
+        console.log("--- [Debug] 소비/GDP 차트용 S&P 500 (분기별) 데이터 ---");
+        if (sp500Obs && sp500Obs.length > 0) {
+            console.log(`[OK] 총 ${sp500Obs.length}개의 분기별 데이터가 로드되었습니다.`);
+            console.log("첫 번째 데이터 (시작 분기):", sp500Obs[0]);
+        } else {
+            console.error("[Error] 소비/GDP 차트용 S&P 500 데이터를 받지 못했습니다.", sp500Obs);
+        }
         
         const chartData = [];
         const gdpMap = new Map(gdpObs.map(d => [d.date, parseFloat(d.value)]));
