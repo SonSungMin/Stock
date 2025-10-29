@@ -547,7 +547,9 @@ export function analyzeGdpConsumption(gdpObs, pceObs, resultsObject) {
 }
 
 /**
+ * [버그 수정됨]
  * GDP 갭의 레벨과 모멘텀(방향성)을 조합하여 분석을 세분화합니다.
+ * 균형점(0) 근처에서 현재 값(+, -)과 모멘텀(+, -)을 조합하여 텍스트를 수정합니다.
  */
 export function analyzeGdpGap(gdpGapData, resultsObject) {
     const analysisDiv = document.getElementById('gdp-gap-analysis');
@@ -562,7 +564,7 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
         const prev = gdpGapData[gdpGapData.length - 2]; 
         
         const momentum = latest.value - prev.value;
-        const momentumText = momentum > 0 ? "확대" : "축소";
+        const momentumText = momentum > 0 ? "확대(개선)" : "축소(악화)";
         
         if (latest.value > 0.5) {
             if (momentum > 0) {
@@ -577,11 +579,27 @@ export function analyzeGdpGap(gdpGapData, resultsObject) {
                 result = { status: 'negative', outlook: '🚨 침체 심화', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 마이너스를 기록 중이며, 갭이 더욱 확대(악화)되고 있습니다. 경기 침체 우려가 매우 높습니다.` };
             }
         } else {
+            // "균형" 상태 (-0.5 ~ +0.5)
             if (momentum > 0.1) {
-                 result = { status: 'positive', outlook: '📈 확장 국면 진입', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 균형 상태에서 플러스(+)로 확장되고 있습니다. 경기가 확장 국면에 진입하고 있습니다.` };
+                 // 모멘텀이 강하게 상승 중
+                 if (latest.value > 0) {
+                     // 예: 0.1% -> 0.3%
+                     result = { status: 'positive', outlook: '📈 확장 국면 진입', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 균형 상태에서 플러스(+)로 확장되고 있습니다. 경기가 확장 국면에 진입하고 있습니다.` };
+                 } else {
+                     // 예: -0.3% -> -0.1% (사용자가 지적한 케이스)
+                     result = { status: 'positive', outlook: '🌱 회복 국면 진입', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 마이너스(-)이나, 강한 상승 모멘텀으로 균형점(0)을 향해 회복 중입니다. 경기 회복 신호입니다.` };
+                 }
             } else if (momentum < -0.1) {
-                 result = { status: 'negative', outlook: '📉 둔화 국면 진입', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 균형 상태에서 마이너스(-)로 축소되고 있습니다. 경기가 둔화 국면에 진입하고 있습니다.` };
+                 // 모멘텀이 강하게 하락 중
+                 if (latest.value < 0) {
+                     // 예: -0.1% -> -0.3%
+                     result = { status: 'negative', outlook: '📉 둔화 국면 진입', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 균형 상태에서 마이너스(-)로 축소(악화)되고 있습니다. 경기가 둔화 국면에 진입하고 있습니다.` };
+                 } else {
+                      // 예: 0.3% -> 0.1%
+                     result = { status: 'neutral', outlook: '⚠️ 둔화 전환 신호', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 플러스(+)이나, 하락 모멘텀으로 균형점(0)을 향해 둔화 중입니다. 경기 고점 통과 신호일 수 있습니다.` };
+                 }
             } else {
+                 // 모멘텀 중립
                  result = { status: 'positive', outlook: '✅ 안정적 균형', summary: `GDP 갭(${latest.value.toFixed(2)}%)이 0에 가까우며 모멘텀도 중립적이어서 경제가 이상적인 균형 상태에 있습니다.` };
             }
         }
