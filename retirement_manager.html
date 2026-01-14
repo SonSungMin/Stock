@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>7년 은퇴 포트폴리오 지능형 관리 도구</title>
+    <style>
+        :root { --primary: #0056b3; --positive: #28a745; --negative: #dc3545; --neutral: #ffc107; }
+        body { font-family: 'Malgun Gothic', sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h1 { color: var(--primary); text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        
+        /* 시장 분석 섹션 (GitHub 로직 반영) */
+        .status-panel { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; background: #eef2f7; padding: 20px; border-radius: 10px; margin-bottom: 25px; }
+        .market-badge { font-size: 2.5em; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .market-info h3 { margin-top: 0; }
+        
+        /* 리밸런싱 테이블 */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; border-bottom: 1px solid #ddd; text-align: center; }
+        th { background: var(--primary); color: white; }
+        input { width: 120px; padding: 8px; text-align: right; border: 1px solid #ccc; border-radius: 4px; }
+        .adjusted-weight { font-weight: bold; color: var(--primary); }
+        
+        /* 투자금 배분 섹션 */
+        .investment-call { background: #fff3cd; padding: 20px; border-radius: 10px; margin-top: 20px; border-left: 5px solid var(--neutral); }
+        .btn-calc { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1.1em; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 7년 은퇴 자산 지능형 관리자</h1>
+
+    <div class="status-panel" id="market-status-panel">
+        <div class="market-badge" id="market-signal">🤔</div>
+        <div class="market-info">
+            <h3 id="market-title">데이터 분석 중...</h3>
+            <p id="market-analysis">GitHub 소스의 가중치 분석 알고리즘을 사용하여 시장 국면을 판단하고 비중을 조절합니다.</p>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>자산군</th>
+                <th>기본 비중</th>
+                <th>현재 시장 조정 비중</th>
+                <th>현재 평가금액(원)</th>
+                <th>목표 금액(원)</th>
+                <th>매매 필요량</th>
+            </tr>
+        </thead>
+        <tbody id="asset-table">
+            </tbody>
+    </table>
+
+    <div class="investment-call">
+        <strong>💡 이번 달 신규 투자금 (150만 원) 배분 가이드</strong>
+        <div id="monthly-guide" style="margin-top: 10px; line-height: 1.8;">
+            계산 버튼을 누르면 시장 상황에 맞춘 투자 배분액이 표시됩니다.
+        </div>
+    </div>
+
+    <button class="btn-calc" onclick="updateDashboard()">시장 데이터 반영 및 리밸런싱 계산</button>
+</div>
+
+<script>
+    // GitHub 소스(indicators.js/analysis.js)의 가중치 및 분석 로직 이식
+    const baseAssets = [
+        { id: 'stock', name: "주식 (S&P500/배당)", weight: 0.40 },
+        { id: 'bond', name: "채권 (미국채)", weight: 0.20 },
+        { id: 'gold', name: "금 (KRX 금)", weight: 0.10 },
+        { id: 'cash', name: "현금 (원화/달러)", weight: 0.10 },
+        { id: 'income', name: "나머지 (배당주/리츠)", weight: 0.20 }
+    ];
+
+    // GitHub의 analyzeIndicators 시뮬레이션 데이터
+    // 실제 운영 시에는 fetchFredData 등을 통해 실시간 데이터를 받아와야 합니다.
+    function getMockMarketScore() {
+        // 예시: 장단기 금리차(weight 5), CPI(weight 5), PMI(weight 5) 등
+        // 여기서는 종합 점수가 +30(완만한 회복)인 상황을 가정
+        return 30; 
+    }
+
+    function updateDashboard() {
+        const score = getMockMarketScore();
+        let status = 'neutral', signal = '📊', title = '방향성 탐색 구간', adj = { stock: 0, bond: 0, cash: 0 };
+
+        // GitHub getMarketOutlook 로직 적용
+        if (score > 20) {
+            status = 'positive'; signal = '📈'; title = '완만한 회복/상승 국면';
+            adj = { stock: 0.05, bond: 0, cash: -0.05 }; // 주식 비중 확대
+        } else if (score < -20) {
+            status = 'negative'; signal = '📉'; title = '경기 둔화/위험 관리';
+            adj = { stock: -0.10, bond: 0.05, cash: 0.05 }; // 주식 축소, 채권/현금 확대
+        }
+
+        document.getElementById('market-signal').innerText = signal;
+        document.getElementById('market-title').innerText = title;
+        document.getElementById('market-status-panel').className = `status-panel ${status}-bg`;
+
+        renderTable(adj);
+    }
+
+    function renderTable(adj) {
+        const tableBody = document.getElementById('asset-table');
+        tableBody.innerHTML = '';
+        let totalCurrent = 0;
+
+        // 현재 입력값 합산
+        baseAssets.forEach((_, i) => {
+            const val = parseFloat(document.getElementById(`curr-${i}`)?.value) || 0;
+            totalCurrent += val;
+        });
+
+        let monthlyGuideHtml = "";
+
+        baseAssets.forEach((asset, i) => {
+            // 시장 상황에 따른 비중 조정
+            const adjustedWeight = asset.weight + (adj[asset.id] || 0);
+            const targetAmt = totalCurrent * adjustedWeight;
+            const currentAmt = parseFloat(document.getElementById(`curr-${i}`)?.value) || 0;
+            const diff = targetAmt - currentAmt;
+
+            // 월 150만 원 투자금 배분액 계산
+            const monthlyInvest = 1500000 * adjustedWeight;
+
+            const row = `<tr>
+                <td>${asset.name}</td>
+                <td>${(asset.weight * 100).toFixed(0)}%</td>
+                <td class="adjusted-weight">${(adjustedWeight * 100).toFixed(0)}%</td>
+                <td><input type="number" id="curr-${i}" value="${currentAmt}" onchange="renderTable({stock:${adj.stock||0}, bond:${adj.bond||0}, cash:${adj.cash||0}})"></td>
+                <td>${Math.round(targetAmt).toLocaleString()}</td>
+                <td style="color:${diff > 0 ? 'red' : 'blue'}">${diff > 0 ? '+' : ''}${Math.round(diff).toLocaleString()}</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+
+            monthlyGuideHtml += `• <strong>${asset.name}</strong>: 매수액 ${Math.round(monthlyInvest).toLocaleString()}원<br>`;
+        });
+
+        document.getElementById('monthly-guide').innerHTML = monthlyGuideHtml;
+    }
+
+    // 초기 실행
+    updateDashboard();
+</script>
+
+</body>
+</html>
