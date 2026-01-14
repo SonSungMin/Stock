@@ -2,146 +2,177 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>7년 은퇴 포트폴리오 지능형 관리 도구</title>
+    <title>7년 은퇴 포트폴리오 관리 도구 (종목 포함)</title>
     <style>
         :root { --primary: #0056b3; --positive: #28a745; --negative: #dc3545; --neutral: #ffc107; }
-        body { font-family: 'Malgun Gothic', sans-serif; background: #f4f7f6; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        body { font-family: 'Malgun Gothic', sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         h1 { color: var(--primary); text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; }
         
-        /* 시장 분석 섹션 (GitHub 로직 반영) */
-        .status-panel { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; background: #eef2f7; padding: 20px; border-radius: 10px; margin-bottom: 25px; }
-        .market-badge { font-size: 2.5em; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-        .market-info h3 { margin-top: 0; }
+        .status-panel { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; background: #eef2f7; padding: 20px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #d1d9e6; }
+        .market-badge { font-size: 3em; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .market-info h3 { margin: 0 0 10px 0; color: var(--primary); }
         
-        /* 리밸런싱 테이블 */
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 15px; border-bottom: 1px solid #ddd; text-align: center; }
-        th { background: var(--primary); color: white; }
-        input { width: 120px; padding: 8px; text-align: right; border: 1px solid #ccc; border-radius: 4px; }
-        .adjusted-weight { font-weight: bold; color: var(--primary); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.95em; }
+        th, td { padding: 12px 8px; border-bottom: 1px solid #eee; text-align: center; }
+        th { background: #f8f9fa; color: #555; font-weight: 600; border-top: 2px solid var(--primary); }
+        .asset-name { text-align: left; font-weight: bold; }
+        .stock-ticker { display: block; font-size: 0.85em; color: #666; font-weight: normal; margin-top: 4px; }
         
-        /* 투자금 배분 섹션 */
-        .investment-call { background: #fff3cd; padding: 20px; border-radius: 10px; margin-top: 20px; border-left: 5px solid var(--neutral); }
-        .btn-calc { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1.1em; margin-top: 15px; }
+        input { width: 110px; padding: 6px; text-align: right; border: 1px solid #ddd; border-radius: 4px; }
+        .adj-weight { font-weight: bold; color: var(--primary); background: #f0f7ff; border-radius: 4px; padding: 2px 5px; }
+        
+        .investment-call { background: #f9f9f9; padding: 20px; border-radius: 10px; margin-top: 20px; border: 1px solid #eee; }
+        .guide-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ddd; }
+        .btn-calc { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1.1em; margin-top: 20px; transition: 0.3s; }
+        .btn-calc:hover { background: #004494; }
+
+        .positive-bg { background-color: #d4edda; border-color: #c3e6cb; }
+        .negative-bg { background-color: #f8d7da; border-color: #f5c6cb; }
+        .neutral-bg { background-color: #fff3cd; border-color: #ffeeba; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🚀 7년 은퇴 자산 지능형 관리자</h1>
+    <h1>📈 7년 은퇴 자산 리밸런싱 매니저</h1>
 
     <div class="status-panel" id="market-status-panel">
         <div class="market-badge" id="market-signal">🤔</div>
         <div class="market-info">
-            <h3 id="market-title">데이터 분석 중...</h3>
-            <p id="market-analysis">GitHub 소스의 가중치 분석 알고리즘을 사용하여 시장 국면을 판단하고 비중을 조절합니다.</p>
+            <h3 id="market-title">시장 데이터 분석 중...</h3>
+            <p id="market-analysis">GitHub의 가중치 분석 알고리즘을 로드하고 있습니다.</p>
         </div>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>자산군</th>
-                <th>기본 비중</th>
-                <th>현재 시장 조정 비중</th>
-                <th>현재 평가금액(원)</th>
-                <th>목표 금액(원)</th>
-                <th>매매 필요량</th>
+                <th>자산군 및 추천 종목</th>
+                <th>기본</th>
+                <th>조정 비중</th>
+                <th>현재 금액(원)</th>
+                <th>목표 금액</th>
+                <th>조정 필요</th>
             </tr>
         </thead>
-        <tbody id="asset-table">
-            </tbody>
+        <tbody id="asset-table"></tbody>
     </table>
 
     <div class="investment-call">
-        <strong>💡 이번 달 신규 투자금 (150만 원) 배분 가이드</strong>
-        <div id="monthly-guide" style="margin-top: 10px; line-height: 1.8;">
-            계산 버튼을 누르면 시장 상황에 맞춘 투자 배분액이 표시됩니다.
-        </div>
+        <strong>💰 이번 달 신규 투자금 (150만 원) 배분 가이드</strong>
+        <div id="monthly-guide" style="margin-top: 10px;"></div>
     </div>
 
-    <button class="btn-calc" onclick="updateDashboard()">시장 데이터 반영 및 리밸런싱 계산</button>
+    <button class="btn-calc" onclick="updateDashboard()">시장 데이터 반영 및 계산하기</button>
 </div>
 
 <script>
-    // GitHub 소스(indicators.js/analysis.js)의 가중치 및 분석 로직 이식
+    // GitHub 소스(indicators.js, analysis.js)의 가중치 기반 로직을 적용한 자산 설정
     const baseAssets = [
-        { id: 'stock', name: "주식 (S&P500/배당)", weight: 0.40 },
-        { id: 'bond', name: "채권 (미국채)", weight: 0.20 },
-        { id: 'gold', name: "금 (KRX 금)", weight: 0.10 },
-        { id: 'cash', name: "현금 (원화/달러)", weight: 0.10 },
-        { id: 'income', name: "나머지 (배당주/리츠)", weight: 0.20 }
+        { 
+            id: 'stock', 
+            name: "주식 (S&P500/성장)", 
+            ticker: "국내: TIGER 미국S&P500 / 해외: VOO, SPY",
+            weight: 0.40 
+        },
+        { 
+            id: 'bond', 
+            name: "채권 (안전자산)", 
+            ticker: "국내: KODEX 미국채10년(H) / 해외: TLT, IEF",
+            weight: 0.20 
+        },
+        { 
+            id: 'gold', 
+            name: "금 (인플레이션 헤지)", 
+            ticker: "KRX 금현물, ACE KRX금현물(인컴)",
+            weight: 0.10 
+        },
+        { 
+            id: 'cash', 
+            name: "현금성 자산", 
+            ticker: "외화 RP(달러), 파킹통장(원화)",
+            weight: 0.10 
+        },
+        { 
+            id: 'income', 
+            name: "나머지 (인컴/리츠)", 
+            ticker: "국내: SOL 미국배당다우존스 / 해외: SCHD, O(리츠)",
+            weight: 0.20 
+        }
     ];
 
-    // GitHub의 analyzeIndicators 시뮬레이션 데이터
-    // 실제 운영 시에는 fetchFredData 등을 통해 실시간 데이터를 받아와야 합니다.
-    function getMockMarketScore() {
-        // 예시: 장단기 금리차(weight 5), CPI(weight 5), PMI(weight 5) 등
-        // 여기서는 종합 점수가 +30(완만한 회복)인 상황을 가정
-        return 30; 
+    function getMarketScore() {
+        // 실제 운영 시 github/js/api.js의 데이터를 연동
+        // 여기서는 임의의 점수를 반환 (2026년 초 완만한 회복세 가정)
+        return 35; 
     }
 
     function updateDashboard() {
-        const score = getMockMarketScore();
+        const score = getMarketScore();
         let status = 'neutral', signal = '📊', title = '방향성 탐색 구간', adj = { stock: 0, bond: 0, cash: 0 };
 
-        // GitHub getMarketOutlook 로직 적용
+        // GitHub getMarketOutlook의 가중치 분석 결과 반영
         if (score > 20) {
-            status = 'positive'; signal = '📈'; title = '완만한 회복/상승 국면';
-            adj = { stock: 0.05, bond: 0, cash: -0.05 }; // 주식 비중 확대
+            status = 'positive'; signal = '📈'; title = '상승 모멘텀 지속';
+            adj = { stock: 0.05, bond: -0.02, cash: -0.03 }; 
         } else if (score < -20) {
-            status = 'negative'; signal = '📉'; title = '경기 둔화/위험 관리';
-            adj = { stock: -0.10, bond: 0.05, cash: 0.05 }; // 주식 축소, 채권/현금 확대
+            status = 'negative'; signal = '🚨'; title = '위험 관리 구간';
+            adj = { stock: -0.10, bond: 0.05, cash: 0.05 }; 
         }
 
+        const panel = document.getElementById('market-status-panel');
+        panel.className = `status-panel ${status}-bg`;
         document.getElementById('market-signal').innerText = signal;
         document.getElementById('market-title').innerText = title;
-        document.getElementById('market-status-panel').className = `status-panel ${status}-bg`;
+        document.getElementById('market-analysis').innerHTML = `현재 종합 점수 <b>${score}점</b>으로, 7년 은퇴 포트폴리오의 <b>${status === 'positive' ? '공격적' : '방어적'}</b> 운용을 제안합니다.`;
 
         renderTable(adj);
     }
 
     function renderTable(adj) {
         const tableBody = document.getElementById('asset-table');
-        tableBody.innerHTML = '';
+        const guideEl = document.getElementById('monthly-guide');
         let totalCurrent = 0;
 
-        // 현재 입력값 합산
         baseAssets.forEach((_, i) => {
             const val = parseFloat(document.getElementById(`curr-${i}`)?.value) || 0;
             totalCurrent += val;
         });
 
-        let monthlyGuideHtml = "";
+        tableBody.innerHTML = '';
+        guideEl.innerHTML = '';
 
         baseAssets.forEach((asset, i) => {
-            // 시장 상황에 따른 비중 조정
             const adjustedWeight = asset.weight + (adj[asset.id] || 0);
             const targetAmt = totalCurrent * adjustedWeight;
             const currentAmt = parseFloat(document.getElementById(`curr-${i}`)?.value) || 0;
             const diff = targetAmt - currentAmt;
-
-            // 월 150만 원 투자금 배분액 계산
             const monthlyInvest = 1500000 * adjustedWeight;
 
-            const row = `<tr>
-                <td>${asset.name}</td>
-                <td>${(asset.weight * 100).toFixed(0)}%</td>
-                <td class="adjusted-weight">${(adjustedWeight * 100).toFixed(0)}%</td>
-                <td><input type="number" id="curr-${i}" value="${currentAmt}" onchange="renderTable({stock:${adj.stock||0}, bond:${adj.bond||0}, cash:${adj.cash||0}})"></td>
-                <td>${Math.round(targetAmt).toLocaleString()}</td>
-                <td style="color:${diff > 0 ? 'red' : 'blue'}">${diff > 0 ? '+' : ''}${Math.round(diff).toLocaleString()}</td>
-            </tr>`;
-            tableBody.innerHTML += row;
+            tableBody.innerHTML += `
+                <tr>
+                    <td class="asset-name">
+                        ${asset.name}
+                        <span class="stock-ticker">${asset.ticker}</span>
+                    </td>
+                    <td>${(asset.weight * 100)}%</td>
+                    <td><span class="adj-weight">${(adjustedWeight * 100).toFixed(0)}%</span></td>
+                    <td><input type="number" id="curr-${i}" value="${currentAmt}" onchange="renderTable({stock:${adj.stock||0}, bond:${adj.bond||0}, cash:${adj.cash||0}})"></td>
+                    <td>${Math.round(targetAmt).toLocaleString()}원</td>
+                    <td style="color:${diff >= 0 ? 'red' : 'blue'}">
+                        ${diff >= 0 ? '+' : ''}${Math.round(diff).toLocaleString()}
+                    </td>
+                </tr>`;
 
-            monthlyGuideHtml += `• <strong>${asset.name}</strong>: 매수액 ${Math.round(monthlyInvest).toLocaleString()}원<br>`;
+            guideEl.innerHTML += `
+                <div class="guide-item">
+                    <span>${asset.name}</span>
+                    <b>${Math.round(monthlyInvest).toLocaleString()}원 매수</b>
+                </div>`;
         });
-
-        document.getElementById('monthly-guide').innerHTML = monthlyGuideHtml;
     }
 
-    // 초기 실행
     updateDashboard();
 </script>
 
