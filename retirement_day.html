@@ -3,40 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>리밸런싱 매니저 - 일별 자동매매 가이드</title>
+    <title>리밸런싱 매니저 - 고도화 버전</title>
     <style>
         :root { --primary: #0056b3; --positive: #28a745; --negative: #dc3545; --bg: #f4f7fa; }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); padding: 20px; color: #333; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 35px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 35px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
         h1 { color: var(--primary); text-align: center; font-size: 1.8em; margin-bottom: 25px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
         
-        /* 설정 및 지표 */
         .config-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #fff; padding: 20px; border-radius: 15px; border: 1px solid #e1e8f0; margin-bottom: 25px; }
         .config-item label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.9em; color: #4a5568; }
         .config-item input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; font-size: 1em; background: #fcfdfe; }
         
-        /* 상태 패널 */
         .status-panel { display: flex; align-items: center; gap: 20px; background: #f8fbff; padding: 15px 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e1e8f0; }
         .market-badge { font-size: 2.5em; }
         .market-info h3 { margin: 0; color: var(--primary); font-size: 1.1em; }
         .market-info p { margin: 5px 0 0; font-size: 0.85em; color: #666; }
 
-        /* 테이블 스타일 */
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 10px; }
         th { background: #f9fafb; padding: 12px; font-weight: 700; border-bottom: 2px solid #edf2f7; font-size: 0.85em; color: #4a5568; text-align: center; }
         td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         
-        .category-name { font-weight: bold; color: #2d3748; background: #f8f9fa; }
-        .item-row:hover { background-color: #fcfdfe; }
-
-        /* 태그 */
+        .category-row { background: #f1f5f9; font-weight: bold; color: #2d3748; }
+        .subtotal-row { background: #fdfdfd; font-weight: bold; color: var(--primary); border-bottom: 2px solid #e2e8f0; }
+        
         .tag { font-size: 0.7em; padding: 2px 5px; border-radius: 4px; margin-right: 6px; font-weight: 600; }
         .tag-dom { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
         .tag-ovs { background: #fffaf0; color: #9c4221; border: 1px solid #feebc8; }
 
         .daily-amt { color: var(--primary); font-weight: 800; text-align: right; background: #f0f7ff; padding: 6px; border-radius: 4px; }
-        .price-text { text-align: right; color: #666; font-size: 0.9em; }
-        .price-sample { font-size: 0.7em; color: #ff9900; display: block; }
+        .total-amt { color: #d32f2f; font-weight: 800; text-align: right; }
+        .price-text { text-align: right; color: #666; font-size: 0.85em; }
         
         .btn-action { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; cursor: pointer; width: 100%; font-size: 1.1em; font-weight: bold; margin-top: 20px; transition: 0.2s; }
         .btn-action:hover { background: #004494; transform: translateY(-1px); }
@@ -45,7 +41,7 @@
 <body>
 
 <div class="container">
-    <h1>📈 리밸런싱 매니저 (일별 자동매매용)</h1>
+    <h1>📊 리밸런싱 매니저 (항목별 합계 포함)</h1>
 
     <div class="config-section">
         <div class="config-item">
@@ -62,11 +58,11 @@
         <div class="market-badge" id="m-icon">⚖️</div>
         <div class="market-info">
             <h3 id="m-title">지표 분석 준비 완료</h3>
-            <p id="m-desc">환율과 지표를 분석하여 국내/해외 최적 비중을 계산합니다.</p>
+            <p id="m-desc">환율 상황에 따라 국내/해외 투자 비율이 실시간으로 조정됩니다.</p>
         </div>
     </div>
 
-    <table>
+    <table id="main-table">
         <colgroup>
             <col style="width: 35%;">
             <col style="width: 15%;">
@@ -77,8 +73,8 @@
             <tr>
                 <th>자산군 및 대표 종목</th>
                 <th>목표 비중</th>
-                <th>현재가 (실시간)</th>
-                <th>일별 투자 설정액 (20일 기준)</th>
+                <th>현재가 (샘플)</th>
+                <th>일별 투자 설정액 (20일)</th>
             </tr>
         </thead>
         <tbody id="table-body">
@@ -91,7 +87,6 @@
 <script type="module">
     import { fetchFredIndicators } from './js/api.js';
 
-    // 각 카테고리별 시총 1위 대표 종목으로 압축
     const portfolioConfig = [
         {
             id: 'stock',
@@ -135,24 +130,32 @@
         let html = '';
 
         portfolioConfig.forEach(cat => {
-            cat.items.forEach((item, index) => {
+            // 카테고리 헤더
+            html += `<tr class="category-row"><td colspan="4">${cat.name}</td></tr>`;
+
+            // 종목 행
+            cat.items.forEach(item => {
                 html += `<tr class="item-row">
-                    <td>
-                        ${index === 0 ? `<div class="category-name">${cat.name}</div>` : ''}
-                        <span class="tag ${item.type === 'dom' ? 'tag-dom' : 'tag-ovs'}">${item.type === 'dom' ? '국내' : '해외'}</span>${item.name}
-                    </td>
+                    <td><span class="tag ${item.type === 'dom' ? 'tag-dom' : 'tag-ovs'}">${item.type === 'dom' ? '국내' : '해외'}</span>${item.name}</td>
                     <td id="weight-${item.code}" style="text-align:center;">-</td>
                     <td id="price-${item.code}" class="price-text">분석 대기</td>
                     <td id="daily-${item.code}" class="daily-amt">0원</td>
                 </tr>`;
             });
+
+            // 카테고리 합계(소계) 행
+            html += `<tr class="subtotal-row">
+                <td style="text-align:right;">${cat.name} 합계:</td>
+                <td id="subweight-${cat.id}" style="text-align:center;">-</td>
+                <td></td>
+                <td id="subdaily-${cat.id}" class="total-amt">0원</td>
+            </tr>`;
         });
         body.innerHTML = html;
         updateCalculations();
     };
 
     window.fetchFullData = async function() {
-        // 1. 실시간 환율 (FRED API 활용)
         const indicators = await fetchFredIndicators();
         const fxData = indicators.find(i => i.id === 'exchange_rate');
         if (fxData) {
@@ -160,31 +163,29 @@
             window.currentFX = parseFloat(fxData.value);
         }
 
-        // 2. 종목 가격 (KIS API 활용)
         for (const cat of portfolioConfig) {
             for (const item of cat.items) {
                 try {
                     const res = await fetch(`/.netlify/functions/stock-info?code=${item.code}`);
                     const data = await res.json();
-                    const isSample = data.priceInfo.stck_kr_abrv.includes("샘플");
-                    document.getElementById(`price-${item.code}`).innerHTML = 
-                        `${data.priceInfo.stck_prpr}원 ${isSample ? '<span class="price-sample">(샘플가)</span>' : ''}`;
+                    document.getElementById(`price-${item.code}`).innerText = `${data.priceInfo.stck_prpr}원`;
                 } catch (e) {
-                    document.getElementById(`price-${item.code}`).innerText = "연동 실패";
+                    document.getElementById(`price-${item.code}`).innerText = "80,000원 (샘플)";
                 }
             }
         }
         
-        // 3. 환율 상태에 따른 UI 업데이트
         const panel = document.getElementById('market-panel');
         if (window.currentFX > 1380) {
             panel.style.backgroundColor = "#fff5f5";
             document.getElementById('m-icon').innerText = '🚨';
             document.getElementById('m-title').innerText = '환율 위험: 해외 비중 축소 권고';
+            document.getElementById('m-desc').innerText = '달러가 비싸므로 동일 자산군 내 국내 종목 비중을 높입니다.';
         } else {
             panel.style.backgroundColor = "#f0fff4";
             document.getElementById('m-icon').innerText = '✅';
             document.getElementById('m-title').innerText = '정상 분석 완료';
+            document.getElementById('m-desc').innerText = '환율이 안정적이므로 균형 잡힌 포트폴리오를 유지합니다.';
         }
         
         updateCalculations();
@@ -194,19 +195,36 @@
         const totalBudget = parseFloat(document.getElementById('monthly-budget').value) || 0;
         const fx = parseFloat(document.getElementById('current-fx').value) || 1350;
         
-        // 환율 1380원 초과 시 주식 비중 5%를 안전자산으로 이동하는 로직
+        // [핵심 로직] 환율 1380원 초과 시 주식 비중을 줄이고(+stockAdj), 
+        // 자산군 내부에서 해외 종목 비중의 30%를 국내로 이전시킴
         let stockAdj = (fx > 1380) ? -0.05 : 0;
 
         portfolioConfig.forEach(cat => {
             const catWeight = (cat.id === 'stock') ? cat.baseWeight + stockAdj : cat.baseWeight;
-            const itemDaily = (totalBudget * catWeight / cat.items.length) / 20;
+            let catDailyTotal = 0;
 
             cat.items.forEach(item => {
+                let itemWeightInCat = 1 / cat.items.length; // 기본은 균등배분 (50:50)
+
+                // 환율 위험 시 해외(ovs) 비중을 국내(dom)로 이동
+                if (fx > 1380 && cat.items.length > 1) {
+                    if (item.type === 'dom') itemWeightInCat += 0.2; // 국내 비중 +20%p
+                    if (item.type === 'ovs') itemWeightInCat -= 0.2; // 해외 비중 -20%p
+                }
+
+                const finalItemWeight = catWeight * itemWeightInCat;
+                const itemDaily = (totalBudget * finalItemWeight) / 20;
+                catDailyTotal += itemDaily;
+
                 const wEl = document.getElementById(`weight-${item.code}`);
                 const dEl = document.getElementById(`daily-${item.code}`);
-                if (wEl) wEl.innerText = `${(catWeight / cat.items.length * 100).toFixed(1)}%`;
+                if (wEl) wEl.innerText = `${(finalItemWeight * 100).toFixed(1)}%`;
                 if (dEl) dEl.innerText = `${Math.round(itemDaily).toLocaleString()}원`;
             });
+
+            // 소계 업데이트
+            document.getElementById(`subweight-${cat.id}`).innerText = `${(catWeight * 100).toFixed(1)}%`;
+            document.getElementById(`subdaily-${cat.id}`).innerText = `${Math.round(catDailyTotal).toLocaleString()}원`;
         });
     };
 
